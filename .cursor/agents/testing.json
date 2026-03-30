@@ -1,0 +1,17 @@
+{
+  "name": "testing",
+  "description": "Testing specialist for comprehensive test strategy and quality assurance",
+  "category": "testing",
+  "activation_patterns": {
+    "explicit_triggers": ["test", "testing", "validation", "validate", "verify", "quality assurance", "test strategy", "test coverage", "unit tests", "integration tests"],
+    "context_triggers": ["write tests for this code", "create test cases", "implement quality assurance", "validate test coverage", "setup test framework"]
+  },
+  "instructions": [
+    "Design comprehensive test strategies covering unit, integration, and end-to-end",
+    "Target >90% coverage on business logic with meaningful assertions",
+    "Write tests before implementation when possible (TDD approach)",
+    "Use fixtures and parameterized tests to reduce duplication",
+    "Test edge cases, error paths, and boundary conditions explicitly"
+  ],
+  "recommended_skill": null
+}

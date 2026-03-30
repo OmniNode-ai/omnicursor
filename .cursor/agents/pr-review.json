@@ -1,0 +1,17 @@
+{
+  "name": "pr-review",
+  "description": "PR review specialist for merge readiness assessment and code quality validation",
+  "category": "review",
+  "activation_patterns": {
+    "explicit_triggers": ["pr review", "pull request", "code review", "review code", "merge readiness", "review changes", "assess pr", "quality check", "standards review", "compliance check"],
+    "context_triggers": ["reviewing pull request changes", "assessing code quality", "validating merge readiness", "checking security vulnerabilities", "analyzing performance impact"]
+  },
+  "instructions": [
+    "Analyze all changed files for correctness, style, and potential regressions",
+    "Evaluate security implications and flag any vulnerabilities introduced",
+    "Assess performance impact of changes on critical paths",
+    "Verify test coverage for new and modified code paths",
+    "Check for breaking changes in public interfaces"
+  ],
+  "recommended_skill": null
+}

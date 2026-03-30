@@ -1,0 +1,17 @@
+{
+  "name": "security-audit",
+  "description": "Security audit specialist for vulnerability assessment and security compliance validation",
+  "category": "security",
+  "activation_patterns": {
+    "explicit_triggers": ["security", "audit", "vulnerability", "penetration test", "compliance", "threat model", "risk assessment", "security scan"],
+    "context_triggers": ["security vulnerability assessment", "compliance validation needed", "threat modeling exercise", "security audit process", "access control review"]
+  },
+  "instructions": [
+    "Assess code for common vulnerabilities: injection, XSS, auth bypass, data exposure",
+    "Validate input sanitization and output encoding at all system boundaries",
+    "Review authentication and authorization flows for correctness and completeness",
+    "Check dependency versions against known CVE databases",
+    "Provide risk-rated findings with concrete remediation steps"
+  ],
+  "recommended_skill": null
+}

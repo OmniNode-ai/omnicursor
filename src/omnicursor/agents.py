@@ -2,10 +2,24 @@
 
 from __future__ import annotations
 
-from typing import Dict
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from .schemas import AgentContext
 
+
+# ---------------------------------------------------------------------------
+# Repo root / agents directory
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_AGENTS_DIR = _REPO_ROOT / ".cursor" / "agents"
+
+
+# ---------------------------------------------------------------------------
+# Default (generalist) context — never changes
+# ---------------------------------------------------------------------------
 
 DEFAULT_CONTEXT = AgentContext(
     agent_name="omnicursor-generalist",
@@ -18,6 +32,10 @@ DEFAULT_CONTEXT = AgentContext(
     recommended_skill=None,
 )
 
+
+# ---------------------------------------------------------------------------
+# Hardcoded agent contexts (v1 fallback — always present)
+# ---------------------------------------------------------------------------
 
 AGENT_CONTEXTS: Dict[str, AgentContext] = {
     "debugging": AgentContext(
@@ -80,7 +98,12 @@ AGENT_CONTEXTS: Dict[str, AgentContext] = {
 }
 
 
-ALIASES = {
+# ---------------------------------------------------------------------------
+# Aliases — maps shorthand names to canonical category keys
+# ---------------------------------------------------------------------------
+
+ALIASES: Dict[str, str] = {
+    # Original v1 aliases
     "debug": "debugging",
     "bug": "debugging",
     "systematic-debugging": "debugging",
@@ -96,18 +119,167 @@ ALIASES = {
     "adapter-stub": "adapter",
     "bucket-3": "adapter",
     "stub": "adapter",
+    # New aliases for JSON-loaded categories
+    "debug-intelligence": "debug-intelligence",
+    "version-control": "version-control",
+    "git": "version-control",
+    "commit": "version-control",
+    "research": "research",
+    "investigate": "research",
+    "test": "testing",
+    "tests": "testing",
+    "testing": "testing",
+    "quality": "quality",
+    "code-quality": "quality",
+    "lint": "quality",
+    "review": "review",
+    "pr": "review",
+    "pull-request": "review",
+    "docs": "documentation",
+    "documentation": "documentation",
+    "security": "security",
+    "audit": "security",
+    "vulnerability": "security",
+    "performance": "performance",
+    "optimize": "performance",
+    "benchmark": "performance",
+    "database": "database",
+    "db": "database",
+    "sql": "database",
+    "frontend": "frontend",
+    "react": "frontend",
+    "ui": "frontend",
+    "backend": "backend",
+    "fastapi": "backend",
+    "summarize": "summarization",
+    "summarization": "summarization",
+    "condense": "summarization",
+    "exploration": "exploration",
+    "crawl": "exploration",
+    "generalist": "generalist",
 }
 
 
-def normalize_category(category: str) -> str:
-    """Normalize free-form categories to the v1 routing table."""
+# ---------------------------------------------------------------------------
+# Dynamic JSON loading
+# ---------------------------------------------------------------------------
 
+
+def _load_json_agents() -> Dict[str, AgentContext]:
+    """Load agent configs from .cursor/agents/*.json files.
+
+    Returns a dict keyed by the ``category`` field in each JSON file.
+    Returns ``{}`` on any failure so the hardcoded fallback always works.
+    """
+    result: Dict[str, AgentContext] = {}
+    try:
+        if not _AGENTS_DIR.is_dir():
+            return result
+        for path in sorted(_AGENTS_DIR.glob("*.json")):
+            try:
+                raw: Dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+                category = raw.get("category", "")
+                if not category:
+                    continue
+                result[category] = AgentContext(
+                    agent_name=raw.get("name", path.stem),
+                    description=raw.get("description", ""),
+                    instructions=raw.get("instructions", []),
+                    recommended_skill=raw.get("recommended_skill"),
+                )
+            except (json.JSONDecodeError, OSError, TypeError):
+                continue
+    except OSError:
+        pass
+    return result
+
+
+# Merged registry: hardcoded first, then JSON overlay
+_JSON_AGENTS: Dict[str, AgentContext] = _load_json_agents()
+
+_MERGED_CONTEXTS: Dict[str, AgentContext] = {**AGENT_CONTEXTS, **_JSON_AGENTS}
+
+# Also store raw JSON data for match_agent trigger scoring
+_RAW_JSON_AGENTS: List[Dict[str, Any]] = []
+try:
+    if _AGENTS_DIR.is_dir():
+        for _p in sorted(_AGENTS_DIR.glob("*.json")):
+            try:
+                _RAW_JSON_AGENTS.append(json.loads(_p.read_text(encoding="utf-8")))
+            except (json.JSONDecodeError, OSError):
+                continue
+except OSError:
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Category normalization
+# ---------------------------------------------------------------------------
+
+
+def normalize_category(category: str) -> str:
+    """Normalize free-form categories to the routing table."""
     normalized = category.strip().lower().replace("_", "-")
     return ALIASES.get(normalized, normalized)
 
 
+# ---------------------------------------------------------------------------
+# Category-based lookup (original API — backward compatible)
+# ---------------------------------------------------------------------------
+
+
 def get_agent_context(category: str) -> AgentContext:
     """Return a structured context object for a rule-selected category."""
-
     normalized = normalize_category(category)
-    return AGENT_CONTEXTS.get(normalized, DEFAULT_CONTEXT)
+    return _MERGED_CONTEXTS.get(normalized, DEFAULT_CONTEXT)
+
+
+# ---------------------------------------------------------------------------
+# Prompt-based matching (new API)
+# ---------------------------------------------------------------------------
+
+
+def _score_agent(prompt_lower: str, agent: Dict[str, Any]) -> float:
+    """Score a single agent config against the lowered prompt."""
+    activation = agent.get("activation_patterns", {})
+    explicit: List[str] = activation.get("explicit_triggers", [])
+    context: List[str] = activation.get("context_triggers", [])
+
+    max_points = 2 * len(explicit) + len(context)
+    if max_points == 0:
+        return 0.0
+
+    points = 0
+    for trigger in explicit:
+        if trigger.lower() in prompt_lower:
+            points += 2
+    for trigger in context:
+        if trigger.lower() in prompt_lower:
+            points += 1
+
+    return points / max_points
+
+
+def match_agent(prompt: str) -> AgentContext:
+    """Match a prompt to the best agent using trigger keyword scoring.
+
+    Uses the JSON agent configs loaded from ``.cursor/agents/*.json``.
+    Falls back to ``DEFAULT_CONTEXT`` if no agent scores above 0.
+    """
+    if not prompt or not _RAW_JSON_AGENTS:
+        return DEFAULT_CONTEXT
+
+    prompt_lower = prompt.lower()
+    best_score = 0.0
+    best_category: Optional[str] = None
+
+    for agent in _RAW_JSON_AGENTS:
+        score = _score_agent(prompt_lower, agent)
+        if score > best_score:
+            best_score = score
+            best_category = agent.get("category", "")
+
+    if best_category:
+        return _MERGED_CONTEXTS.get(best_category, DEFAULT_CONTEXT)
+
+    return DEFAULT_CONTEXT

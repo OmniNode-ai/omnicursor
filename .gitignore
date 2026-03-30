@@ -1,10 +1,20 @@
+# OmniNode reference (local only — do not push)
+omniclaude-main/
+
+# macOS
 .DS_Store
+
+# Python
 __pycache__/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+*.pyc
 .venv/
 dist/
 build/
-*.pyc
 
+# Tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OmniCursor local data
+.omnicursor/

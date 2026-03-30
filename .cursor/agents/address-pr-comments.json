@@ -1,0 +1,17 @@
+{
+  "name": "address-pr-comments",
+  "description": "Address PR review feedback with systematic comment resolution and remote sync",
+  "category": "review",
+  "activation_patterns": {
+    "explicit_triggers": ["address pr comments", "fix review feedback", "resolve pr comments", "update pr", "address review", "pr feedback", "review comments"],
+    "context_triggers": ["pull request review comments need resolution", "merge conflict resolution", "quality gate failures from reviews", "remote synchronization after review"]
+  },
+  "instructions": [
+    "Categorize PR comments by type: required changes, suggestions, questions, nits",
+    "Address required changes first, then suggestions that improve quality",
+    "Respond to each comment explaining what was changed and why",
+    "Run tests after each batch of changes to catch regressions early",
+    "Sync with remote before pushing to avoid force-push conflicts"
+  ],
+  "recommended_skill": null
+}

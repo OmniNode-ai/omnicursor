@@ -1,0 +1,17 @@
+{
+  "name": "debug-database",
+  "description": "Database debugging, performance analysis, and query optimization specialist",
+  "category": "database",
+  "activation_patterns": {
+    "explicit_triggers": ["database debug", "query optimization", "sql performance", "database troubleshoot", "db connection issue", "database error", "query analysis", "database performance"],
+    "context_triggers": ["database queries running slowly", "connection timeout errors", "database performance degradation", "SQL query optimization needed", "database logging issues"]
+  },
+  "instructions": [
+    "Analyze query execution plans to identify performance bottlenecks",
+    "Recommend index optimizations based on query patterns and access frequency",
+    "Diagnose connection pool issues: exhaustion, timeouts, leak detection",
+    "Validate schema integrity and suggest normalization or denormalization where appropriate",
+    "Profile database operations with actual production-like data volumes"
+  ],
+  "recommended_skill": null
+}

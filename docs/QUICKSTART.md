@@ -97,6 +97,41 @@ A typical session using all three MCP tools:
    - Rule calls `get_agent_context("adapter")` for routing context.
    - Dry-run payload constructed. Fail-soft behavior enforced.
 
+## Hooks
+
+Cursor hooks are deterministic Python scripts that fire on editor lifecycle events. They are **not** interpreted by the LLM — they run as subprocesses before or after specific actions. No pip dependencies required (stdlib only).
+
+### Configuration
+
+`.cursor/hooks.json` controls which scripts run and when. To disable all hooks, rename it to `.cursor/hooks.json.disabled`.
+
+### Active Hooks
+
+**`beforeSubmitPrompt` → `on_prompt.py`** — Classifies each prompt against the 16 agent configs in `.cursor/agents/` using trigger-based scoring (`explicit_triggers` = 2 pts, `context_triggers` = 1 pt). The matched agent and score are logged to `~/.omnicursor/events.jsonl`. This hook is informational only — it cannot modify the prompt.
+
+**`beforeShellExecution` → `on_shell.py`** — Guards against dangerous shell commands using a two-tier regex system. Hard-blocked commands (e.g., `rm -rf /`, `--no-verify`, fork bombs) are denied outright. Risky commands (e.g., `git push --force`, `DROP TABLE`, `curl | sh`) are allowed with a warning injected into the agent context.
+
+**`afterFileEdit` → `on_edit.py`** — Logs every file edit with language detection and edit count. For Python files, runs `ruff check` (diagnostic only, never `--fix`) and logs any issues to `~/.omnicursor/lint.jsonl`.
+
+**`stop` → `on_stop.py`** — Aggregates all events for the ending conversation: prompt classifications, unique files edited, shell command decisions, and languages used. Writes a session summary to `~/.omnicursor/sessions/<conversation_id>.json`.
+
+### Verifying Hooks Work
+
+- **Event log**: `cat ~/.omnicursor/events.jsonl` — one JSON line per event
+- **Session summaries**: `ls ~/.omnicursor/sessions/` — one file per completed conversation
+- **Cursor UI**: Open Output channels → Hooks to see real-time stdout/stderr from hook scripts
+
+### Requirements
+
+- Python 3.10+ (same as the MCP server)
+- `ruff` (optional) — if installed, `on_edit.py` runs diagnostic linting on Python files
+
+### Phase 3B Preview
+
+Two additional hooks are planned:
+- `beforeMCPExecution` — intercept and validate MCP tool calls before they execute
+- `beforeReadFile` — control file access patterns and log read operations
+
 ## Notes
 
 - [`HOW_TO_RUN_IN_CURSOR.md`](../HOW_TO_RUN_IN_CURSOR.md) is preserved as the original starter-kit walkthrough.

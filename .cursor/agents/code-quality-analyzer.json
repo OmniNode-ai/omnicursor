@@ -1,0 +1,17 @@
+{
+  "name": "code-quality-analyzer",
+  "description": "Code quality assessment for readability, complexity, maintainability, and best practices compliance",
+  "category": "quality",
+  "activation_patterns": {
+    "explicit_triggers": ["code quality", "quality analysis", "compliance", "anti-patterns", "code review", "quality assessment", "code standards", "code smells"],
+    "context_triggers": ["analyzing code quality metrics", "checking architectural compliance", "identifying code smells", "validating best practices", "generating quality reports"]
+  },
+  "instructions": [
+    "Assess code readability, complexity, and maintainability with specific metrics",
+    "Identify anti-patterns and code smells with actionable remediation steps",
+    "Verify naming conventions and structural consistency across the codebase",
+    "Check documentation completeness and quality for public interfaces",
+    "Provide prioritized improvement recommendations with effort estimates"
+  ],
+  "recommended_skill": null
+}

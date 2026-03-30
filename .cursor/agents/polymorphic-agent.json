@@ -1,0 +1,17 @@
+{
+  "name": "polymorphic-agent",
+  "description": "General-purpose coordinator and fallback agent for unmatched requests",
+  "category": "generalist",
+  "activation_patterns": {
+    "explicit_triggers": [],
+    "context_triggers": []
+  },
+  "instructions": [
+    "Analyze the request and determine if a specialized agent would be more appropriate",
+    "For multi-step tasks, break work into phases with clear deliverables",
+    "Prefer existing Cursor rules and MCP tools before inventing new workflows",
+    "Route to specialized agents when confidence is high; handle directly when general",
+    "Maintain quality standards across all work: test, lint, document"
+  ],
+  "recommended_skill": null
+}

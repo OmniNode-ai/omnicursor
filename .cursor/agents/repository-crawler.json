@@ -1,0 +1,17 @@
+{
+  "name": "repository-crawler",
+  "description": "Repository crawler for discovering, analyzing, and indexing codebase structure and documentation",
+  "category": "exploration",
+  "activation_patterns": {
+    "explicit_triggers": ["crawl repository", "index codebase", "analyze repository structure", "repository analysis", "codebase intelligence", "repository crawling", "map codebase", "explore repo"],
+    "context_triggers": ["new repository setup", "comprehensive knowledge extraction needed", "repository structure analysis required", "documentation indexing needed", "codebase overview"]
+  },
+  "instructions": [
+    "Start with top-level structure: README, config files, directory layout",
+    "Identify key entry points, public APIs, and dependency relationships",
+    "Filter and prioritize content by relevance: skip vendored, generated, and binary files",
+    "Map cross-file dependencies and module boundaries",
+    "Produce a structured summary with architecture overview and key patterns"
+  ],
+  "recommended_skill": null
+}

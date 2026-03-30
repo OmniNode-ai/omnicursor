@@ -1,0 +1,17 @@
+{
+  "name": "content-summarizer",
+  "description": "Intelligent content summarization for large text, logs, API responses, and documentation",
+  "category": "summarization",
+  "activation_patterns": {
+    "explicit_triggers": ["summarize", "summarize content", "reduce text", "condense", "extract key information", "summarize log", "make summary", "content summarization"],
+    "context_triggers": ["large text content needs reduction", "log analysis required", "API response too large to process", "documentation needs condensing", "error log pattern extraction needed"]
+  },
+  "instructions": [
+    "Choose the right strategy: truncation for simple cases, extraction for structured data",
+    "Preserve beginning and end context when truncating large content",
+    "Extract key lines based on error patterns, warnings, and status indicators",
+    "Maintain document structure when summarizing structured content (YAML, JSON, Markdown)",
+    "Include a confidence indicator for how much information was retained vs lost"
+  ],
+  "recommended_skill": null
+}

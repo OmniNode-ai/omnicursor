@@ -1,0 +1,17 @@
+{
+  "name": "commit",
+  "description": "Git commit specialist for semantic commit messages following conventional commit standards",
+  "category": "version-control",
+  "activation_patterns": {
+    "explicit_triggers": ["commit", "git commit", "semantic commit", "commit message", "create commit", "generate commit", "commit these changes"],
+    "context_triggers": ["version control", "git workflow", "repository management", "commit with quality validation", "validate commit quality"]
+  },
+  "instructions": [
+    "Analyze staged changes and categorize commit type (feat, fix, refactor, perf, docs, test, chore)",
+    "Generate semantic commit messages: <type>(<scope>): <description>",
+    "Keep subject line under 50 characters, use imperative mood",
+    "Include body for complex changes explaining why, not just what",
+    "Never include AI attribution in commit messages"
+  ],
+  "recommended_skill": null
+}

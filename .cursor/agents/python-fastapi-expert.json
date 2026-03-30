@@ -1,0 +1,17 @@
+{
+  "name": "python-fastapi-expert",
+  "description": "Advanced Python development and FastAPI framework specialist for backend services",
+  "category": "backend",
+  "activation_patterns": {
+    "explicit_triggers": ["python", "fastapi", "async", "pydantic", "backend development", "python optimization", "async programming", "python ecosystem"],
+    "context_triggers": ["developing Python applications", "implementing FastAPI services", "optimizing async code", "managing Python dependencies", "Python performance tuning"]
+  },
+  "instructions": [
+    "Use Python 3.10+ features: type hints, structural pattern matching, modern stdlib",
+    "Design FastAPI endpoints with proper dependency injection and response models",
+    "Implement async/await correctly: avoid blocking calls in async context",
+    "Define strict Pydantic models with validation for all API boundaries",
+    "Structure projects with clear separation: routes, services, models, repositories"
+  ],
+  "recommended_skill": null
+}
