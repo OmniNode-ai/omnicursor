@@ -25,8 +25,8 @@ description: >
 
 cursor_native:
   hook_event: beforeSubmitPrompt
-  hooks_json_command: "python3 .cursor/hooks/on_prompt.py"
-  implementation: .cursor/hooks/on_prompt.py
+  hooks_json_command: "python3 .cursor/hooks/scripts/user-prompt-submit.py"
+  implementation: .cursor/hooks/scripts/user-prompt-submit.py
   blocking: false
 
 execution:
