@@ -3,12 +3,12 @@
   "hooks": {
     "beforeSubmitPrompt": [
       {
-        "command": "python3 .cursor/hooks/on_prompt.py"
+        "command": "python3 .cursor/hooks/scripts/user-prompt-submit.py"
       }
     ],
     "beforeShellExecution": [
       {
-        "command": "python3 .cursor/hooks/on_shell.py"
+        "command": "python3 .cursor/hooks/scripts/shell-guard.py"
       }
     ],
     "afterFileEdit": [
