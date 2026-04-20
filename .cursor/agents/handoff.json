@@ -1,4 +1,5 @@
 {
+  "_note": "Added during Phase 3A — Cursor-native agent for OmniClaude handoff skill port. Not in the original 15-agent plan. Intentional.",
   "name": "handoff-guide",
   "description": "Session continuity specialist — structured handoffs so the next chat can resume without rediscovery",
   "category": "handoff",

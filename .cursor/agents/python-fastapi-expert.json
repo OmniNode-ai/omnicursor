@@ -1,4 +1,5 @@
 {
+  "_note": "Added during Phase 3A — Cursor-specific agent for Python/FastAPI stack demos. No omniclaude equivalent. Intentional.",
   "name": "python-fastapi-expert",
   "description": "Advanced Python development and FastAPI framework specialist for backend services",
   "category": "backend",

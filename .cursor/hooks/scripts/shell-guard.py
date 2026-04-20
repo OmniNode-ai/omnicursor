@@ -30,6 +30,9 @@ from _common import log_event, read_session_context, read_stdin, write_stdout
 # Patterns — compiled at module load
 # ---------------------------------------------------------------------------
 
+# HARD_BLOCK patterns hand-picked for OmniCursor; inspired by omniclaude bash_guard.py
+# but not a direct import — 9 patterns covering rm-rf, mkfs, dd, fork-bomb, --no-verify, etc.
+# Future sync job should reconcile any drift against the omniclaude source.
 HARD_BLOCK: List[re.Pattern[str]] = [
     re.compile(p, re.IGNORECASE)
     for p in [
@@ -45,6 +48,9 @@ HARD_BLOCK: List[re.Pattern[str]] = [
     ]
 ]
 
+# SOFT_WARN patterns hand-picked for OmniCursor — 11 patterns covering force-push,
+# hard-reset, DROP TABLE, kill -9, chmod 777, sudo rm, eval, and curl/wget pipe-to-shell.
+# Not present in omniclaude bash_guard.py (which only hard-blocks); advisory tier is OmniCursor-native.
 SOFT_WARN: List[Tuple[re.Pattern[str], str]] = [
     (re.compile(p, re.IGNORECASE), reason)
     for p, reason in [

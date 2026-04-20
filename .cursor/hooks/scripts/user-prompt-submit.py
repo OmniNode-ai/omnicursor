@@ -232,6 +232,8 @@ def _update_session_correlation(conversation_id: str, correlation_id: str) -> No
         pass
 
 
+# Fake SessionStart: fires on the first beforeSubmitPrompt call per conversation.
+# Trigger: session_initialized flag file absent from ~/.omnicursor/sessions/<conv_id>/
 def _init_session(conversation_id: str) -> None:
     """On the FIRST beforeSubmitPrompt call for a conversation:
     - Touch a ``session_initialized`` flag so subsequent calls are no-ops.
