@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "${REPO_ROOT}" ]]; then
+  echo "[pre-commit] Could not determine repository root."
+  exit 1
+fi
+
+cd "${REPO_ROOT}"
+
+if [[ -x ".venv/bin/python" ]]; then
+  PYTHON_BIN=".venv/bin/python"
+else
+  PYTHON_BIN="$(command -v python3 || true)"
+fi
+
+if [[ -z "${PYTHON_BIN}" ]]; then
+  echo "[pre-commit] Python not found. Install Python 3.10+ and run setup first."
+  exit 1
+fi
+
+if ! "${PYTHON_BIN}" -m pytest --version >/dev/null 2>&1; then
+  echo "[pre-commit] pytest is not available in the current environment."
+  echo "[pre-commit] Run: pip install -e \".[dev]\""
+  exit 1
+fi
+
+if ! "${PYTHON_BIN}" -m ruff --version >/dev/null 2>&1; then
+  echo "[pre-commit] ruff is not available in the current environment."
+  echo "[pre-commit] Run: pip install -e \".[dev]\" ruff"
+  exit 1
+fi
+
+echo "[pre-commit] Lint: ruff check src/ tests/ .cursor/hooks/"
+"${PYTHON_BIN}" -m ruff check src/ tests/ .cursor/hooks/
+
+echo "[pre-commit] Test: pytest tests/ -v"
+"${PYTHON_BIN}" -m pytest tests/ -v
+
+echo "[pre-commit] Skill compliance coverage"
+"${PYTHON_BIN}" - <<'PY'
+import pathlib
+import sys
+
+skills = {f.stem for f in pathlib.Path("skills").glob("*.md") if f.name != "README.md"}
+compliance = pathlib.Path("src/omnicursor/compliance.py").read_text()
+missing = [s for s in sorted(skills) if s not in compliance]
+
+if missing:
+    print(f"Skills missing compliance entries: {missing}")
+    sys.exit(1)
+
+print(f"All {len(skills)} skills have compliance entries.")
+PY
+
+echo "[pre-commit] All checks passed."

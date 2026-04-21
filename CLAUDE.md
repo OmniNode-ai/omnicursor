@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Setup
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 
 # Tests
 pytest tests/ -v              # full suite
@@ -17,6 +19,16 @@ pytest tests/ -k "test_debug"   # by name pattern
 # Lint
 ruff check src/ tests/ .cursor/hooks/
 ```
+
+## Local pre-commit gate
+
+- Shared hook path: `.githooks/pre-commit`
+- Runs local CI-parity checks before commit:
+	- `ruff check src/ tests/ .cursor/hooks/`
+	- `pytest tests/ -v`
+	- skill compliance coverage validation
+- Emergency bypass only: `git commit --no-verify`
+- GitHub Actions CI is pull-request based for `main`; rely on local pre-commit checks before opening PRs.
 
 ## Architecture
 

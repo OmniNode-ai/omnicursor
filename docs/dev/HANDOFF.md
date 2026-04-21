@@ -1,6 +1,6 @@
 # OmniCursor Handoff Document
 
-**Date**: 2026-04-01
+**Date**: 2026-04-21
 **Purpose**: Enable any developer or AI session to resume implementation without re-reading the entire codebase.
 
 ---
@@ -74,6 +74,16 @@ Created `skills/merge-planner.md`, `skills/insights-to-plan.md`, `skills/handoff
 - All hook smoke tests pass
 - Library imports cleanly (`agents`, `skills`, `compliance`)
 - 4 unused imports cleaned up (pre-existing lint, not regressions)
+
+### Task 10: Local Pre-Commit Gate + CI Trigger Policy
+
+- Added shared git hook at `.githooks/pre-commit`.
+- Hook runs CI-parity checks before commit:
+	- `ruff check src/ tests/ .cursor/hooks/`
+	- `pytest tests/ -v`
+	- skill compliance coverage validation
+- Repository setup now enables shared hooks via `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit`.
+- GitHub Actions CI trigger is now pull-request based for `main` (no direct `push` trigger in `.github/workflows/ci.yml`).
 
 ---
 
@@ -167,6 +177,8 @@ All tests passing. `pytest tests/ -v` is fast (~sub-second on typical hardware).
 # Setup
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 
 # Tests
 pytest tests/ -v

@@ -17,7 +17,20 @@ OmniCursor has **three layers** — rules and hooks in the IDE, plus a **Python 
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 ```
+
+## Local Pre-Commit Checks
+
+This repo includes a tracked git pre-commit hook in `.githooks/pre-commit`.
+
+- It runs `ruff check src/ tests/ .cursor/hooks/`.
+- It runs `pytest tests/ -v`.
+- It validates skill compliance coverage parity with CI.
+- GitHub Actions CI runs on pull requests to `main`.
+
+Use `git commit --no-verify` only for emergency bypasses.
 
 ## Use in Cursor
 

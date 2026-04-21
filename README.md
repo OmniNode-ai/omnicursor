@@ -13,10 +13,21 @@ Cursor-native adaptation of OmniClaude — **rules**, **hooks**, and **file-back
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 pytest tests/ -v
 ```
 
 See [`docs/QUICKSTART.md`](./docs/QUICKSTART.md) for Cursor setup, hooks, and end-to-end flow.
+
+## Git Pre-Commit Gate
+
+This repo ships a tracked pre-commit hook at `.githooks/pre-commit`.
+
+- It runs CI-parity checks locally before each commit: `ruff`, `pytest`, and skill compliance coverage.
+- Enable it once per clone with `git config core.hooksPath .githooks`.
+- Use `git commit --no-verify` only for emergency bypasses.
+- GitHub Actions CI runs on pull requests to `main`; local pre-commit checks are the first line of defense before opening a PR.
 
 ## Hooks
 
@@ -73,6 +84,8 @@ OmniCursor/
 
 ```bash
 pip install -e ".[dev]"
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
 pytest tests/ -v
 ruff check src/ tests/ .cursor/hooks/
 ```
