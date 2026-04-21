@@ -42,9 +42,9 @@ Cursor supports exactly 4 hook events, registered in `.cursor/hooks.json`:
 
 ---
 
-## Events 1 and 2 — What Was Ported and How Far
+## All 4 Events — What Was Ported and How Far
 
-### Event 1 — `beforeSubmitPrompt` → `user-prompt-submit.py`
+### Event 1 — `beforeSubmitPrompt` → `scripts/user-prompt-submit.py`
 
 OmniClaude fires three separate scripts for `UserPromptSubmit`. Cursor fires one and uses only the last `systemMessage` if multiple scripts fire, so all three concerns were merged into a single script.
 
@@ -56,11 +56,11 @@ OmniClaude fires three separate scripts for `UserPromptSubmit`. Cursor fires one
 - **Agent persona depth** — injects the full agent config: `description`, `instructions` list, `recommended_skill`. The model receives enough context to behave like the selected agent.
 - **Relevance-filtered pattern injection** — patterns scored by domain match (1.0/0.6/0.3 base) + keyword overlap boost (up to +0.4). Only patterns scoring ≥0.7 are injected, ranked by score, capped at 5. Irrelevant patterns excluded rather than injected as noise.
 
-**What was added beyond what OmniClaude does:**
+**What was added beyond OmniClaude:**
 
-- **Fake SessionStart** — `_init_session()` runs on the first prompt of each conversation. Writes `~/.omnicursor/sessions/current.json` with `conversation_id` and `started_at`. Touches a `session_initialized` flag so subsequent calls are no-ops. This is OmniCursor's substitute for `SessionStart`.
+- **Fake SessionStart** — `_init_session()` runs on the first prompt of each conversation. Writes `~/.omnicursor/sessions/current.json` with `conversation_id` and `started_at`. Touches a `session_initialized` flag so subsequent calls are no-ops. This is OmniCursor's substitute for the `SessionStart` event (which Cursor doesn't have). Trigger: `session_initialized` flag file absent from `~/.omnicursor/sessions/<conv_id>/`.
 - **Correlation ID threading** — `_generate_correlation_id()` produces a 12-char hex UUID per prompt. Written into `current.json` as `latest_correlation_id` on every prompt so Events 2–4 can read it and link their log entries back to the triggering prompt.
-- **HTML comment header** — machine-readable metadata block at the top of every `systemMessage`: `agent=`, `confidence=`, `patterns= injected domain=`, `delegation=`, `correlation=`. Parseable by tests without touching the visible Markdown body.
+- **HTML comment header** — machine-readable metadata block at the top of every `systemMessage`: `agent=`, `confidence=`, `patterns=`, `domain=`, `delegation=`, `correlation=`. Parseable by tests without touching the visible Markdown body.
 - **Typed event log** — every call writes `event`, `conversation_id`, `correlation_id`, `generation_id`, `matched_agent`, `score`, `reason`, `patterns_injected`, `delegation_required`, `prompt_snippet` (≤100 chars), `hook_duration_ms` to `events.jsonl`.
 - **Per-turn state reset** — clears `write_count`, `read_count`, `delegated` flag at the start of each prompt.
 
@@ -68,58 +68,113 @@ OmniClaude fires three separate scripts for `UserPromptSubmit`. Cursor fires one
 
 ---
 
-### Event 2 — `beforeShellExecution` → `shell-guard.py`
+### Event 2 — `beforeShellExecution` → `scripts/shell-guard.py`
 
 OmniClaude's closest analog is `pre_tool_use_bash_guard.sh` under `PreToolUse`. In Cursor, `beforeShellExecution` is the only hook that can actually block execution.
 
 **What was ported:**
 
 - **Two-tier guard** — HARD_BLOCK (9 patterns, `"permission": "deny"`) and SOFT_WARN (11 patterns, `"permission": "allow"` + `agentMessage`). HARD_BLOCK always takes priority.
-- **Pattern parity** — identical regex patterns to `on_shell.py`, covering: `rm -rf /`, `rm -rf ~/`, `rm -rf /*`, `mkfs`, `dd if=...of=/dev/`, fork bomb, `--no-verify`, `>/dev/sda`, `base64 --decode | sh` (hard block); `git push --force`, `git reset --hard`, `DROP TABLE/DATABASE`, `TRUNCATE`, `curl|wget ... | sh`, `kill -9`, `chmod 777`, `sudo rm`, `eval` (soft warn).
-- **Correlation threading** — reads `latest_correlation_id` from `current.json` (written by Event 1) so shell guard log entries share the prompt's correlation ID.
-- **Typed event log** — `event`, `conversation_id`, `correlation_id`, `command` (≤500 chars), `decision`, `reason`, `hook_duration_ms`.
+- **Pattern coverage** — HARD_BLOCK: `rm -rf /`, `rm -rf ~/`, `rm -rf /*`, `mkfs`, `dd if=...of=/dev/`, fork bomb, `--no-verify`, `>/dev/sda`, `base64 --decode | sh`. SOFT_WARN: `git push --force`, `git push -f`, `git reset --hard`, `DROP TABLE/DATABASE`, `TRUNCATE`, `curl/wget | sh`, `kill -9`, `chmod 777`, `sudo rm`, `eval`.
+- **Sourcing note** — HARD_BLOCK patterns are hand-picked for OmniCursor, inspired by omniclaude's `bash_guard.py` but not a direct import. SOFT_WARN is entirely OmniCursor-native — the advisory allow+warn tier has no equivalent in omniclaude, which only hard-blocks.
+- **Correlation threading** — reads `latest_correlation_id` from `current.json` (written by Event 1).
+- **Typed event log** — `event`, `conversation_id`, `correlation_id`, `command` (≤500 chars), `decision` (allow/deny/warn), `reason`, `hook_duration_ms`.
 
-**What couldn't be ported:** OmniClaude's bash guard is one of 13+ `PreToolUse` scripts. The other 12 (authorization shims, pipeline gates, scope gates, convention injectors, changeset guards, DoD guards, model router) have no Cursor equivalent — there is no `PreToolUse` surface, and Cursor's `beforeShellExecution` only fires for shell commands, not for file edits or MCP tool calls.
+**What couldn't be ported:** OmniClaude's bash guard is one of 13+ `PreToolUse` scripts. The other 12 (authorization shims, pipeline gates, scope gates, convention injectors, changeset guards, DoD guards, model router) have no Cursor equivalent — Cursor's `beforeShellExecution` only fires for shell commands, not file edits or MCP tool calls.
+
+---
+
+### Event 3 — `afterFileEdit` → `scripts/post-edit.py`
+
+OmniClaude's closest analog is the ruff/TSC quality-check scripts under `PostToolUse`. Cursor fires `afterFileEdit` after every file save. This hook is informational only — stdout is always `{}`.
+
+**What was ported:**
+
+- **Language detection** — 9 extension mappings: `.py` → python, `.ts`/`.tsx` → typescript, `.js`/`.jsx` → javascript, `.yaml`/`.yml` → yaml, `.json` → json, `.md` → markdown; all else → other. Case-insensitive.
+- **Ruff diagnostics** — for Python files only, runs `ruff check <file_path>` (never `--fix`, never modifies any file). Counts finding lines, logs to `~/.omnicursor/lint.jsonl` when findings exist. Returns 0 silently on `FileNotFoundError` or timeout — graceful if ruff is not installed.
+- **Correlation threading** — reads `latest_correlation_id` from `current.json`.
+- **Typed event log** — `event`, `conversation_id`, `correlation_id`, `file_path` (≤500 chars), `edit_count`, `language`, `ruff_findings`, `hook_duration_ms`.
+
+**What couldn't be ported:** OmniClaude's `PostToolUse` fires after any tool call — Write, Bash, MCP, etc. Cursor's `afterFileEdit` only fires for file edits. TSC diagnostics for TypeScript (a PostToolUse script in OmniClaude) are not yet implemented — the language detection wiring is in place but `tsc --noEmit` is not called.
+
+---
+
+### Event 4 — `stop` → `scripts/stop.py`
+
+Fires when Cursor ends the session. This hook is informational only — stdout is always `{}`.
+
+**What was ported:**
+
+- **Session aggregation** — reads `~/.omnicursor/events.jsonl`, filters to the current `conversation_id`, and counts: `prompts_classified`, unique `files_edited`, `languages` (sorted, excluding `"other"`), `shell_commands.allowed/denied/warned`. Duplicate file paths are deduplicated.
+- **Outcome classification** (`derive_session_outcome`) — pure 4-gate decision tree, no side effects:
+  - **Gate 1 — FAILED**: status in `{failed, error, aborted}` OR error markers in corpus (`\w*Error:`, `\w*Exception:`, `Traceback`, `N FAILED`). `0 FAILED` from pytest summaries is excluded.
+  - **Gate 2 — SUCCESS**: `work_done > 0` (file edits + prompt classifications) AND completion markers present (`completed`, `done`, `finished`, `success`).
+  - **Gate 3 — ABANDONED**: no completion markers AND session duration < 60 seconds.
+  - **Gate 4 — UNKNOWN**: catch-all.
+- **Session summary persistence** — writes `~/.omnicursor/sessions/<conversation_id>.json` with the full aggregated summary. Skipped if `conversation_id` is empty.
+- **Correlation threading** — reads `latest_correlation_id` from `current.json`.
+- **Typed event log** — `event`, `conversation_id`, `correlation_id`, `session_status`, `session_outcome`, `session_outcome_reason`, `hook_duration_ms`, `summary` (nested object).
+
+**What couldn't be ported:** OmniClaude's `stop.sh` emits a final Kafka event. No Kafka in OmniCursor. OmniClaude also receives a richer stop payload (tool-call log, token counts); Cursor sends only `{conversation_id, status}`.
 
 ---
 
 ## Implementation
 
-### Files Added
-
-| File | Purpose |
-|---|---|
-| `.cursor/hooks.json` | Hook registration. Updated `beforeSubmitPrompt` → `scripts/user-prompt-submit.py`, `beforeShellExecution` → `scripts/shell-guard.py`. |
-| `.cursor/hooks/lib/_common.py` | Shared library for all hook scripts. Path resolution, `read_stdin`, `write_stdout`, `write_context`, `log_event`, `load_agent_configs`, `read_session_context`. Stdlib only. |
-| `.cursor/hooks/lib/pattern_loader.py` | Thread-safe in-memory pattern cache keyed by domain. `warm_from_json`, `is_stale` (10-min threshold), module-level singleton. |
-| `.cursor/hooks/scripts/user-prompt-submit.py` | Event 1 implementation. Full agent routing, session identity, correlation ID, relevance-filtered patterns, complexity estimator, delegation enforcement, agent persona, HTML header, handoff nudge, typed event log. |
-| `.cursor/hooks/scripts/shell-guard.py` | Event 2 implementation. HARD_BLOCK + SOFT_WARN guard, correlation threading, typed event log. |
-
-### Files Edited
-
-| File | What Changed |
-|---|---|
-| `.cursor/hooks/lib/_common.py` | Added `read_session_context()` — reads `current.json` for Events 2–4 to retrieve `latest_correlation_id`. |
-| `.cursor/hooks/scripts/user-prompt-submit.py` | Added `_update_session_correlation()`, `_init_session()`, `_generate_correlation_id()`, `_estimate_complexity()`, `_score_pattern_relevance()`, `_filter_patterns_by_relevance()`, `_update_session_correlation()`. Updated `build_context()` with `agent_config`, `correlation_id`, `delegation_required` params, HTML comment header, agent persona section, hard vs advisory delegation framing. Updated `main()` to wire all new logic and emit typed events. |
-
-### Architecture
-
-All hook scripts follow the same pattern:
+### File Structure
 
 ```
-Cursor → stdin JSON → script → stdout JSON → Cursor
-                         ↓
-                  ~/.omnicursor/events.jsonl  (append)
-                  ~/.omnicursor/sessions/     (state files)
+.cursor/
+  hooks.json                          ← all 4 events registered
+  hooks/
+    lib/
+      _common.py                      ← shared paths, I/O, logging, session context
+      pattern_loader.py               ← thread-safe learned-patterns cache
+    scripts/
+      user-prompt-submit.py           ← Event 1 (606 lines)
+      shell-guard.py                  ← Event 2 (148 lines)
+      post-edit.py                    ← Event 3 (162 lines)
+      stop.py                         ← Event 4 (321 lines)
 ```
 
-The shared lib (`_common.py`, `pattern_loader.py`) lives at `.cursor/hooks/lib/` and is added to `sys.path` at the top of each script via:
+The legacy scripts (`on_prompt.py`, `on_shell.py`, `on_edit.py`, `on_stop.py`) remain in `.cursor/hooks/` but are no longer registered in `hooks.json`. All active traffic routes through `scripts/`.
+
+### `hooks.json` (current state)
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt":  [{"command": "python3 .cursor/hooks/scripts/user-prompt-submit.py"}],
+    "beforeShellExecution":[{"command": "python3 .cursor/hooks/scripts/shell-guard.py"}],
+    "afterFileEdit":       [{"command": "python3 .cursor/hooks/scripts/post-edit.py"}],
+    "stop":                [{"command": "python3 .cursor/hooks/scripts/stop.py"}]
+  }
+}
+```
+
+### Shared Library (`lib/_common.py`)
+
+All scripts add `lib/` to `sys.path` at startup:
 ```python
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 ```
 
-Session state is file-based under `~/.omnicursor/sessions/<conversation_id>/`:
+Provides: path constants (`OMNICURSOR_DIR`, `EVENTS_LOG`, `SESSIONS_DIR`, `LEARNED_PATTERNS_FILE`, `AGENTS_DIR`), `read_stdin()`, `write_stdout()`, `write_context()`, `log_event()`, `read_session_context()`, `load_agent_configs()`. Stdlib only — no pip dependencies.
 
+### Cross-Event Session Bridge
+
+Event 1 writes `~/.omnicursor/sessions/current.json` on every prompt:
+```json
+{
+  "conversation_id": "abc-123",
+  "started_at": "2026-04-14T00:00:00+00:00",
+  "latest_correlation_id": "a3f9c2d14e8b"
+}
+```
+Events 2–4 read this via `read_session_context()` to thread `correlation_id` into their log entries.
+
+Session state files under `~/.omnicursor/sessions/<conversation_id>/`:
 ```
 session_initialized      — flag: first prompt has run (fake SessionStart)
 handoff_nudge_fired      — flag: nudge has fired this session
@@ -128,46 +183,36 @@ read_count               — per-turn counter reset each prompt
 delegated                — flag cleared each prompt
 ```
 
-`current.json` at `~/.omnicursor/sessions/current.json` is the cross-event bridge:
-```json
-{
-  "conversation_id": "abc-123",
-  "started_at": "2026-04-14T00:00:00+00:00",
-  "latest_correlation_id": "a3f9c2d14e8b"
-}
-```
-Event 1 writes this. Events 2–4 read it via `read_session_context()` to link their log entries to the triggering prompt.
+### Node Contracts
 
-### Tests Added
+Each script has a corresponding YAML node contract in `src/omnicursor/nodes/*/contract.yaml` describing the hook event, script path, blocking status, and capabilities. Validated at test time by `tests/test_node_contracts.py`.
 
-All tests live in `tests/` and run with `pytest tests/ -v -s`. Total: **271 passed, 22 skipped** (skipped = Events 3 and 4 stubs).
+---
 
-**Event 1 tests** — `tests/test_suite_event1_prompt.py` — **115 tests**, 10 classes:
+## Tests
 
-| Class | Tests | What it covers |
-|---|---|---|
-| `TestClassifyPrompt` | 8 | Three-strategy scoring, fallback, case-insensitivity, highest score wins |
-| `TestIsComplexUnstructured` | 11 | Length boundary (49/50), structure markers, skill prefix suppression |
-| `TestNudgeState` | 5 | Fresh session nudges, idempotent after fire, session isolation |
-| `TestResetTurnState` | 5 | write/read count reset, delegated flag removal |
-| `TestBuildContext` | 14 | Routing section, agent name, confidence, delegation threshold, patterns, nudge firing logic |
-| `TestFullPipeline` | 6 | stdin → stdout JSON round-trip, systemMessage shape, routing and delegation in output |
-| `TestSessionIdentity` | 7 | `_init_session` flag creation, `current.json` written, idempotency, multi-session isolation |
-| `TestCorrelationId` | 5 | 12-char hex format, uniqueness, header injection, absent when empty, logged by main |
-| `TestPatternRelevance` | 10 | Domain scoring (1.0/0.6/0.3), keyword boost, ≥0.7 filter, ranking, cap at 5, empty input |
-| `TestComplexityEstimator` | 8 | Length gate, complex verb + connective, two verbs, no verbs, single verb edge cases |
-| `TestAgentPersona` | 6 | Description, instructions, recommended skill in output; no config graceful |
-| `TestHtmlCommentHeader` | 8 | agent=, confidence=, patterns=, delegation=advisory/required, correlation=, header before body |
-| `TestDelegationRequired` | 7 | MUST keyword, advisory framing, threshold reference, main wires complexity to delegation |
-| `TestTypedEventSchema` | 10 | All required fields present and typed correctly, snippet truncation |
-| `TestSessionCorrelationUpdate` | 6 | Writes to `current.json`, creates if missing, overwrites, preserves `started_at`, main wires it |
+All tests run with `pytest tests/ -v`. **378 passed, 0 skipped.**
 
-**Event 2 tests** — `tests/test_suite_event2_shell.py` — **36 tests**, 5 classes:
+| File | Tests | Classes | What it covers |
+|---|---|---|---|
+| `test_suite_event1_prompt.py` | 115 | 14 | Session identity, correlation ID, pattern relevance, complexity estimator, agent persona, HTML header, delegation, typed schema, session correlation update |
+| `test_suite_event2_shell.py` | 36 | 5 | HARD_BLOCK (9 patterns), SOFT_WARN (8 patterns), safe commands, correlation threading, typed event schema |
+| `test_suite_event3_edit.py` | 55 | 6 | Language detection (15 cases), ruff diagnostics (10), handle_edit core (10), correlation threading (5), typed schema (12), robustness (3) |
+| `test_suite_event4_stop.py` | 48 | 6 | Outcome gates (17), session aggregation (11), summary persistence (3), correlation threading (4), typed schema (11), robustness (2) |
+| Other test files | 124 | — | Agents, skills, compliance, node contracts, schemas |
 
-| Class | Tests | What it covers |
-|---|---|---|
-| `TestHardBlock` | 9 | All 9 HARD_BLOCK patterns deny, userMessage present, priority over SOFT_WARN |
-| `TestSoftWarn` | 8 | All 8 representative SOFT_WARN patterns allow with agentMessage |
-| `TestSafeAndMisc` | 3 | Safe commands allow without agentMessage, empty command allows, event logged |
-| `TestCorrelationThreading` | 6 | ID read from session context, missing context uses empty string, ID present on all decision types |
-| `TestTypedEventSchema` | 10 | All fields present and typed, command truncation, all three decision values logged correctly |
+All hook test files use `importlib.util.spec_from_file_location` to force-load each script directly from disk, avoiding `sys.modules` collisions between the old and new `_common.py` versions.
+
+---
+
+## What OmniClaude Does That OmniCursor Cannot
+
+| OmniClaude capability | Why it can't be ported |
+|---|---|
+| `PreToolUse`/`PostToolUse` on any tool | Cursor only has `afterFileEdit` — Write/Bash/MCP calls are invisible to hooks |
+| Multiple scripts per event with tool matchers | Cursor fires one script per event, no matcher system |
+| `SessionStart` hook | No Cursor equivalent; faked via first-prompt detection in Event 1 |
+| Rich `Stop` payload | Cursor sends only `{conversation_id, status}` — no tool-call log, no token counts |
+| Kafka / external bus emission | Not feasible in stdlib-only hooks; OmniCursor uses append-only JSONL |
+| Auto-checkpoint on edit | No generic `PostToolUse` means no `git checkpoint` after every Write call |
+| TSC diagnostics on TypeScript | Language detection wiring is in place in `post-edit.py`; `tsc --noEmit` not yet called |
