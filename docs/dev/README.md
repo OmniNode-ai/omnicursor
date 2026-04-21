@@ -15,5 +15,7 @@ Planning artifacts, continuity notes, and capstone-oriented material that are no
 | [OMNICURSOR_SYSTEM_DESIGN.md](./OMNICURSOR_SYSTEM_DESIGN.md) | Systems design diagrams (Mermaid): IDE layers + optional OmniNode integration. |
 | [HOW_TO_RUN_IN_CURSOR.md](./HOW_TO_RUN_IN_CURSOR.md) | Original starter-kit walkthrough (historical; see QUICKSTART for current setup). |
 | [EXECUTION_PLAN.md](./EXECUTION_PLAN.md) | Planning artifact for the course / team. |
+| [MIGRATION_PHASES_HANDOFF.md](./MIGRATION_PHASES_HANDOFF.md) | **Port track:** agents, skills, ONEX nodes & contracts (hooks / Kafka / Linear / MCP / pattern writes: see migration plan). |
+| [SPONSOR_ALIGNMENT_2026-04-16.md](./SPONSOR_ALIGNMENT_2026-04-16.md) | Capstone vs long-term scope: hooks approved, omnimarket-first bridge, local patterns. |
 | [SKILL_TRANSLATION_TEMPLATE.md](./SKILL_TRANSLATION_TEMPLATE.md) | SKILL.md → `.mdc` port template. |
 | [handoffs/](./handoffs/) | Dated session handoff manifests. |

@@ -6,9 +6,22 @@ import json
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from .schemas import AgentContext
+
+__all__ = [
+    "AGENT_CONTEXTS",
+    "ALIASES",
+    "DEFAULT_CONTEXT",
+    "HARD_FLOOR",
+    "get_agent_context",
+    "list_agents",
+    "match_agent",
+    "match_agent_candidates",
+    "normalize_category",
+    "reload_agents",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +233,48 @@ except OSError:
 
 
 # ---------------------------------------------------------------------------
+# Synthetic activation patterns for hardcoded agents
+# ---------------------------------------------------------------------------
+
+def _build_hardcoded_raw_agents() -> List[Dict[str, Any]]:
+    """Build raw agent dicts for hardcoded AGENT_CONTEXTS using ALIASES as triggers.
+
+    This lets match_agent_candidates score hardcoded agents alongside JSON ones,
+    closing the gap where prompts like "write me a plan" matched nothing.
+    """
+    # Reverse ALIASES: category -> list of alias keys that point to it
+    reverse: Dict[str, List[str]] = {}
+    for alias, category in ALIASES.items():
+        reverse.setdefault(category, []).append(alias)
+
+    result = []
+    for category, ctx in AGENT_CONTEXTS.items():
+        triggers = sorted({category} | set(reverse.get(category, [])))
+        result.append({
+            "name": ctx.agent_name,
+            "category": category,
+            "activation_patterns": {
+                "explicit_triggers": triggers,
+                "context_triggers": [],
+                "activation_keywords": triggers,
+            },
+        })
+    return result
+
+
+_HARDCODED_RAW_AGENTS: List[Dict[str, Any]] = _build_hardcoded_raw_agents()
+
+# JSON categories that have their own file — these shadow the hardcoded entries.
+_JSON_CATEGORIES: Set[str] = {a.get("category", "") for a in _RAW_JSON_AGENTS}
+
+# Combined scoring pool: JSON agents first; hardcoded only where JSON doesn't already cover.
+_ALL_RAW_AGENTS: List[Dict[str, Any]] = _RAW_JSON_AGENTS + [
+    a for a in _HARDCODED_RAW_AGENTS
+    if a.get("category", "") not in _JSON_CATEGORIES
+]
+
+
+# ---------------------------------------------------------------------------
 # Category normalization
 # ---------------------------------------------------------------------------
 
@@ -342,18 +397,18 @@ def match_agent_candidates(
 ) -> List[Tuple[str, float, str]]:
     """Match a prompt against all agents using multi-strategy scoring.
 
-    Returns a list of ``(category, score, reason)`` tuples sorted by
-    descending score.  Only candidates at or above ``HARD_FLOOR`` are
-    included.
+    Scores both JSON agents and hardcoded AGENT_CONTEXTS (via synthesized
+    activation patterns). Returns ``(category, score, reason)`` tuples sorted
+    by descending score. Only candidates at or above ``HARD_FLOOR`` included.
     """
-    if not prompt or not _RAW_JSON_AGENTS:
+    if not prompt:
         return []
 
     prompt_lower = prompt.lower()
     prompt_words = set(_extract_keywords(prompt))
     candidates: List[Tuple[str, float, str]] = []
 
-    for agent in _RAW_JSON_AGENTS:
+    for agent in _ALL_RAW_AGENTS:
         category = agent.get("category", "")
         if not category:
             continue
@@ -368,13 +423,44 @@ def match_agent_candidates(
 def match_agent(prompt: str) -> AgentContext:
     """Match a prompt to the best agent using multi-strategy scoring.
 
-    Uses the JSON agent configs loaded from ``.cursor/agents/*.json``.
-    Falls back to ``DEFAULT_CONTEXT`` if no agent exceeds ``HARD_FLOOR``.
-
-    Backward-compatible: same signature and return type as the original.
+    Considers all agents (JSON + hardcoded). Falls back to ``DEFAULT_CONTEXT``
+    if no agent exceeds ``HARD_FLOOR``.
     """
     candidates = match_agent_candidates(prompt)
     if candidates:
         best_category = candidates[0][0]
         return _MERGED_CONTEXTS.get(best_category, DEFAULT_CONTEXT)
     return DEFAULT_CONTEXT
+
+
+def list_agents() -> List[str]:
+    """Return sorted list of all known agent names across JSON and hardcoded sources."""
+    return sorted({ctx.agent_name for ctx in _MERGED_CONTEXTS.values()})
+
+
+def reload_agents() -> None:
+    """Reload JSON agents from disk and rebuild the merged scoring pool.
+
+    Useful in tests or after adding new ``.cursor/agents/*.json`` files without
+    restarting the process.
+    """
+    global _JSON_AGENTS, _RAW_JSON_AGENTS, _JSON_CATEGORIES, _ALL_RAW_AGENTS, _MERGED_CONTEXTS
+
+    _JSON_AGENTS = _load_json_agents()
+    _RAW_JSON_AGENTS = []
+    try:
+        if _AGENTS_DIR.is_dir():
+            for _p in sorted(_AGENTS_DIR.glob("*.json")):
+                try:
+                    _RAW_JSON_AGENTS.append(json.loads(_p.read_text(encoding="utf-8")))
+                except (json.JSONDecodeError, OSError):
+                    continue
+    except OSError:
+        pass
+
+    _JSON_CATEGORIES = {a.get("category", "") for a in _RAW_JSON_AGENTS}
+    _ALL_RAW_AGENTS = _RAW_JSON_AGENTS + [
+        a for a in _HARDCODED_RAW_AGENTS
+        if a.get("category", "") not in _JSON_CATEGORIES
+    ]
+    _MERGED_CONTEXTS = {**AGENT_CONTEXTS, **_JSON_AGENTS}

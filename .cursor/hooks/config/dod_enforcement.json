@@ -1,0 +1,8 @@
+{
+  "dod_enabled": true,
+  "dod_linear_transition_regex": "(?i)(linear\\s+issue\\b.*\\b(done|completed)\\b|\\blinear\\b.*\\b(--state|-s)\\s+(done|completed)\\b)",
+  "dispatch_enabled": false,
+  "dispatch_claim_regexes": [
+    "(?i)^git\\s+commit\\s+--amend\\b"
+  ]
+}

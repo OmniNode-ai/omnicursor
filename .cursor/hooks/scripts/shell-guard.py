@@ -15,15 +15,27 @@ Typed event schema
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
-from _common import log_event, read_session_context, read_stdin, write_stdout
+from _common import (
+    SESSIONS_DIR,
+    log_event,
+    read_session_context,
+    read_session_json,
+    read_stdin,
+    write_stdout,
+)
+
+_HOOKS_DIR: Path = Path(__file__).resolve().parent.parent
+_DOD_CONFIG_PATH: Path = _HOOKS_DIR / "config" / "dod_enforcement.json"
 
 
 # ---------------------------------------------------------------------------
@@ -70,14 +82,45 @@ SOFT_WARN: List[Tuple[re.Pattern[str], str]] = [
 
 
 # ---------------------------------------------------------------------------
-# Guard logic
+# DoD + dispatch claim (Phase 1 migration)
 # ---------------------------------------------------------------------------
 
 
-def guard_command(command: str) -> Dict[str, Any]:
+def _load_dod_config() -> Dict[str, Any]:
+    defaults: Dict[str, Any] = {
+        "dod_enabled": False,
+        "dod_linear_transition_regex": "",
+        "dispatch_enabled": False,
+        "dispatch_claim_regexes": [],
+    }
+    try:
+        raw = json.loads(_DOD_CONFIG_PATH.read_text(encoding="utf-8"))
+        if isinstance(raw, dict):
+            merged = {**defaults, **raw}
+            if not isinstance(merged.get("dispatch_claim_regexes"), list):
+                merged["dispatch_claim_regexes"] = []
+            return merged
+    except (OSError, json.JSONDecodeError, TypeError):
+        pass
+    return defaults
+
+
+def _dispatch_claim_path(conversation_id: str, sessions_root: Path) -> Path:
+    return sessions_root / conversation_id / "dispatch_claim"
+
+
+def guard_command(
+    command: str,
+    *,
+    conversation_id: str = "",
+    sessions_root: Optional[Path] = None,
+) -> Dict[str, Any]:
     """Return Cursor hook response JSON for *command*."""
     if not command:
         return {"permission": "allow"}
+
+    sessions_base = sessions_root if sessions_root is not None else None
+    cfg = _load_dod_config()
 
     # Tier 1 — HARD_BLOCK
     for pattern in HARD_BLOCK:
@@ -86,6 +129,55 @@ def guard_command(command: str) -> Dict[str, Any]:
                 "permission": "deny",
                 "userMessage": f"Blocked: command matches a destructive pattern ({pattern.pattern})",
             }
+
+    # Tier 1b — Definition-of-Done (Linear transition requires CI signal in session)
+    if (
+        conversation_id
+        and cfg.get("dod_enabled")
+        and os.environ.get("OMNICURSOR_DOD_BYPASS", "") != "1"
+    ):
+        dod_rx = str(cfg.get("dod_linear_transition_regex") or "")
+        try:
+            dod_match = bool(dod_rx and re.search(dod_rx, command))
+        except re.error:
+            dod_match = False
+        if dod_match:
+            state = read_session_json(conversation_id, sessions_root=sessions_base)
+            if not state.get("ci_passing"):
+                return {
+                    "permission": "deny",
+                    "userMessage": (
+                        "Blocked (DoD): Linear done/completed transitions require "
+                        "`ci_passing: true` in ~/.omnicursor/sessions/<conversation_id>.json "
+                        "(set after CI green) or set OMNICURSOR_DOD_BYPASS=1 for local dev."
+                    ),
+                }
+
+    # Tier 1c — Dispatch claim file for configured medium-risk commands
+    if (
+        conversation_id
+        and cfg.get("dispatch_enabled")
+        and os.environ.get("OMNICURSOR_DISPATCH_BYPASS", "") != "1"
+    ):
+        patterns = cfg.get("dispatch_claim_regexes") or []
+        for pat in patterns:
+            if not pat or not isinstance(pat, str):
+                continue
+            try:
+                if re.search(pat, command):
+                    root = sessions_base if sessions_base is not None else SESSIONS_DIR
+                    claim = _dispatch_claim_path(conversation_id, root)
+                    if not claim.exists():
+                        return {
+                            "permission": "deny",
+                            "userMessage": (
+                                "Blocked (dispatch claim): touch "
+                                f"{claim} after registering intent, or set "
+                                "OMNICURSOR_DISPATCH_BYPASS=1."
+                            ),
+                        }
+            except re.error:
+                continue
 
     # Tier 2 — SOFT_WARN
     for pattern, reason in SOFT_WARN:
@@ -115,7 +207,7 @@ def main() -> None:
         session = read_session_context()
         correlation_id: str = session.get("latest_correlation_id", "")
 
-        response = guard_command(command)
+        response = guard_command(command, conversation_id=conversation_id)
 
         if response.get("permission") == "deny":
             decision = "deny"

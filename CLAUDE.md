@@ -108,6 +108,7 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 - `schemas.py` defines 5 Pydantic v2 models: `AgentContext`, `SkillDocument`, `ComplianceResult`, `PatternRecord`, `DatabaseStatus`. The agents, skills, and compliance modules depend on these models.
 - When adding a new agent: create `.cursor/agents/<name>.json` with `name`, `description`, `category`, `activation_patterns` (must include `explicit_triggers`, `context_triggers`, and `activation_keywords`), `instructions`, `recommended_skill`. It auto-loads on startup.
 - When adding a new skill: create `skills/<name>.md`, then add a compliance registry entry in `compliance.py` with 3–5 keyword checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
+- **Port track** (agents, skills, ONEX nodes & contracts from OmniClaude): `docs/dev/MIGRATION_PHASES_HANDOFF.md`. Hooks, Kafka, Linear-in-hooks, MCP bridge, and authoritative pattern writes are covered in `docs/OMNICURSOR_MIGRATION_PLAN.md` / other tracks.
 
 ## Source-of-truth hierarchy
 
@@ -116,5 +117,5 @@ When documents disagree, use this order:
 1. Actual current codebase behavior
 2. This file (`CLAUDE.md`) — repo conventions and architecture overview
 3. `docs/dev/OMNICURSOR_IMPLEMENTATION_BRIEF.md` — implementation decisions
-4. `omnicursor-team-guidance.md` — demo-focused guidance from Jonah
+4. `omnicursor-team-guidance.md` — demo-focused guidance (local; gitignored)
 5. `omniclaude-main/` — read-only reference library

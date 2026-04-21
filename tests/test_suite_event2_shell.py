@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util as _ilu
 import io
+import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -284,3 +285,87 @@ class TestTypedEventSchema:
 
     def test_allow_decision_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert self._run(monkeypatch, command="git status")["decision"] == "allow"
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 — DoD + dispatch claim
+# ---------------------------------------------------------------------------
+
+
+class TestDoDAndDispatch:
+    def test_linear_done_denied_without_ci_passing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sessions = tmp_path / "sessions"
+        sessions.mkdir()
+        (sessions / "conv-a.json").write_text(
+            json.dumps({"conversation_id": "conv-a", "ci_passing": False}),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OMNICURSOR_DOD_BYPASS", "")
+        r = _mod.guard_command(
+            "linear issue update OMN-123 --state Done",
+            conversation_id="conv-a",
+            sessions_root=sessions,
+        )
+        assert r["permission"] == "deny"
+        assert "DoD" in r.get("userMessage", "")
+
+    def test_linear_done_allowed_when_ci_passing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sessions = tmp_path / "sessions"
+        sessions.mkdir()
+        (sessions / "conv-b.json").write_text(
+            json.dumps({"ci_passing": True}),
+            encoding="utf-8",
+        )
+        r = _mod.guard_command(
+            "linear issue update OMN-123 --state Done",
+            conversation_id="conv-b",
+            sessions_root=sessions,
+        )
+        assert r["permission"] == "allow"
+
+    def test_dod_bypass_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        sessions = tmp_path / "sessions"
+        sessions.mkdir()
+        (sessions / "conv-c.json").write_text(json.dumps({"ci_passing": False}))
+        monkeypatch.setenv("OMNICURSOR_DOD_BYPASS", "1")
+        r = _mod.guard_command(
+            "linear issue update OMN-123 --state Done",
+            conversation_id="conv-c",
+            sessions_root=sessions,
+        )
+        assert r["permission"] == "allow"
+        monkeypatch.delenv("OMNICURSOR_DOD_BYPASS", raising=False)
+
+    def test_dispatch_claim_enforced_when_enabled(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sessions = tmp_path / "sessions"
+        (sessions / "conv-d").mkdir(parents=True)
+        monkeypatch.setattr(
+            _mod,
+            "_load_dod_config",
+            lambda: {
+                "dod_enabled": False,
+                "dod_linear_transition_regex": "",
+                "dispatch_enabled": True,
+                "dispatch_claim_regexes": [r"(?i)^git\s+commit\s+--amend\b"],
+            },
+        )
+        monkeypatch.delenv("OMNICURSOR_DISPATCH_BYPASS", raising=False)
+        r = _mod.guard_command(
+            "git commit --amend --no-edit",
+            conversation_id="conv-d",
+            sessions_root=sessions,
+        )
+        assert r["permission"] == "deny"
+        (sessions / "conv-d" / "dispatch_claim").touch()
+        r2 = _mod.guard_command(
+            "git commit --amend --no-edit",
+            conversation_id="conv-d",
+            sessions_root=sessions,
+        )
+        assert r2["permission"] == "allow"

@@ -32,6 +32,12 @@ _lib_common = _load("_common", _LIB / "_common.py")
 _mod = _load("stop", _SCRIPTS / "stop.py")
 
 
+def _stub_stop_emit_and_pattern_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Phase 1: stop.py emits on socket + syncs patterns — stub for isolated tests."""
+    monkeypatch.setattr(_mod, "send_event", lambda *a, **k: False)
+    monkeypatch.setattr(_mod, "sync_learned_patterns", lambda *a, **k: False)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -332,6 +338,23 @@ class TestSessionSummaryPersistence:
         data = json.loads(written.read_text())
         assert data["session_outcome"] == "success"
 
+    def test_summary_merge_preserves_ci_passing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sessions = tmp_path / "sessions"
+        sessions.mkdir()
+        monkeypatch.setattr(_mod, "SESSIONS_DIR", sessions)
+        monkeypatch.setattr(_lib_common, "SESSIONS_DIR", sessions)
+        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        pre = sessions / "c-001.json"
+        pre.write_text(json.dumps({"ci_passing": True, "started_at": "2026-01-01"}))
+        summary = {"conversation_id": "c-001", "session_outcome": "success"}
+        _mod._write_session_summary("c-001", summary)
+        data = json.loads((sessions / "c-001.json").read_text())
+        assert data["session_outcome"] == "success"
+        assert data["ci_passing"] is True
+        assert data["started_at"] == "2026-01-01"
+
     def test_empty_conversation_id_skips_write(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -344,6 +367,7 @@ class TestSessionSummaryPersistence:
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "", "status": "completed"})
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         assert list(sessions.iterdir()) == []
@@ -379,6 +403,7 @@ class TestCorrelationThreading:
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         return events_out[0]
@@ -427,6 +452,7 @@ class TestTypedEventSchema:
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         return events_out[0]
@@ -463,6 +489,7 @@ class TestTypedEventSchema:
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         buf = io.StringIO()
         monkeypatch.setattr(sys, "stdout", buf)
         _mod.main()
@@ -475,6 +502,7 @@ class TestTypedEventSchema:
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         assert len(events_out) == 1
@@ -506,6 +534,7 @@ class TestRobustness:
         monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
         buf = io.StringIO()
         monkeypatch.setattr(sys, "stdout", buf)
         _mod.main()

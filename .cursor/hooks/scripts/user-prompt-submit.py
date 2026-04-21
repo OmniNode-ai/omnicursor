@@ -47,9 +47,11 @@ from _common import (
     ensure_dirs,
     load_agent_configs,
     log_event,
+    merge_session_json,
     read_stdin,
     write_context,
 )
+from emit_client import send_event
 from pattern_loader import get_pattern_cache
 
 
@@ -232,31 +234,56 @@ def _update_session_correlation(conversation_id: str, correlation_id: str) -> No
         pass
 
 
-# Fake SessionStart: fires on the first beforeSubmitPrompt call per conversation.
-# Trigger: session_initialized flag file absent from ~/.omnicursor/sessions/<conv_id>/
-def _init_session(conversation_id: str) -> None:
+# Fake SessionStart (Cursor has no session-open hook): first beforeSubmitPrompt per
+# Cursor conversation_id. Trigger rule: ~/.omnicursor/sessions/<conversation_id>/
+# exists but session_initialized is absent — we touch the flag and write state once.
+# Same conversation_id reuses the session until Cursor starts a new chat (new id).
+def _init_session(conversation_id: str) -> bool:
     """On the FIRST beforeSubmitPrompt call for a conversation:
     - Touch a ``session_initialized`` flag so subsequent calls are no-ops.
     - Write ``~/.omnicursor/sessions/current.json`` so Events 2–4 can read
       the active conversation_id without receiving it from Cursor directly.
+    - Create / merge ``~/.omnicursor/sessions/<conversation_id>.json`` (session state).
 
-    Idempotent: subsequent calls with the same conversation_id do nothing.
+    Returns True if this invocation performed first-prompt initialization.
+    Idempotent: subsequent calls with the same conversation_id return False.
     """
     d = _session_dir(conversation_id)
     if not d:
-        return
+        return False
     flag = d / "session_initialized"
     if flag.exists():
-        return
+        return False
     try:
         flag.touch()
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         current = SESSIONS_DIR / "current.json"
         current.write_text(json.dumps({
             "conversation_id": conversation_id,
-            "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "started_at": now,
         }))
+        merge_session_json(
+            conversation_id,
+            {
+                "conversation_id": conversation_id,
+                "started_at": now,
+                "first_prompt_at": now,
+                "last_prompt_at": now,
+                "ci_passing": False,
+            },
+            sessions_root=SESSIONS_DIR,
+        )
+        return True
     except OSError:
-        pass
+        return False
+
+
+def _bump_session_prompt_timestamp(conversation_id: str) -> None:
+    """Update last_prompt_at for recurring prompts in the same conversation."""
+    if not conversation_id:
+        return
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    merge_session_json(conversation_id, {"last_prompt_at": now}, sessions_root=SESSIONS_DIR)
 
 
 # ---------------------------------------------------------------------------
@@ -558,9 +585,11 @@ def main() -> None:
             (a for a in agents if a.get("name") == agent_name), {}
         )
 
-        # Session identity: write current.json on first prompt of session,
+        # Session identity: write current.json + sessions/<id>.json on first prompt,
         # then update the correlation_id so Events 2–4 can read it.
-        _init_session(conversation_id)
+        first_prompt = _init_session(conversation_id)
+        if not first_prompt:
+            _bump_session_prompt_timestamp(conversation_id)
         _update_session_correlation(conversation_id, correlation_id)
         reset_turn_state(conversation_id)
 
@@ -591,6 +620,31 @@ def main() -> None:
             "prompt_snippet": prompt[:100],
             "hook_duration_ms": hook_ms,
         })
+
+        send_event(
+            "onex.cmd.omnicursor.cursor-hook-event.v1",
+            {
+                "hook": "beforeSubmitPrompt",
+                "conversation_id": conversation_id,
+                "correlation_id": correlation_id,
+                "generation_id": generation_id,
+                "matched_agent": agent_name,
+                "score": round(score, 4),
+                "reason": reason,
+                "patterns_injected": len(patterns),
+                "delegation_required": delegation_required,
+            },
+        )
+        if delegation_required:
+            send_event(
+                "onex.cmd.omnicursor.node-delegation-request.v1",
+                {
+                    "conversation_id": conversation_id,
+                    "correlation_id": correlation_id,
+                    "prompt_excerpt": prompt[:2000],
+                    "target_orchestrator": "node_delegation_orchestrator",
+                },
+            )
     except Exception:
         pass
 

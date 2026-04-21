@@ -17,7 +17,7 @@ import datetime
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +40,58 @@ OMNICURSOR_DIR: Path = Path.home() / ".omnicursor"
 EVENTS_LOG: Path = OMNICURSOR_DIR / "events.jsonl"
 SESSIONS_DIR: Path = OMNICURSOR_DIR / "sessions"
 LEARNED_PATTERNS_FILE: Path = OMNICURSOR_DIR / "learned_patterns.json"
+
+
+# ---------------------------------------------------------------------------
+# Per-conversation session JSON (~/.omnicursor/sessions/<id>.json)
+# ---------------------------------------------------------------------------
+
+
+def session_json_path(
+    conversation_id: str,
+    *,
+    sessions_root: Optional[Path] = None,
+) -> Path:
+    root = sessions_root if sessions_root is not None else SESSIONS_DIR
+    return root / f"{conversation_id}.json"
+
+
+def read_session_json(
+    conversation_id: str,
+    *,
+    sessions_root: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Read merged session state; returns {} if missing or invalid."""
+    if not conversation_id:
+        return {}
+    root = sessions_root if sessions_root is not None else SESSIONS_DIR
+    path = root / f"{conversation_id}.json"
+    try:
+        if not path.exists():
+            return {}
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError, TypeError):
+        return {}
+
+
+def merge_session_json(
+    conversation_id: str,
+    updates: Dict[str, Any],
+    *,
+    sessions_root: Optional[Path] = None,
+) -> None:
+    """Merge *updates* into sessions/<id>.json (create if absent). Never raises."""
+    if not conversation_id:
+        return
+    try:
+        ensure_dirs()
+        path = session_json_path(conversation_id, sessions_root=sessions_root)
+        data = read_session_json(conversation_id, sessions_root=sessions_root)
+        data.update(updates)
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------

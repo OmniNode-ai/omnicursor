@@ -24,7 +24,7 @@ When documents disagree:
 1. Actual current codebase behavior
 2. `CLAUDE.md` — repo conventions and architecture overview
 3. `docs/dev/OMNICURSOR_IMPLEMENTATION_BRIEF.md` — implementation decisions
-4. `omnicursor-team-guidance.md` — Jonah's demo-focused guidance with code examples
+4. `omnicursor-team-guidance.md` — demo-focused guidance with code examples (local / gitignored)
 5. `omniclaude-main/` — reference library, never a source of mandatory parity
 
 ---
@@ -130,7 +130,7 @@ All tests passing. `pytest tests/ -v` is fast (~sub-second on typical hardware).
 
 ---
 
-## 5. Demo Success Criteria (from Jonah)
+## 5. Demo Success Criteria (from team guidance)
 
 | # | What to Show | Status |
 |---|-------------|--------|
@@ -143,11 +143,26 @@ All tests passing. `pytest tests/ -v` is fast (~sub-second on typical hardware).
 
 ## 6. What Remains
 
+### Port track (agents, skills, ONEX nodes & contracts)
+
+Use **`docs/dev/MIGRATION_PHASES_HANDOFF.md`** as the checklist. In short:
+
+- **Agents** — grow `.cursor/agents/*.json` toward OmniClaude parity; keep routing tests green.
+- **Skills** — port `skills/*.md`, register in `compliance.py`, add rules where needed (Bucket 1 first).
+- **Nodes** — implement or extend `src/omnicursor/nodes/*` (`contract.yaml`, handlers, tests).
+
+This track **does not** include Kafka daemon work, Linear-in-hooks Phase 6, omnimarket MCP, or authoritative pattern DB writes — see **`docs/OMNICURSOR_MIGRATION_PLAN.md`** for those.
+
+### Other tracks (outside the port checklist)
+
 | Item | Priority | Description |
 |------|----------|-------------|
-| Pattern writer UX | High | Script or small flow to append `learned_patterns.json` — completes demo criterion 3 |
-| Seed `learned_patterns.json` | Medium | Ship a starter JSON file so the demo has pattern data out of the box |
-| Valkey integration | Deferred | JSON file persistence works; Valkey is a future performance upgrade |
+| Pattern writer UX / PG | Varies | Persistence track — append or store patterns; completes richer demo criterion 3 when owned |
+| Seed `learned_patterns.json` | Medium | Optional demo data |
+| Hooks Phase 6 (Linear, DoD in hooks) | Varies | Hooks + rules track per migration plan |
+| Kafka / emit daemon (Phase 5) | Varies | Infra / team bus |
+| Omnimarket MCP bridge | Sponsor | Integration track |
+| Valkey integration | Deferred | Performance upgrade |
 | `beforeMCPExecution` / `beforeReadFile` hooks | Deferred | Phase 3B — not needed for MVP |
 
 ---
@@ -207,8 +222,9 @@ Paste this as a preamble:
 Read these files to build working context:
 - CLAUDE.md (conventions and architecture overview)
 - docs/dev/HANDOFF.md (current state and remaining tasks)
+- docs/dev/MIGRATION_PHASES_HANDOFF.md (port track: agents, skills, nodes — if that is your scope)
 - docs/dev/OMNICURSOR_IMPLEMENTATION_BRIEF.md (implementation decisions)
-- omnicursor-team-guidance.md (Jonah's guidance)
+- omnicursor-team-guidance.md (demo-focused guidance)
 - .cursor/hooks/on_prompt.py, _common.py, pattern_loader.py, on_shell.py, on_stop.py
 - src/omnicursor/agents.py, compliance.py, skills.py
 ```

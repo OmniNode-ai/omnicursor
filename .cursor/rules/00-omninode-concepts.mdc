@@ -61,6 +61,30 @@ Stages 4–5 require external services (Bucket 3); they are outside in-repo Curs
 
 ---
 
+## Cursor compaction (PreCompact substitute)
+
+Cursor does not expose a **PreCompact** hook. Before context is compacted or when the session is long, preserve critical state yourself:
+
+- **Session facts** live in `~/.omnicursor/sessions/<conversation_id>.json` (updated by hooks). Do not rely only on chat memory for ticket IDs, CI status, or routing outcomes.
+- Re-open or `@file` local plans under `docs/plans/` rather than expecting the model to recall pre-compaction detail.
+
+---
+
+## Dispatch guard (non-shell tools)
+
+There is **no** Cursor hook that gates `Edit` / `Write` / `Read` tool calls. The omniclaude **dispatch-claim** behavior is approximated as follows:
+
+1. **Shell:** `beforeShellExecution` may require a claim file for commands configured in `.cursor/hooks/config/dod_enforcement.json` (see `dispatch_enabled` / `dispatch_claim_regexes`). Create an empty `~/.omnicursor/sessions/<conversation_id>/dispatch_claim` after you have explicitly registered intent to run that command, or set `OMNICURSOR_DISPATCH_BYPASS=1` for local work.
+2. **Edits / reads:** Follow this rule and `01-codebase-research.mdc` — no automatic enforcement; violations are a process failure, not a hook failure.
+
+---
+
+## Definition-of-Done (Linear shell)
+
+If you use the **Linear CLI** from the integrated terminal to move an issue to **Done** / **completed**, `beforeShellExecution` blocks the command unless `ci_passing` is `true` in `~/.omnicursor/sessions/<conversation_id>.json` (set after CI is green) or `OMNICURSOR_DOD_BYPASS=1`. Rules still cannot call Linear; this guard is **shell-only**.
+
+---
+
 ## File Writing Outputs
 
 Writing to `docs/plans/` is an **output action**, not an external dependency.

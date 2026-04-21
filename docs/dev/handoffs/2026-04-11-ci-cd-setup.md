@@ -3,6 +3,8 @@
 **Date**: 2026-04-11
 **Focus**: CI/CD pipeline setup — GitHub Actions for lint, tests, and docs validation
 
+> **Update (2026-04-16):** Sponsor feedback favors **omnimarket-first MCP bridge** over direct OmniIntelligence APIs for capstone integration. See [SPONSOR_ALIGNMENT_2026-04-16.md](../SPONSOR_ALIGNMENT_2026-04-16.md). The “OmniIntelligence bridge” line in **Recommended Next Actions** below is **superseded** for capstone scope.
+
 ## What Was Done
 
 - Created `.github/workflows/ci.yml` — the first CI pipeline for OmniCursor
@@ -26,30 +28,30 @@ Triggers on push and PR to `main`. Runs on `ubuntu-latest` with Python 3.12.
 
 ## What Was NOT Done
 
-- No `store_pattern` automation yet (Kailash's task)
-- No Cursor plugin research (Andy's task)
-- No OmniIntelligence integration planning (Julian's task)
+- No `store_pattern` automation yet (persistence / pattern-append track)
+- No Cursor plugin research (extension / connection path)
+- No OmniIntelligence / omnimarket integration planning (integration track)
 
 ## Recommended Next Actions
 
-### Sam
+### CI / quality
 
 - Monitor the first CI run after this push goes to `main`
 - If tests fail in CI (environment difference), check Python path / package install
 
-### Andy
+### This repo (library + hooks)
 
 - Harden `src/omnicursor/agents.py` (library)
 - Research Cursor plugin connection path
 
-### Kailash
+### Persistence / patterns
 
 - Implement pattern-append UX (script or hook)
 - Keep JSON persistence lightweight
 
-### Julian
+### Integration
 
-- Define first OmniCursor → OmniIntelligence bridge
+- Define first OmniCursor → backend bridge (see sponsor note: omnimarket-first when applicable)
 - Build minimal Dockerized local integration path
 
 ## Risk Register (Updated)

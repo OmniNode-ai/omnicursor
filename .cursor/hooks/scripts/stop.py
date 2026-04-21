@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import re
 import sys
 import time
@@ -26,13 +27,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 from _common import (
     EVENTS_LOG,
+    LEARNED_PATTERNS_FILE,
     SESSIONS_DIR,
     ensure_dirs,
     log_event,
     read_session_context,
+    read_session_json,
     read_stdin,
     write_stdout,
 )
+from emit_client import send_event
+from pattern_sync import sync_learned_patterns
 
 
 # ---------------------------------------------------------------------------
@@ -271,12 +276,14 @@ def aggregate_session(conversation_id: str, status: str) -> Dict[str, Any]:
 
 
 def _write_session_summary(conversation_id: str, summary: Dict[str, Any]) -> None:
-    """Persist session summary to ~/.omnicursor/sessions/<id>.json."""
+    """Persist session summary, merging with existing session state (e.g. ci_passing)."""
     try:
         ensure_dirs()
         path = SESSIONS_DIR / f"{conversation_id}.json"
+        merged = {**read_session_json(conversation_id, sessions_root=SESSIONS_DIR), **summary}
         with path.open("w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
+            json.dump(merged, f, indent=2, ensure_ascii=False)
+            f.write("\n")
     except OSError:
         pass
 
@@ -312,6 +319,26 @@ def main() -> None:
 
         if conversation_id:
             _write_session_summary(conversation_id, summary)
+
+        send_event(
+            "onex.evt.omnicursor.session-ended.v1",
+            {
+                "conversation_id": conversation_id,
+                "correlation_id": correlation_id,
+                "session_status": status,
+                "session_outcome": summary["session_outcome"],
+                "session_outcome_reason": summary["session_outcome_reason"],
+                "summary": summary,
+            },
+        )
+        # Optional dev pull from omniintelligence HTTP — off by default (sponsor: capstone
+        # pattern persistence is local / PG; see docs/dev/SPONSOR_ALIGNMENT_2026-04-16.md).
+        if os.environ.get("OMNICURSOR_PATTERN_SYNC_HTTP", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
+            sync_learned_patterns(LEARNED_PATTERNS_FILE)
     except Exception:
         pass
     write_stdout({})

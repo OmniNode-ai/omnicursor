@@ -52,28 +52,12 @@
 
 The team split is good, but only if the boundaries stay explicit:
 
-- **Sam** owns correctness automation:
-  - GitHub Actions
-  - green baseline
-  - test/lint/docs verification on push
-- **Andy** owns the OmniCursor backend and Cursor connection story:
-  - Python library (`src/omnicursor/`) + hooks/rules integration
-  - agent registry
-  - routing
-  - research on how Cursor-side agents or future plugin surfaces can connect
-- **Kailash** owns OmniClaude reuse *inside OmniCursor*:
-  - hooks integration
-  - routing/runtime borrowing
-  - pattern lifecycle path from OmniClaude concepts
-- **Julian** owns external ecosystem integration:
-  - OmniIntelligence
-  - OmniMemory
-  - OmniDash
-  - Dockerized local integration path
+- **CI / quality automation:** GitHub Actions, green baseline, test/lint/docs verification on push.
+- **This repo (library + Cursor surface):** Python library (`src/omnicursor/`), hooks/rules integration, agent registry, routing, research on Cursor-side agents or plugin surfaces.
+- **OmniClaude reuse inside OmniCursor:** Hooks integration, routing/runtime borrowing, pattern lifecycle path from OmniClaude concepts.
+- **External ecosystem integration:** OmniIntelligence, OmniMemory, OmniDash, Dockerized local integration path.
 
-This split reduces the biggest overlap risk:
-- Kailash should own what gets reused in OmniCursor from OmniClaude.
-- Julian should own how OmniCursor connects outward to the rest of OmniNode.
+This split reduces the biggest overlap risk: one lane owns what gets reused from OmniClaude inside this repo; another owns how OmniCursor connects outward to the rest of OmniNode.
 
 ## Files Created This Session
 
@@ -94,26 +78,26 @@ The new document keeps the existing structure/style but updates the content to r
 
 ## Recommended Next Actions
 
-### Sam
+### CI / quality
 
 - Create `.github/workflows/ci.yml`
 - Make lint + tests run on push / PR
 - Fix the `skills/README.md` regression in skill discovery
 - Add docs validation if lightweight
 
-### Andy
+### This repo (library + Cursor)
 
 - Harden `src/omnicursor/agents.py` (and related library modules)
 - Clarify whether "Cursor plugin" is a real near-term path or just a research track
 - Document how OmniCursor should connect to Cursor agents/configs without assuming unsupported APIs
 
-### Kailash
+### OmniClaude reuse / patterns
 
 - Continue extracting only the reusable hook/runtime patterns from `omniclaude/`
 - Design or implement `store_pattern`
 - Keep the JSON persistence path lightweight for MVP
 
-### Julian
+### External integration
 
 - Use `investigacion_omninode_ClaudeCode.md` to define the first realistic OmniCursor -> OmniIntelligence bridge
 - Identify what should connect now vs later across OmniIntelligence, OmniMemory, OmniDash

@@ -15,8 +15,8 @@ Use this document when prompting Cursor, Codex, or Claude to make architecture-a
 
 ## 1. Decision Summary
 
-Jonah is **not** asking the team to replace the architecture document with the guidance doc.
-He is saying:
+The sponsor direction is **not** to replace the architecture document with the guidance doc.
+It says:
 
 - the **architecture direction is correct**
 - the **rules + hooks + library** model is correct
@@ -35,14 +35,14 @@ The practical reading is:
 When the documents disagree, use this order:
 
 1. **This brief** for implementation decisions in this repo
-2. [`omnicursor-team-guidance.md`](/Users/jirustaroure/Desktop/OmniCursor/omnicursor-team-guidance.md) for demo-focused implementation details
+2. [`omnicursor-team-guidance.md`](../../omnicursor-team-guidance.md) for demo-focused implementation details
 3. The OmniCursor architecture deliverables:
-   - [`OmniCursor_Architecture_FINAL2.pdf`](/Users/jirustaroure/Desktop/OmniCursor/OmniCursor_Architecture_FINAL2.pdf)
-   - [`OmniCursor_Architecture_Visual_Guide55.pages`](/Users/jirustaroure/Desktop/OmniCursor/OmniCursor_Architecture_Visual_Guide55.pages)
+   - [`OmniCursor_Architecture_FINAL2.pdf`](../../OmniCursor_Architecture_FINAL2.pdf)
+   - [`OmniCursor_Architecture_Visual_Guide55.pages`](../../OmniCursor_Architecture_Visual_Guide55.pages)
 4. Repo architecture and starter-kit constraints:
-   - [`README.md`](/Users/jirustaroure/Desktop/OmniCursor/README.md)
-   - [`CLAUDE.md`](/Users/jirustaroure/Desktop/OmniCursor/CLAUDE.md)
-   - [`.cursor/rules/README.md`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/rules/README.md)
+   - [`README.md`](../../README.md)
+   - [`CLAUDE.md`](../../CLAUDE.md)
+   - [`.cursor/rules/README.md`](../../.cursor/rules/README.md)
 5. `omniclaude-main/` as a **reference library**, not a source of mandatory parity
 
 If a current repo file contradicts the guidance and the newer architecture direction, prefer the guidance plus architecture direction, then update the implementation carefully.
@@ -54,21 +54,21 @@ If a current repo file contradicts the guidance and the newer architecture direc
 OmniCursor is a **Cursor-native adaptation of OmniClaude**, built from **rules, hooks, and a Python library** (plus file-backed skills):
 
 1. **Cursor Rules**
-   - Path: [`.cursor/rules/`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/rules)
+   - Path: [`.cursor/rules/`](../../.cursor/rules)
    - Purpose: always-on and context-activated behavioral instructions
    - Role: the first routing surface and methodology surface
 
 2. **Cursor Hooks**
-   - Path: [`.cursor/hooks.json`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks.json) and [`.cursor/hooks/`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks)
+   - Path: [`.cursor/hooks.json`](../../.cursor/hooks.json) and [`.cursor/hooks/`](../../.cursor/hooks)
    - Purpose: deterministic, non-LLM lifecycle behavior
    - Role: prompt routing, command guarding, edit-time diagnostics, session summarization
 
 3. **Python library** (`src/omnicursor/`)
-   - Path: [`src/omnicursor/`](/Users/jirustaroure/Desktop/OmniCursor/src/omnicursor)
+   - Path: [`src/omnicursor/`](../../src/omnicursor)
    - Purpose: structured agents/skills/compliance **for tests and CI**
    - Role: `get_agent_context`, skill loading, compliance checks; mirrors hook routing in `agents.py`
 
-This is the architecture Jonah explicitly approved.
+This is the architecture that was explicitly approved for the project.
 
 ---
 
@@ -94,9 +94,9 @@ The implementation should prioritize these outcomes:
 
 ---
 
-## 5. What Jonah Wants Us To Do
+## 5. Demo-Critical Implementation Priorities
 
-Jonah's message focuses on three areas because they map directly to demo success:
+Team guidance focuses on three areas because they map directly to demo success:
 
 ### A. Prompt enrichment
 
@@ -141,13 +141,13 @@ These parts map cleanly into OmniCursor:
 
 | OmniClaude reference | OmniCursor destination | Why it matters |
 |---|---|---|
-| [`omniclaude-main/plugins/onex/hooks/lib/agent_router.py`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/hooks/lib/agent_router.py) | [`.cursor/hooks/on_prompt.py`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks/on_prompt.py) and [`src/omnicursor/agents.py`](/Users/jirustaroure/Desktop/OmniCursor/src/omnicursor/agents.py) | Core routing logic |
-| [`omniclaude-main/plugins/onex/hooks/lib/context_injection_wrapper.py`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/hooks/lib/context_injection_wrapper.py) | [`.cursor/hooks/on_prompt.py`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks/on_prompt.py) | Prompt enrichment formatting |
-| [`omniclaude-main/plugins/onex/hooks/lib/bash_guard.py`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/hooks/lib/bash_guard.py) | [`.cursor/hooks/on_shell.py`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks/on_shell.py) | Dangerous command guardrails |
-| [`omniclaude-main/plugins/onex/hooks/lib/session_outcome.py`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/hooks/lib/session_outcome.py) | [`.cursor/hooks/on_stop.py`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks/on_stop.py) | Better session summary and outcome tracking |
-| [`omniclaude-main/plugins/onex/.claude/learned_patterns.json`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/.claude/learned_patterns.json) | `~/.omnicursor/learned_patterns.json` | Seed pattern persistence for MVP |
-| [`omniclaude-main/plugins/onex/agents/configs/`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/agents/configs) | [`.cursor/agents/`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/agents) | Agent definitions and triggers |
-| [`omniclaude-main/plugins/onex/skills/`](/Users/jirustaroure/Desktop/OmniCursor/omniclaude-main/plugins/onex/skills) | [`skills/`](/Users/jirustaroure/Desktop/OmniCursor/skills) | Reusable methodology skills |
+| [`omniclaude-main/plugins/onex/hooks/lib/agent_router.py`](../../omniclaude-main/plugins/onex/hooks/lib/agent_router.py) | [`.cursor/hooks/on_prompt.py`](../../.cursor/hooks/on_prompt.py) and [`src/omnicursor/agents.py`](../../src/omnicursor/agents.py) | Core routing logic |
+| [`omniclaude-main/plugins/onex/hooks/lib/context_injection_wrapper.py`](../../omniclaude-main/plugins/onex/hooks/lib/context_injection_wrapper.py) | [`.cursor/hooks/on_prompt.py`](../../.cursor/hooks/on_prompt.py) | Prompt enrichment formatting |
+| [`omniclaude-main/plugins/onex/hooks/lib/bash_guard.py`](../../omniclaude-main/plugins/onex/hooks/lib/bash_guard.py) | [`.cursor/hooks/on_shell.py`](../../.cursor/hooks/on_shell.py) | Dangerous command guardrails |
+| [`omniclaude-main/plugins/onex/hooks/lib/session_outcome.py`](../../omniclaude-main/plugins/onex/hooks/lib/session_outcome.py) | [`.cursor/hooks/on_stop.py`](../../.cursor/hooks/on_stop.py) | Better session summary and outcome tracking |
+| [`omniclaude-main/plugins/onex/.claude/learned_patterns.json`](../../omniclaude-main/plugins/onex/.claude/learned_patterns.json) | `~/.omnicursor/learned_patterns.json` | Seed pattern persistence for MVP |
+| [`omniclaude-main/plugins/onex/agents/configs/`](../../omniclaude-main/plugins/onex/agents/configs) | [`.cursor/agents/`](../../.cursor/agents) | Agent definitions and triggers |
+| [`omniclaude-main/plugins/onex/skills/`](../../omniclaude-main/plugins/onex/skills) | [`skills/`](../../skills) | Reusable methodology skills |
 
 ### Do not copy wholesale
 
@@ -177,16 +177,16 @@ When borrowing from OmniClaude:
 These constraints matter when implementing:
 
 - `omniclaude-main/` is read-only
-- existing rules in [`.cursor/rules/`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/rules) are part of the architecture and should be preserved
-- hooks currently live in [`.cursor/hooks/`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks)
-- Python library lives in [`src/omnicursor/`](/Users/jirustaroure/Desktop/OmniCursor/src/omnicursor)
-- skills live in [`skills/`](/Users/jirustaroure/Desktop/OmniCursor/skills)
+- existing rules in [`.cursor/rules/`](../../.cursor/rules) are part of the architecture and should be preserved
+- hooks currently live in [`.cursor/hooks/`](../../.cursor/hooks)
+- Python library lives in [`src/omnicursor/`](../../src/omnicursor)
+- skills live in [`skills/`](../../skills)
 - `docs/ARCHITECTURE.md` is the starter-pack contract, not the whole OmniCursor implementation story
 
 ### Important implementation caveat
 
 Some existing repo text still assumes `beforeSubmitPrompt` is informational-only.
-Jonah's guidance assumes prompt enrichment is the desired target behavior.
+The guidance doc assumes prompt enrichment is the desired target behavior.
 
 That means OmniCursor should be built with this rule:
 
@@ -214,7 +214,7 @@ Build in this order:
 The MVP is sufficient if it has:
 
 - rules at repo root
-- working hooks registered in [`.cursor/hooks.json`](/Users/jirustaroure/Desktop/OmniCursor/.cursor/hooks.json)
+- working hooks registered in [`.cursor/hooks.json`](../../.cursor/hooks.json)
 - a real routing flow in `on_prompt.py`
 - learned patterns persisted in JSON
 - library APIs (`agents`, `skills`, `compliance`) that remain usable even without hooks
@@ -294,4 +294,4 @@ At the end, report:
 
 ## 12. One-Sentence Team Alignment
 
-For OmniCursor, the architecture document defines the system, Jonah's guidance defines the next implementation priorities, and `omniclaude-main/` is the reference library we selectively adapt to get the demo working fast.
+For OmniCursor, the architecture document defines the system, the team guidance doc defines the next implementation priorities, and `omniclaude-main/` is the reference library we selectively adapt to get the demo working fast.
