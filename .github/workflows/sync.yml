@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2026 OmniNode.ai Inc.
+# SPDX-License-Identifier: MIT
+#
+# Keeps this fork’s default branch merged with the parent repository’s default
+# branch. Runs on a schedule and on demand. If the repo is not a GitHub fork,
+# the job no-ops. Merge conflicts fail the workflow so you can resolve manually.
+#
+# Requirements:
+#   - Settings → Actions → General → Workflow permissions: allow read/write
+#     (otherwise the push step cannot update the fork).
+#   - If the parent repo is private, `git fetch` needs credentials; add a PAT
+#     with read access to the parent org and extend this workflow to use it.
+
+name: Sync fork
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sync-fork-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve upstream (fork parent)
+        id: meta
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            if (!data.fork || !data.parent) {
+              core.notice('Not a fork (no parent); skipping.');
+              core.setOutput('is_fork', 'false');
+              return;
+            }
+            const upstreamDefault = data.parent.default_branch || 'main';
+            core.setOutput('is_fork', 'true');
+            core.setOutput('upstream_full', data.parent.full_name);
+            core.setOutput('fork_default', data.default_branch);
+            core.setOutput('upstream_default', upstreamDefault);
+
+      - uses: actions/checkout@v4
+        if: steps.meta.outputs.is_fork == 'true'
+        with:
+          ref: ${{ steps.meta.outputs.fork_default }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge upstream default branch
+        if: steps.meta.outputs.is_fork == 'true'
+        env:
+          UPSTREAM_FULL: ${{ steps.meta.outputs.upstream_full }}
+          UPSTREAM_DEFAULT: ${{ steps.meta.outputs.upstream_default }}
+        run: |
+          set -euo pipefail
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream "https://github.com/${UPSTREAM_FULL}.git"
+          else
+            git remote add upstream "https://github.com/${UPSTREAM_FULL}.git"
+          fi
+          git fetch upstream "${UPSTREAM_DEFAULT}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge FETCH_HEAD --no-edit
+
+      - name: Push fork default branch
+        if: steps.meta.outputs.is_fork == 'true'
+        run: git push origin "HEAD:${{ steps.meta.outputs.fork_default }}"
