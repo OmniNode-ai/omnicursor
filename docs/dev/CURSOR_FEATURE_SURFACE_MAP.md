@@ -313,7 +313,7 @@ list, and feature flags.
 |---|---|
 | Ticket metadata from Linear | `@linear-ticket OMN-1234` (via Linear MCP) |
 | Learned patterns from omniintelligence | `@notepad onex-patterns` or `@omniintelligence get_patterns` (via MCP) |
-| Skill SKILL.md content | `@file skills/systematic-debugging.md` |
+| Skill SKILL.md content | `@file .cursor/skills/systematic-debugging/SKILL.md` |
 | Architecture docs | `@file docs/ARCHITECTURE.md` |
 | Web search for context | `@web "cursor hooks API"` |
 

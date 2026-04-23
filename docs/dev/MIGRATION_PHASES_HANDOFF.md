@@ -69,4 +69,4 @@ Sponsor context: [SPONSOR_ALIGNMENT_2026-04-16.md](./SPONSOR_ALIGNMENT_2026-04-1
 
 ## Handoff note
 
-When stopping work, add or update a dated manifest under [handoffs/](./handoffs/) (see `skills/handoff.md`) with: branch, agents/skills/nodes touched, tests run, and the next **concrete** tasks (not “port more of omniclaude” unless scoped).
+When stopping work, add or update a dated manifest under [handoffs/](./handoffs/) (see `.cursor/skills/handoff/SKILL.md`) with: branch, agents/skills/nodes touched, tests run, and the next **concrete** tasks (not “port more of omniclaude” unless scoped).

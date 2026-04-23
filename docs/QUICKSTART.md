@@ -38,7 +38,7 @@ Use `git commit --no-verify` only for emergency bypasses.
 2. Confirm the rules under `.cursor/rules/` are visible in Cursor Settings.
 3. Hooks are active via `.cursor/hooks.json` — no extra configuration.
 4. Use `@`-rules for brainstorming, planning, ticketing, debugging, PR review, handoff, etc.
-5. The model loads skills by reading **`skills/<name>.md`** (see table below). Hook output may include routing hints in `systemMessage` (`beforeSubmitPrompt`).
+5. The model loads skills by reading **`.cursor/skills/<name>/SKILL.md`** (see table below). Hook output may include routing hints in `systemMessage` (`beforeSubmitPrompt`).
 
 ## Structured API (Python library)
 
@@ -46,7 +46,7 @@ For structured payloads in code or tests:
 
 ### `get_agent_context(category: str)`
 
-Returns routing context (`AgentContext` — agent name, instructions, recommended skill). Used in tests; rules typically rely on hooks + reading `skills/*.md`.
+Returns routing context (`AgentContext` — agent name, instructions, recommended skill). Used in tests; rules typically rely on hooks + reading `.cursor/skills/<name>/SKILL.md`.
 
 | Category | Agent | Matching Rule | Recommended Skill |
 |----------|-------|---------------|-------------------|
@@ -54,8 +54,6 @@ Returns routing context (`AgentContext` — agent name, instructions, recommende
 | `brainstorming` | brainstorming-guide | 10-brainstorming.mdc | brainstorming |
 | `planning` | plan-writer | 11-writing-plans.mdc | writing-plans |
 | `ticketing` | ticket-planner | 12-plan-ticket.mdc | plan-ticket |
-| Linear create (YAML → issue) | — | 16-create-ticket.mdc | create-ticket |
-| Linear consume / close | — | 17-consume-ticket.mdc | consume-ticket |
 | `review` | pr-review | 14-pr-review.mdc | pr-review |
 | `handoff` | handoff-guide | 15-handoff.mdc | handoff |
 
@@ -69,48 +67,42 @@ python -c "from omnicursor.agents import get_agent_context; import json; print(j
 
 ### Skills on disk
 
-Read `skills/<skill_name>.md` from the repo root, or use `SkillRepository` in Python / tests.
+Read `.cursor/skills/<skill_name>/SKILL.md` from the repo root, or use `SkillRepository` in Python / tests.
 
 ### `check_compliance(skill_name, response_summary)`
 
 Implemented in `src/omnicursor/compliance.py`. Run via `pytest tests/test_compliance.py` or call from Python.
 
-## Available Skills (14)
+## Available Skills (12)
 
 | Skill | File | Purpose |
 |-------|------|---------|
-| `systematic-debugging` | `skills/systematic-debugging.md` | Structured debugging |
-| `brainstorming` | `skills/brainstorming.md` | Design exploration |
-| `writing-plans` | `skills/writing-plans.md` | TDD-oriented plans |
-| `plan-ticket` | `skills/plan-ticket.md` | YAML ticket templates |
-| `create-ticket` | `skills/create-ticket.md` | Linear create flow |
-| `consume-ticket` | `skills/consume-ticket.md` | Linear intake / done |
-| `pr-review` | `skills/pr-review.md` | PR review methodology |
-| `pr-polish` | `skills/pr-polish.md` | PR refinement |
-| `hostile-reviewer` | `skills/hostile-reviewer.md` | Adversarial review |
-| `defense-in-depth` | `skills/defense-in-depth.md` | Data-flow validation |
-| `merge-planner` | `skills/merge-planner.md` | Merge planning |
-| `insights-to-plan` | `skills/insights-to-plan.md` | Findings → plan |
-| `handoff` | `skills/handoff.md` | Session handoff |
-| `using-git-worktrees` | `skills/using-git-worktrees.md` | Worktree workflow |
+| `systematic-debugging` | `.cursor/skills/systematic-debugging/SKILL.md` | Structured debugging |
+| `brainstorming` | `.cursor/skills/brainstorming/SKILL.md` | Design exploration |
+| `writing-plans` | `.cursor/skills/writing-plans/SKILL.md` | TDD-oriented plans |
+| `plan-ticket` | `.cursor/skills/plan-ticket/SKILL.md` | YAML ticket templates |
+| `pr-review` | `.cursor/skills/pr-review/SKILL.md` | PR review methodology |
+| `pr-polish` | `.cursor/skills/pr-polish/SKILL.md` | PR refinement |
+| `hostile-reviewer` | `.cursor/skills/hostile-reviewer/SKILL.md` | Adversarial multi-pass review |
+| `defense-in-depth` | `.cursor/skills/defense-in-depth/SKILL.md` | Data-flow validation |
+| `merge-planner` | `.cursor/skills/merge-planner/SKILL.md` | Merge planning |
+| `insights-to-plan` | `.cursor/skills/insights-to-plan/SKILL.md` | Findings → plan |
+| `handoff` | `.cursor/skills/handoff/SKILL.md` | Session handoff |
+| `using-git-worktrees` | `.cursor/skills/using-git-worktrees/SKILL.md` | Worktree workflow |
 
 ## End-to-End Flow in Cursor
 
-0. **Optional — Linear:** use Cursor’s Linear MCP with rules `16` / `17` when configured.
-
 1. **User invokes `@10-brainstorming`.**
    - Hook may classify the prompt and inject `systemMessage`.
-   - Model reads `skills/brainstorming.md` and follows the methodology.
+   - Model reads `.cursor/skills/brainstorming/SKILL.md` and follows the methodology.
    - Design saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
 
 2. **User invokes `@11-writing-plans`** with the design path.
-   - Model reads `skills/writing-plans.md`.
+   - Model reads `.cursor/skills/writing-plans/SKILL.md`.
    - Plan saved under `docs/plans/`.
 
 3. **User invokes `@12-plan-ticket`** with the plan path.
-   - Model reads `skills/plan-ticket.md`; repo detection per rule.
-
-4. **Optional — `@16-create-ticket`** with YAML — follow skill + Linear tools if available.
+   - Model reads `.cursor/skills/plan-ticket/SKILL.md`; repo detection per rule.
 
 **Other external systems (Kafka, full ONEX runtime):** out of scope — see `docs/ARCHITECTURE.md`.
 

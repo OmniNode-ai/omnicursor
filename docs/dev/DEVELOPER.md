@@ -20,8 +20,8 @@ These existing files were reviewed and intentionally preserved as the architectu
 
 **OmniCursor extensions (not starter-pack originals):**
 
-- [`.cursor/rules/14-pr-review.mdc`](../.cursor/rules/14-pr-review.mdc): PR / merge-readiness (`review` → `skills/pr-review.md`)
-- [`.cursor/rules/15-handoff.mdc`](../.cursor/rules/15-handoff.mdc): session handoff (`handoff` → `skills/handoff.md`)
+- [`.cursor/rules/14-pr-review.mdc`](../.cursor/rules/14-pr-review.mdc): PR / merge-readiness (`review` → `.cursor/skills/pr-review/SKILL.md`)
+- [`.cursor/rules/15-handoff.mdc`](../.cursor/rules/15-handoff.mdc): session handoff (`handoff` → `.cursor/skills/handoff/SKILL.md`)
 
 ## Architecture (rules + hooks + library)
 
@@ -51,7 +51,7 @@ Structured helpers for **tests**, **CI**, and optional scripting.
 | Module | Purpose |
 |--------|---------|
 | `agents.py` | Agent routing with three-strategy scoring (exact/fuzzy/keyword), `HARD_FLOOR = 0.55`, dynamic JSON loading from `.cursor/agents/*.json`, `get_agent_context(category)` |
-| `skills.py` | Auto-discovers and loads Markdown skills from `skills/` |
+| `skills.py` | Auto-discovers and loads Markdown skills from `.cursor/skills/<name>/SKILL.md` |
 | `compliance.py` | Keyword-based compliance registry with 3–5 checks per skill |
 | `node_contracts.py` | Cursor-native node `contract.yaml` validation |
 | `schemas.py` | Pydantic v2 models: `AgentContext`, `SkillDocument`, `ComplianceResult`, `PatternRecord`, `DatabaseStatus` |
@@ -60,7 +60,7 @@ Structured helpers for **tests**, **CI**, and optional scripting.
 
 ## How Agent Routing Works
 
-Routing uses identical three-strategy scoring in both `on_prompt.py` (hooks) and `agents.py` (library) — **two copies** so hooks stay free of `import omnicursor`. See [`OMNICLAUDE_TO_CURSOR_PORT.md`](./OMNICLAUDE_TO_CURSOR_PORT.md) for the port model; learned-pattern filtering instead shares **one** stdlib module under `.cursor/hooks/lib/prompt_pattern_selection.py`.
+Routing logic lives in **one canonical module**: `.cursor/hooks/lib/agent_scoring.py` (stdlib only). Both `on_prompt.py` (hooks) and `agents.py` (library, via importlib bridge) delegate to it — no duplication. See [`ROUTING_DEDUPLICATION.md`](./ROUTING_DEDUPLICATION.md) for the importlib bridge pattern. Learned-pattern filtering shares a separate stdlib module: `.cursor/hooks/lib/prompt_pattern_selection.py`.
 
 The three strategies are:
 
@@ -70,19 +70,19 @@ The three strategies are:
 
 `HARD_FLOOR = 0.55` discards weak candidates. No match falls back to `polymorphic-agent` (hooks) or `omnicursor-generalist` (library default context).
 
-Agent definitions are loaded dynamically from `.cursor/agents/*.json` (16 configs). Each config has: `name`, `description`, `category`, `activation_patterns` (with `explicit_triggers`, `context_triggers`, `activation_keywords`), `instructions`, `recommended_skill`.
+Agent definitions are loaded dynamically from `.cursor/agents/*.json` (17 configs). Each config has: `name`, `description`, `category`, `activation_patterns` (with `explicit_triggers`, `context_triggers`, `activation_keywords`), `instructions`, `recommended_skill`.
 
 ## How routing integrates with rules
 
-Hooks attempt **automatic** classification via `beforeSubmitPrompt`. Rules instruct the model to **read** `skills/<name>.md` and to use hook `systemMessage` hints when present.
+Hooks attempt **automatic** classification via `beforeSubmitPrompt`. Rules instruct the model to **read** `.cursor/skills/<name>/SKILL.md` and to use hook `systemMessage` hints when present.
 
-`get_agent_context(category)` in `agents.py` is the **test/CI** view of the same routing metadata — not a second routing system in the IDE. For example, `13-systematic-debugging.mdc` tells the model to read `skills/systematic-debugging.md` after self-classifying as debugging.
+`get_agent_context(category)` in `agents.py` is the **test/CI** view of the same routing metadata — not a second routing system in the IDE. For example, `13-systematic-debugging.mdc` tells the model to read `.cursor/skills/systematic-debugging/SKILL.md` after self-classifying as debugging.
 
 ## Adding New Components
 
 **New agent**: Create `.cursor/agents/<name>.json` with `name`, `description`, `category`, `activation_patterns` (must include `explicit_triggers`, `context_triggers`, `activation_keywords`), `instructions`, `recommended_skill`. It auto-loads on startup.
 
-**New skill**: Create `skills/<name>.md`. Add a compliance registry entry in `compliance.py` with 3–5 keyword checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
+**New skill**: Create `.cursor/skills/<name>/SKILL.md` with YAML frontmatter (`name:`, `description:`). Add a compliance registry entry in `compliance.py` with 3–5 keyword checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
 
 ## Historical Starter-Pack Docs
 

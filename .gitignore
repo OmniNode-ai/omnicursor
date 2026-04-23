@@ -23,6 +23,7 @@ build/
 
 # OmniCursor local data
 .omnicursor/
+.worktrees/
 
 # Personal notes / research (not part of the project)
 investigacion_omninode_ClaudeCode.md
