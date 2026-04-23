@@ -24,7 +24,7 @@ See [`docs/QUICKSTART.md`](./docs/QUICKSTART.md) for Cursor setup, hooks, and en
 
 This repo ships a tracked pre-commit hook at `.githooks/pre-commit`.
 
-- It runs CI-parity checks locally before each commit: `ruff`, `pytest`, and skill compliance coverage.
+- It runs the **same checks as CI** locally before each commit: `ruff`, `pytest`, and skill compliance coverage.
 - Enable it once per clone with `git config core.hooksPath .githooks`.
 - Use `git commit --no-verify` only for emergency bypasses.
 - GitHub Actions CI runs on pull requests to `main`; local pre-commit checks are the first line of defense before opening a PR.

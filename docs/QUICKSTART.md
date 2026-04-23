@@ -27,7 +27,7 @@ This repo includes a tracked git pre-commit hook in `.githooks/pre-commit`.
 
 - It runs `ruff check src/ tests/ .cursor/hooks/`.
 - It runs `pytest tests/ -v`.
-- It validates skill compliance coverage parity with CI.
+- It validates skill compliance coverage using the **same rule as CI** (every `skills/*.md` has a `compliance.py` entry).
 - GitHub Actions CI runs on pull requests to `main`.
 
 Use `git commit --no-verify` only for emergency bypasses.

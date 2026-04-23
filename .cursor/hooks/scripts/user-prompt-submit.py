@@ -25,6 +25,10 @@ Ported and extended from omniclaude:
   - user-prompt-submit.sh           (routing + pattern injection)
   - user-prompt-delegation-rule.sh  (counter reset + delegation rule)
   - user_prompt_structured_handoff_nudge.sh  (once-per-session nudge)
+
+Learned-pattern relevance filtering is imported from
+``lib/prompt_pattern_selection.py`` (shared with ``omnicursor.prompt_pattern_read``;
+see ``docs/dev/OMNICLAUDE_TO_CURSOR_PORT.md``).
 """
 
 from __future__ import annotations
@@ -35,9 +39,8 @@ import re
 import sys
 import time
 import uuid
-from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
@@ -51,22 +54,27 @@ from _common import (
     read_stdin,
     write_context,
 )
+from agent_scoring import HARD_FLOOR, score_agent
 from emit_client import send_event
 from pattern_loader import get_pattern_cache
+from prompt_pattern_selection import (
+    MAX_PATTERNS,
+    filter_patterns_by_relevance,
+    prompt_keyword_set,
+    score_pattern_relevance,
+)
+
+# Private names kept for hook self-tests (tests/test_suite_event1_prompt.py).
+_score_pattern_relevance = score_pattern_relevance
+_filter_patterns_by_relevance = filter_patterns_by_relevance
 
 
 # ---------------------------------------------------------------------------
 # Routing constants
 # ---------------------------------------------------------------------------
 
-HARD_FLOOR: float = 0.55
+# HARD_FLOOR imported from agent_scoring (single source of truth).
 DELEGATION_THRESHOLD: int = 2
-
-_STOPWORDS = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
 
 # Structured prompt field markers — if present, prompt is already structured.
 _STRUCTURE_MARKERS = re.compile(
@@ -88,98 +96,34 @@ _MULTI_STEP_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern relevance filter threshold (mirrors omniclaude's >= 0.7 cutoff).
-PATTERN_RELEVANCE_THRESHOLD: float = 0.7
-MAX_PATTERNS: int = 5
-
 
 # ---------------------------------------------------------------------------
 # Prompt classification — multi-strategy scoring
 # ---------------------------------------------------------------------------
 
 
-def _extract_keywords(text: str) -> List[str]:
-    return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
-        if w not in _STOPWORDS and len(w) > 2
-    ]
-
-
-def _fuzzy_threshold(trigger: str) -> float:
-    n = len(trigger)
-    if n <= 6:
-        return 0.85
-    elif n <= 10:
-        return 0.78
-    return 0.72
-
-
-def _score_agent(
-    prompt_lower: str,
-    prompt_words: Set[str],
-    agent: Dict[str, Any],
-) -> Tuple[float, str]:
-    activation = agent.get("activation_patterns", {})
-    explicit: List[str] = activation.get("explicit_triggers", [])
-    context: List[str] = activation.get("context_triggers", [])
-
-    best_score = 0.0
-    best_reason = ""
-
-    for trigger in explicit:
-        if trigger.lower() in prompt_lower and 0.95 > best_score:
-            best_score = 0.95
-            best_reason = "Exact trigger: '{}'".format(trigger)
-
-    for trigger in context:
-        if trigger.lower() in prompt_lower and 0.80 > best_score:
-            best_score = 0.80
-            best_reason = "Context trigger: '{}'".format(trigger)
-
-    if best_score < 0.90:
-        words_in_prompt = re.findall(r"\b\w+\b", prompt_lower)
-        for trigger in explicit:
-            trigger_lower = trigger.lower()
-            threshold = _fuzzy_threshold(trigger_lower)
-            for word in words_in_prompt:
-                ratio = SequenceMatcher(None, trigger_lower, word).ratio()
-                if ratio >= threshold and ratio > best_score:
-                    best_score = ratio
-                    best_reason = "Fuzzy match: '{}' ({:.0%})".format(trigger, ratio)
-
-    if best_score < 0.70:
-        keywords_raw: List[str] = activation.get("activation_keywords", [])
-        if not keywords_raw:
-            keywords_raw = [w for t in explicit for w in t.lower().split()]
-        keyword_set = {k.lower() for k in keywords_raw if len(k) > 2} - _STOPWORDS
-        if keyword_set:
-            overlap = prompt_words & keyword_set
-            if len(overlap) >= 2:
-                scaled = 0.55 + (len(overlap) / len(keyword_set) * 0.30)
-                if scaled > best_score:
-                    best_score = scaled
-                    best_reason = "Keywords: {{{}}}".format(", ".join(sorted(overlap)))
-
-    return (best_score, best_reason)
-
-
 def classify_prompt(
     prompt: str, agents: List[Dict[str, Any]],
 ) -> Tuple[str, float, str]:
+    """Classify *prompt* against *agents* using the shared scoring engine.
+
+    Delegates to ``agent_scoring.score_agent`` — the single source of truth
+    shared with on_prompt.py and src/omnicursor/agents.py.
+    """
     if not prompt or not agents:
         return ("polymorphic-agent", 0.0, "No agent matched")
 
     prompt_lower = prompt.lower()
-    prompt_words = set(_extract_keywords(prompt))
+    prompt_words = prompt_keyword_set(prompt)
     best_name, best_score, best_reason = "polymorphic-agent", 0.0, "No agent matched"
 
     for agent in agents:
         name = agent.get("name", "")
         if not name:
             continue
-        score, reason = _score_agent(prompt_lower, prompt_words, agent)
-        if score >= HARD_FLOOR and score > best_score:
-            best_score, best_name, best_reason = score, name, reason
+        sc, reason = score_agent(prompt_lower, prompt_words, agent)
+        if sc >= HARD_FLOOR and sc > best_score:
+            best_score, best_name, best_reason = sc, name, reason
 
     return (best_name, best_score, best_reason)
 
@@ -341,63 +285,7 @@ def mark_nudge_fired(conversation_id: str) -> None:
         pass
 
 
-# ---------------------------------------------------------------------------
-# Pattern relevance filtering
-# ---------------------------------------------------------------------------
-
-
-def _score_pattern_relevance(
-    pattern: Dict[str, Any],
-    domain: str,
-    prompt_words: Set[str],
-) -> float:
-    """Score a learned pattern's relevance to the current prompt and domain.
-
-    Domain match is the primary signal:
-      - Same domain  → 1.0 base
-      - "general"    → 0.6 base
-      - Other domain → 0.3 base
-
-    Keyword overlap between the pattern description and the prompt provides
-    a secondary boost (up to +0.4), capped at 1.0.
-    """
-    p_domain = pattern.get("domain", "general")
-    if p_domain == domain:
-        base = 1.0
-    elif p_domain == "general":
-        base = 0.6
-    else:
-        base = 0.3
-
-    desc = pattern.get("description", "")
-    desc_words = (
-        {w for w in re.findall(r"\b\w+\b", desc.lower()) if len(w) > 2}
-        - _STOPWORDS
-    )
-    if desc_words and prompt_words:
-        overlap_ratio = len(prompt_words & desc_words) / len(desc_words)
-        boost = overlap_ratio * 0.4
-    else:
-        boost = 0.0
-
-    return min(1.0, base + boost)
-
-
-def _filter_patterns_by_relevance(
-    patterns: List[Dict[str, Any]],
-    domain: str,
-    prompt_words: Set[str],
-) -> List[Dict[str, Any]]:
-    """Return patterns filtered to >= PATTERN_RELEVANCE_THRESHOLD and ranked
-    by descending relevance score, capped at MAX_PATTERNS."""
-    scored = [
-        (p, _score_pattern_relevance(p, domain, prompt_words))
-        for p in patterns
-    ]
-    filtered = [(p, s) for p, s in scored if s >= PATTERN_RELEVANCE_THRESHOLD]
-    filtered.sort(key=lambda x: x[1], reverse=True)
-    return [p for p, _ in filtered[:MAX_PATTERNS]]
-
+# Pattern relevance: shared stdlib implementation in ``lib/prompt_pattern_selection.py``.
 
 # ---------------------------------------------------------------------------
 # Complexity estimator — gates hard delegation enforcement
@@ -599,8 +487,8 @@ def main() -> None:
             cache.warm_from_json(LEARNED_PATTERNS_FILE)
         domain = _agent_domain(agent_name)
         raw = cache.get(domain) or cache.get("general") or []
-        prompt_words_set = set(_extract_keywords(prompt))
-        patterns = _filter_patterns_by_relevance(raw, domain, prompt_words_set)
+        prompt_words_set = prompt_keyword_set(prompt)
+        patterns = filter_patterns_by_relevance(raw, domain, prompt_words_set)
 
         # Complexity estimation gates delegation enforcement framing.
         delegation_required = _estimate_complexity(prompt)

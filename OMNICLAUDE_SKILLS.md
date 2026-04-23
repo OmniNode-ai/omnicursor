@@ -4,6 +4,8 @@
 **Last Updated**: 2026-02-25
 **Total Skills**: ~53 primary + nested sub-skills under `agent-tracking/` and `system-status/`
 
+**OmniCursor note:** This inventory describes **OmniClaude only**. OmniCursor intentionally ships a **small curated** skill set (on the order of **~12–17** methodology skills) and grows **only when needed** — see [docs/OMNICURSOR_MIGRATION_PLAN.md](./docs/OMNICURSOR_MIGRATION_PLAN.md).
+
 This document is the canonical reference for every skill available in the OmniClaude plugin. Skills are invoked via `/skill-name` in Claude Code or composed as sub-skills by orchestrators.
 
 ---

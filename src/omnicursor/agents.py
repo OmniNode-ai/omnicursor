@@ -1,11 +1,11 @@
-"""Agent routing contexts for OmniCursor (library + tests; hooks mirror scoring separately)."""
+"""Agent routing contexts for OmniCursor (library + tests)."""
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import re
-from difflib import SequenceMatcher
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Dict, List, Set, Tuple
 
 from .schemas import AgentContext
@@ -25,19 +25,38 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# Routing constants
+# Scoring engine — loaded from .cursor/hooks/lib/agent_scoring.py
+#
+# The canonical implementation is stdlib-only and lives next to the Cursor
+# hook library.  Hooks import it directly; this module loads it by path so
+# omnicursor never becomes a hook dependency, while pytest and library
+# callers still use ``import omnicursor``.  Same pattern as prompt_pattern_read.py.
 # ---------------------------------------------------------------------------
 
-# Below this score an agent is not considered a candidate.
-# Mirrors omniclaude HARD_FLOOR (agent_router.py).
-HARD_FLOOR: float = 0.55
+def _load_agent_scoring() -> ModuleType:
+    path = Path(__file__).resolve().parents[2] / ".cursor" / "hooks" / "lib" / "agent_scoring.py"
+    if not path.is_file():
+        raise RuntimeError(
+            "agent_scoring.py not found at {}; full OmniCursor checkout required. "
+            "See docs/dev/ROUTING_DEDUPLICATION.md.".format(path)
+        )
+    name = "_omnicursor_hook_agent_scoring"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Cannot load agent_scoring from {}".format(path))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
 
-# Common stopwords filtered out during keyword extraction.
-_STOPWORDS = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
+
+_as = _load_agent_scoring()
+
+# Re-export canonical constants and functions under their original private names
+# so callers in this module and in tests are unaffected.
+HARD_FLOOR: float = _as.HARD_FLOOR
+_STOPWORDS: frozenset[str] = _as.STOPWORDS
+_score_agent = _as.score_agent
+_fuzzy_threshold = _as.fuzzy_threshold
 
 
 # ---------------------------------------------------------------------------
@@ -303,91 +322,12 @@ def get_agent_context(category: str) -> AgentContext:
 
 def _extract_keywords(text: str) -> List[str]:
     """Extract meaningful keywords from *text*, filtering stopwords."""
-    return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
-        if w not in _STOPWORDS and len(w) > 2
-    ]
+    return _as.extract_keywords(text)
 
 
-def _fuzzy_threshold(trigger: str) -> float:
-    """Dynamic threshold: shorter triggers need higher similarity."""
-    n = len(trigger)
-    if n <= 6:
-        return 0.85
-    elif n <= 10:
-        return 0.78
-    return 0.72
-
-
-def _score_agent(
-    prompt_lower: str,
-    prompt_words: set,
-    agent: Dict[str, Any],
-) -> Tuple[float, str]:
-    """Multi-strategy scoring for a single agent config.
-
-    Strategies (evaluated in order, best score wins):
-      1. Exact substring match on explicit_triggers → 0.95
-      2. Fuzzy SequenceMatcher on explicit_triggers → scaled by ratio
-      3. Keyword overlap on activation_keywords (or auto-extracted) → 0.55-0.85
-
-    Returns ``(score, reason)``.  Score 0.0 means no match.
-    """
-    activation = agent.get("activation_patterns", {})
-    explicit: List[str] = activation.get("explicit_triggers", [])
-    context: List[str] = activation.get("context_triggers", [])
-
-    best_score = 0.0
-    best_reason = ""
-
-    # --- Strategy 1: exact substring match (highest confidence) ---
-    for trigger in explicit:
-        if trigger.lower() in prompt_lower:
-            if 0.95 > best_score:
-                best_score = 0.95
-                best_reason = "Exact trigger: '{}'".format(trigger)
-
-    for trigger in context:
-        if trigger.lower() in prompt_lower:
-            score = 0.80
-            if score > best_score:
-                best_score = score
-                best_reason = "Context trigger: '{}'".format(trigger)
-
-    # --- Strategy 2: fuzzy matching via SequenceMatcher ---
-    if best_score < 0.90:
-        words_in_prompt = re.findall(r"\b\w+\b", prompt_lower)
-        for trigger in explicit:
-            trigger_lower = trigger.lower()
-            threshold = _fuzzy_threshold(trigger_lower)
-            for word in words_in_prompt:
-                ratio = SequenceMatcher(None, trigger_lower, word).ratio()
-                if ratio >= threshold and ratio > best_score:
-                    best_score = ratio
-                    best_reason = "Fuzzy match: '{}' ({:.0%})".format(trigger, ratio)
-
-    # --- Strategy 3: keyword overlap ---
-    if best_score < 0.70:
-        # Use activation_keywords if present, otherwise auto-extract from triggers.
-        keywords_raw: List[str] = activation.get("activation_keywords", [])
-        if not keywords_raw:
-            keywords_raw = []
-            for t in explicit:
-                keywords_raw.extend(t.lower().split())
-        keyword_set = {k.lower() for k in keywords_raw if len(k) > 2} - _STOPWORDS
-        if keyword_set:
-            overlap = prompt_words & keyword_set
-            if len(overlap) >= 2:
-                keyword_ratio = len(overlap) / len(keyword_set)
-                # Scale to 0.55-0.85 range.
-                scaled = 0.55 + (keyword_ratio * 0.30)
-                if scaled > best_score:
-                    best_score = scaled
-                    best_reason = "Keywords: {{{}}}".format(
-                        ", ".join(sorted(overlap)),
-                    )
-
-    return (best_score, best_reason)
+# _fuzzy_threshold and _score_agent are re-exported from the scoring engine
+# at the top of this module (assigned from _as).  The functions below use them
+# via those module-level names so callers are unaffected.
 
 
 def match_agent_candidates(

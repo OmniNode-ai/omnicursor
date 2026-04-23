@@ -147,9 +147,9 @@ All tests passing. `pytest tests/ -v` is fast (~sub-second on typical hardware).
 
 Use **`docs/dev/MIGRATION_PHASES_HANDOFF.md`** as the checklist. In short:
 
-- **Agents** — grow `.cursor/agents/*.json` toward OmniClaude parity; keep routing tests green.
-- **Skills** — port `skills/*.md`, register in `compliance.py`, add rules where needed (Bucket 1 first).
-- **Nodes** — implement or extend `src/omnicursor/nodes/*` (`contract.yaml`, handlers, tests).
+- **Agents** — keep JSON agents + routing tests green; add configs **only when** a new workflow needs them (omniclaude is reference, not a full port list).
+- **Skills** — maintain `skills/*.md` + `compliance.py` + rules; add skills incrementally (~12–17 curated is the default ceiling unless the team widens scope).
+- **Nodes** — evolve `src/omnicursor/nodes/*` when a contract or demo requires it; no mandate to mirror omniclaude’s full node catalog.
 
 This track **does not** include Kafka daemon work, Linear-in-hooks Phase 6, omnimarket MCP, or authoritative pattern DB writes — see **`docs/OMNICURSOR_MIGRATION_PLAN.md`** for those.
 

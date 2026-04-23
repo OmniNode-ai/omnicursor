@@ -133,13 +133,13 @@ automatically.
 only used by the routing hook (`on_prompt.py`). To make them actually execute as background
 agents, each needs a `system_prompt` field with the full skill methodology plus ONEX constraints.
 
-### What background agents unlock for omniclaude parity
+### What background agents could add later (optional)
 
-1. **Ticket pipeline** — a `ticket-pipeline` background agent reads Linear context, runs the
-   skill methodology, and outputs a plan without manual prompting.
-2. **Overnight automation** — cron-style invocation of background agents for recurring tasks
-   (merge sweep, CI watch, compliance sweep).
-3. **Sub-agent dispatch** — the `polymorphic-agent` can delegate to specialist agents by name.
+OmniCursor’s **foundation** uses the same JSON for **routing** (`beforeSubmitPrompt`). Turning configs into **executing** background agents is **optional** and product-version-dependent:
+
+1. **Ticket-style workflows** — a dedicated background agent could read Linear context and run a skill methodology.
+2. **Automation** — scheduled or recurring runs for merge/CI-style workflows **if** you add agents for that purpose.
+3. **Delegation** — `polymorphic-agent` or new JSON agents only when you choose to model them.
 
 ### Gap
 
@@ -346,11 +346,11 @@ list, and feature flags.
 
 ## Recommended build order — port track (agents, skills, ONEX nodes & contracts)
 
-Aligned with [MIGRATION_PHASES_HANDOFF.md](./MIGRATION_PHASES_HANDOFF.md):
+Aligned with [MIGRATION_PHASES_HANDOFF.md](./MIGRATION_PHASES_HANDOFF.md) — **foundation first**, omniclaude as **reference only**:
 
-1. **Agents** — expand `.cursor/agents/*.json` toward OmniClaude parity; keep `src/omnicursor/agents.py` and routing tests aligned.
-2. **Skills** — port `skills/*.md`, `compliance.py`, and keyword rules in batches (Bucket 1 first).
-3. **ONEX nodes** — flesh out `src/omnicursor/nodes/*` (`contract.yaml`, handlers, tests); treat pattern **writes** and bus **emit** as other tracks unless explicitly assigned.
+1. **Agents** — keep the **current JSON set** healthy; add agents **only when a workflow needs them**; keep `src/omnicursor/agents.py` and routing tests aligned.
+2. **Skills** — keep shipped `skills/*.md` + `compliance.py` + rules consistent; add skills **sparingly** (on the order of **~12–17 curated** skills unless scope widens).
+3. **ONEX nodes** — harden `src/omnicursor/nodes/*` (`contract.yaml`, handlers, tests) **when** a demo or integration needs it; pattern **writes** and bus **emit** stay other tracks unless assigned.
 
 Optional later: **background agent `system_prompt`** fields if Cursor execution model is confirmed for your version.
 

@@ -29,14 +29,14 @@ def test_invoke_skill_loads_markdown_skill() -> None:
     payload = _skill_payload("systematic-debugging")
 
     assert payload["skill_name"] == "systematic-debugging"
-    assert payload["path"] == "skills/systematic-debugging.md"
+    assert payload["path"] == ".cursor/skills/systematic-debugging/SKILL.md"
 
 
 def test_invoke_skill_loads_brainstorming_skill() -> None:
     payload = _skill_payload("brainstorming")
 
     assert payload["skill_name"] == "brainstorming"
-    assert payload["path"] == "skills/brainstorming.md"
+    assert payload["path"] == ".cursor/skills/brainstorming/SKILL.md"
 
 
 def test_check_compliance_returns_result() -> None:

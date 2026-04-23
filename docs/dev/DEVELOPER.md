@@ -16,7 +16,7 @@ These existing files were reviewed and intentionally preserved as the architectu
 - [`tests/prompts`](../tests/prompts): prompt fixtures for rule behavior
 - [`tests/rubrics`](../tests/rubrics): pass/fail criteria for the preserved rules
 - [`HOW_TO_RUN_IN_CURSOR.md`](./HOW_TO_RUN_IN_CURSOR.md): original starter-pack setup instructions (historical — see note below)
-- [`OMNICLAUDE_SKILLS.md`](../OMNICLAUDE_SKILLS.md): skill inventory to mine for future ports
+- [`OMNICLAUDE_SKILLS.md`](../OMNICLAUDE_SKILLS.md): omniclaude skill **reference** (optional when adding a new curated skill)
 
 **OmniCursor extensions (not starter-pack originals):**
 
@@ -60,7 +60,9 @@ Structured helpers for **tests**, **CI**, and optional scripting.
 
 ## How Agent Routing Works
 
-Routing uses identical three-strategy scoring in both `on_prompt.py` (hooks) and `agents.py` (library):
+Routing uses identical three-strategy scoring in both `on_prompt.py` (hooks) and `agents.py` (library) — **two copies** so hooks stay free of `import omnicursor`. See [`OMNICLAUDE_TO_CURSOR_PORT.md`](./OMNICLAUDE_TO_CURSOR_PORT.md) for the port model; learned-pattern filtering instead shares **one** stdlib module under `.cursor/hooks/lib/prompt_pattern_selection.py`.
+
+The three strategies are:
 
 1. **Exact substring match** on `explicit_triggers` → 0.95, `context_triggers` → 0.80
 2. **Fuzzy match** via `SequenceMatcher` with length-aware thresholds

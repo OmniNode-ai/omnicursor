@@ -18,7 +18,7 @@ def test_contracts_root_contains_yaml() -> None:
     root = contracts_root()
     assert root.is_dir()
     paths = list(iter_contract_paths(root))
-    assert len(paths) >= 4
+    assert len(paths) >= 5
     assert all(p.name == "contract.yaml" for p in paths)
 
 
@@ -29,6 +29,7 @@ def test_load_all_contracts_validates() -> None:
     assert "node_cursor_shell_guard_effect" in names
     assert "node_cursor_file_edit_effect" in names
     assert "node_cursor_session_outcome_orchestrator" in names
+    assert "node_cursor_pattern_injection_compute" in names
     for c in contracts:
         assert c.cursor_native.hook_event
         assert c.cursor_native.implementation.startswith(".cursor/hooks/")

@@ -138,5 +138,5 @@ After outputting the template:
 ## OmniCursor backend (library + files)
 
 1. Prefer hook-injected routing (`beforeSubmitPrompt`) when present.
-2. Read **`skills/plan-ticket.md`** for the full methodology.
+2. Read **`.cursor/skills/plan-ticket/SKILL.md`** for the full methodology.
 3. Optional: structured routing and compliance live in `src/omnicursor/agents.py` and `src/omnicursor/compliance.py` for tests and scripting.

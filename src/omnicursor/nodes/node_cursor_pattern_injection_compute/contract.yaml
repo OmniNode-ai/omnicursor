@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2025 OmniNode.ai Inc.
+# SPDX-License-Identifier: MIT
+# Read-side pattern selection for prompt injection (local ``learned_patterns.json`` only).
+
+name: node_cursor_pattern_injection_compute
+contract_name: node_cursor_pattern_injection_compute
+node_name: node_cursor_pattern_injection_compute
+
+contract_version:
+  major: 1
+  minor: 0
+  patch: 0
+
+node_version:
+  major: 1
+  minor: 0
+  patch: 0
+
+node_type: COMPUTE
+
+description: >
+  Relevance-ranked read of learned patterns from local JSON for injection into
+  beforeSubmitPrompt context. No writes and no upstream intelligence calls —
+  persistence and optional HTTP refresh are separate tracks.
+
+cursor_native:
+  hook_event: beforeSubmitPrompt
+  hooks_json_command: "python3 .cursor/hooks/scripts/user-prompt-submit.py"
+  implementation: .cursor/hooks/scripts/user-prompt-submit.py
+  blocking: false
+
+execution:
+  backend: cursor_ide
+  notes: >
+    Canonical scoring in .cursor/hooks/lib/prompt_pattern_selection.py;
+    user-prompt-submit.py and omnicursor.prompt_pattern_read both use it.
+
+local_event_bus:
+  kind: append_only_jsonl
+  path: "~/.omnicursor/events.jsonl"
+
+capabilities:
+  - name: cursor.pattern_injection_read
+    description: Load and rank patterns from learned_patterns.json for a prompt
+    version: 1.0.0
+
+metadata:
+  license: MIT
+  tags:
+    - compute
+    - cursor
+    - patterns
+    - read-only

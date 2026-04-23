@@ -14,7 +14,7 @@ OmniCursor **behavior surface** for the model. Rules `00` and `01` are **always 
 | [`14-pr-review.mdc`](./14-pr-review.mdc) | PR / merge-readiness review + severity rubric. |
 | [`15-handoff.mdc`](./15-handoff.mdc) | Session continuity — structured handoff manifest. |
 
-**Skills:** Rules direct the model to read `skills/*.md`. Structured routing/compliance for tests lives in `src/omnicursor/`. See [docs/QUICKSTART.md](../../docs/QUICKSTART.md).
+**Skills:** Rules direct the model to read `.cursor/skills/<name>/SKILL.md`. Structured routing/compliance for tests lives in `src/omnicursor/`. See [docs/QUICKSTART.md](../../docs/QUICKSTART.md).
 
 **Teaching / capstone:** [docs/dev/STUDENT_GUIDE.md](../../docs/dev/STUDENT_GUIDE.md), [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (bucket model; Bucket 3 is conceptual — no `adapter-stub` rule in this repo).
 

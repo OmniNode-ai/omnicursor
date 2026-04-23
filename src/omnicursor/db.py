@@ -8,7 +8,7 @@ from .schemas import DatabaseStatus
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SKILLS_DIR = REPO_ROOT / "skills"
+SKILLS_DIR = REPO_ROOT / ".cursor" / "skills"
 RULES_DIR = REPO_ROOT / ".cursor" / "rules"
 
 

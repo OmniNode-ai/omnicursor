@@ -1,6 +1,6 @@
 # Sponsor alignment — 2026-04-16
 
-Condensed from written sponsor feedback (hook port review + intelligence/Docker / omnimarket integration review). Resolves conflicts between **long-term omniclaude parity** and **capstone scope**.
+Condensed from written sponsor feedback (hook port review + intelligence/Docker / omnimarket integration review). Aligns **long-term omniclaude-style depth** with **capstone scope** — capstone stays **foundation-first**, not full surface parity with omniclaude.
 
 **Source PDFs (repo root / team folder):** sponsor response and agenda PDFs dated 2026-04-15–16.
 

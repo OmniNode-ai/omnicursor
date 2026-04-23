@@ -15,7 +15,7 @@ It does not replace `00-omninode-concepts`, `01-codebase-research`, `02-no-secre
 
 1. Self-classify the request as **`handoff`** (aliases: `session-handoff`, `continuity`).
 2. Prefer hook-injected routing when present.
-3. Read **`skills/handoff.md`** at the repository root and follow it.
+3. Read **`.cursor/skills/handoff/SKILL.md`** at the repository root and follow it.
 4. Optionally run compliance checks for **`handoff`** via `src/omnicursor/compliance.py`.
 
 ## Working Style

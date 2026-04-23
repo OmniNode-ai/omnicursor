@@ -15,7 +15,7 @@ It does not replace `00-omninode-concepts`, `01-codebase-research`, `02-no-secre
 
 1. Self-classify the request as **`debugging`**.
 2. Prefer the **`beforeSubmitPrompt`** hook output when present: the model context may include `<!-- OmniCursor Agent: ...` with the selected agent and confidence.
-3. Read the full methodology from **`skills/systematic-debugging.md`** at the repository root (use the Read tool on that path).
+3. Read the full methodology from **`.cursor/skills/systematic-debugging/SKILL.md`** at the repository root (use the Read tool on that path).
 4. For the same structured routing document the test suite uses, see category **`debugging`** in `src/omnicursor/agents.py` (`get_agent_context` in Python — optional).
 
 ## Working Style

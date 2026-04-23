@@ -171,10 +171,11 @@ not just *what* they built?
   to generic agent too often). The number itself doesn't matter — understanding that
   it's a tunable trade-off does.
 
-- [ ] **Why does omniclaude have 80+ skills but you only ported a subset?** Good answer:
-  "Most omniclaude skills depend on infrastructure we don't have — Kafka, org integrations,
-  Docker runtime, multi-repo worktrees. We ported methodology-only skills that
-  work in any IDE. Quality over quantity." Bad answer: "We ran out of time."
+- [ ] **Why does omniclaude have 80+ skills but OmniCursor ships far fewer?** Good answer:
+  "We chose a **foundation-first** Cursor-native stack: hooks, routing, and a **curated**
+  set of methodology skills (~12–17) that work without Kafka, org integrations, or full ONEX.
+  omniclaude is **reference**, not a port checklist. We add skills when a workflow needs them."
+  Bad answer: "We ran out of time" (without explaining the deliberate scope).
 
 - [ ] **What would you build next if you had another semester?** Looking for: pattern
   lifecycle with real DB, routing accuracy evaluation loop, multi-agent coordination.

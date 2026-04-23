@@ -12,6 +12,7 @@ Planning artifacts, continuity notes, and capstone-oriented material that are no
 | [CURSOR_VS_CLAUDE_HOOKS.md](./CURSOR_VS_CLAUDE_HOOKS.md) | Cursor vs Claude-style lifecycle mapping, event matrix, Phase 3B gaps (**OMN-12**). |
 | [ADR-hook-first-architecture.md](./ADR-hook-first-architecture.md) | Hook-first ownership: rules vs hooks vs library (**OMN-37**). |
 | [OMNICURSOR_NODE_CONTRACTS.md](./OMNICURSOR_NODE_CONTRACTS.md) | Per-node `contract.yaml` under `src/omnicursor/nodes/` (OmniClaude-shaped, Cursor-native execution). |
+| [OMNICLAUDE_TO_CURSOR_PORT.md](./OMNICLAUDE_TO_CURSOR_PORT.md) | OmniClaude → Cursor port: hook vs library planes, shared pattern module, duplicated agent routing. |
 | [OMNICURSOR_SYSTEM_DESIGN.md](./OMNICURSOR_SYSTEM_DESIGN.md) | Systems design diagrams (Mermaid): IDE layers + optional OmniNode integration. |
 | [HOW_TO_RUN_IN_CURSOR.md](./HOW_TO_RUN_IN_CURSOR.md) | Original starter-kit walkthrough (historical; see QUICKSTART for current setup). |
 | [EXECUTION_PLAN.md](./EXECUTION_PLAN.md) | Planning artifact for the course / team. |

@@ -109,5 +109,5 @@ Replace `YYYY-MM-DD` with the actual date and `<topic>` with the actual slug use
 ## OmniCursor backend (library + files)
 
 1. Prefer hook-injected routing when present.
-2. Read **`skills/brainstorming.md`** for the full methodology.
+2. Read **`.cursor/skills/brainstorming/SKILL.md`** for the full methodology.
 3. Optional: `get_agent_context` / `check_compliance` in `src/omnicursor/` for tests and scripting only.

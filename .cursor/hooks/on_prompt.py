@@ -13,14 +13,14 @@ Always exits 0 and always emits valid JSON.
 
 from __future__ import annotations
 
-import re
 import sys
-from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
-# Ensure _common is importable from the same directory.
+# _common and pattern_loader live in the same directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Shared lib modules (agent_scoring, prompt_pattern_selection, …) live in lib/.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 
 from _common import (
     LEARNED_PATTERNS_FILE,
@@ -29,120 +29,23 @@ from _common import (
     read_stdin,
     write_stdout,
 )
+from agent_scoring import HARD_FLOOR, extract_keywords, score_agent
 from pattern_loader import get_pattern_cache
 
 
 # ---------------------------------------------------------------------------
-# Routing constants (aligned with src/omnicursor/agents.py)
+# Prompt classification
 # ---------------------------------------------------------------------------
-
-HARD_FLOOR: float = 0.55
-
-_STOPWORDS = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
-
-
-# ---------------------------------------------------------------------------
-# Prompt classification — multi-strategy scoring
-# ---------------------------------------------------------------------------
-
-
-def _extract_keywords(text: str) -> List[str]:
-    """Extract meaningful keywords from *text*, filtering stopwords."""
-    return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
-        if w not in _STOPWORDS and len(w) > 2
-    ]
-
-
-def _fuzzy_threshold(trigger: str) -> float:
-    """Dynamic threshold: shorter triggers need higher similarity."""
-    n = len(trigger)
-    if n <= 6:
-        return 0.85
-    elif n <= 10:
-        return 0.78
-    return 0.72
-
-
-def _score_agent(
-    prompt_lower: str,
-    prompt_words: Set[str],
-    agent: Dict[str, Any],
-) -> Tuple[float, str]:
-    """Multi-strategy scoring for a single agent config.
-
-    Strategies (evaluated in order, best score wins):
-      1. Exact substring match on explicit/context triggers
-      2. Fuzzy SequenceMatcher on explicit triggers
-      3. Keyword overlap (activation_keywords or auto-extracted)
-
-    Returns ``(score, reason)``.  Score 0.0 means no match.
-    """
-    activation = agent.get("activation_patterns", {})
-    explicit: List[str] = activation.get("explicit_triggers", [])
-    context: List[str] = activation.get("context_triggers", [])
-
-    best_score = 0.0
-    best_reason = ""
-
-    # --- Strategy 1: exact substring match (highest confidence) ---
-    for trigger in explicit:
-        if trigger.lower() in prompt_lower:
-            if 0.95 > best_score:
-                best_score = 0.95
-                best_reason = "Exact trigger: '{}'".format(trigger)
-
-    for trigger in context:
-        if trigger.lower() in prompt_lower:
-            score = 0.80
-            if score > best_score:
-                best_score = score
-                best_reason = "Context trigger: '{}'".format(trigger)
-
-    # --- Strategy 2: fuzzy matching via SequenceMatcher ---
-    if best_score < 0.90:
-        words_in_prompt = re.findall(r"\b\w+\b", prompt_lower)
-        for trigger in explicit:
-            trigger_lower = trigger.lower()
-            threshold = _fuzzy_threshold(trigger_lower)
-            for word in words_in_prompt:
-                ratio = SequenceMatcher(None, trigger_lower, word).ratio()
-                if ratio >= threshold and ratio > best_score:
-                    best_score = ratio
-                    best_reason = "Fuzzy match: '{}' ({:.0%})".format(
-                        trigger, ratio,
-                    )
-
-    # --- Strategy 3: keyword overlap ---
-    if best_score < 0.70:
-        keywords_raw: List[str] = activation.get("activation_keywords", [])
-        if not keywords_raw:
-            keywords_raw = []
-            for t in explicit:
-                keywords_raw.extend(t.lower().split())
-        keyword_set = {k.lower() for k in keywords_raw if len(k) > 2} - _STOPWORDS
-        if keyword_set:
-            overlap = prompt_words & keyword_set
-            if len(overlap) >= 2:
-                keyword_ratio = len(overlap) / len(keyword_set)
-                scaled = 0.55 + (keyword_ratio * 0.30)
-                if scaled > best_score:
-                    best_score = scaled
-                    best_reason = "Keywords: {{{}}}".format(
-                        ", ".join(sorted(overlap)),
-                    )
-
-    return (best_score, best_reason)
 
 
 def classify_prompt(
     prompt: str, agents: List[Dict[str, Any]],
 ) -> Tuple[str, float, str]:
     """Return ``(agent_name, score, reason)``.
+
+    Scoring is delegated to ``agent_scoring.score_agent`` — the single
+    source of truth shared with scripts/user-prompt-submit.py and
+    src/omnicursor/agents.py.
 
     Only agents scoring at or above ``HARD_FLOOR`` are considered.
     Falls back to ``('polymorphic-agent', 0.0, 'No agent matched')``.
@@ -151,7 +54,7 @@ def classify_prompt(
         return ("polymorphic-agent", 0.0, "No agent matched")
 
     prompt_lower = prompt.lower()
-    prompt_words = set(_extract_keywords(prompt))
+    prompt_words = set(extract_keywords(prompt))
     best_name = "polymorphic-agent"
     best_score = 0.0
     best_reason = "No agent matched"
@@ -160,9 +63,9 @@ def classify_prompt(
         name = agent.get("name", "")
         if not name:
             continue
-        score, reason = _score_agent(prompt_lower, prompt_words, agent)
-        if score >= HARD_FLOOR and score > best_score:
-            best_score = score
+        sc, reason = score_agent(prompt_lower, prompt_words, agent)
+        if sc >= HARD_FLOOR and sc > best_score:
+            best_score = sc
             best_name = name
             best_reason = reason
 

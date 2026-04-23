@@ -1,16 +1,18 @@
 # OmniCursor Migration Plan
 ## omniclaude → omnicursor
 
-**Status:** Planning (Phase 1 hooks delivered). Sponsor splits **this repo** (hooks + `src/omnicursor`) from **omnimarket MCP / integration** work — see [SPONSOR_ALIGNMENT_2026-04-16.md](./dev/SPONSOR_ALIGNMENT_2026-04-16.md).
-**Last updated:** 2026-04-21
+**Status:** Foundation-first (Phase 1 hooks delivered). Sponsor splits **this repo** (hooks + `src/omnicursor`) from **omnimarket MCP / integration** work — see [SPONSOR_ALIGNMENT_2026-04-16.md](./dev/SPONSOR_ALIGNMENT_2026-04-16.md).
+**Last updated:** 2026-04-22
 
-**Port track (agents, skills, ONEX nodes & contracts):** If your scope is **only** porting those artifacts from OmniClaude, follow [MIGRATION_PHASES_HANDOFF.md](./dev/MIGRATION_PHASES_HANDOFF.md) — it **excludes** hooks/Kafka/Linear/MCP/pattern-write work. This document below remains the **full** phase map for the repository and team.
+**Philosophy:** Ship a **small, strong Cursor-native core** (hooks, routing, curated agents/skills, stub ONEX contracts) and grow **only when a concrete workflow needs it**. `omniclaude-main/` is a **patterns reference**, not a checklist to empty.
+
+**Port track (agents, skills, ONEX nodes & contracts):** See [MIGRATION_PHASES_HANDOFF.md](./dev/MIGRATION_PHASES_HANDOFF.md) — **excludes** hooks/Kafka/Linear/MCP/pattern-write work. This document is the **roadmap** for hooks + optional expansion tracks; it does **not** commit to omniclaude surface parity.
 
 ---
 
 ## Sponsor alignment (2026-04-16)
 
-Long-term this plan still describes **omniclaude → Cursor** parity. **Capstone scope** is narrower per sponsor feedback:
+This plan describes how OmniCursor relates to **omniclaude-style** behavior on Cursor. **Capstone scope** stays narrow per sponsor feedback; **full omniclaude parity is not a goal** — only a **foundation** plus optional add-ons:
 
 - **Hooks:** Four events are the correct ceiling; only `beforeShellExecution` truly *blocks*. Workarounds (fake SessionStart, rules, MCP advisory) are intentional — see [SPONSOR_ALIGNMENT_2026-04-16.md](./dev/SPONSOR_ALIGNMENT_2026-04-16.md).
 - **OmniNode bridge (sponsor — separate integration track):** Prefer **`omnimarket` nodes** (subprocess `python -m` or in-process handlers). **Do not** target direct omniintelligence service APIs or broken `onex run <contract.yaml>` for that bridge. This repo’s checklist does **not** include that MCP bridge unless explicitly in scope.
@@ -21,19 +23,19 @@ Long-term this plan still describes **omniclaude → Cursor** parity. **Capstone
 
 ## Background
 
-OmniCursor already has a solid scaffold: 4 Cursor hooks, 17 agents, 12 skills, 4 stub ONEX nodes, and 11 rules. The gap vs omniclaude is:
+OmniCursor ships a **deliberate foundation**: 4 Cursor hooks, JSON-backed **agents** (order-of ~17 configs including Cursor-specific ones), **~12 methodology skills** today (design ceiling on the order of **~17 curated skills** — grow only when needed), **five** ONEX-shaped node contracts under `src/omnicursor/nodes/` (hooks + read-side pattern compute), and rules. **omniclaude** has a much larger surface (many agents, 80+ skills, many nodes). That scale is **reference**, not a target.
 
-| Dimension | OmniCursor (current) | omniclaude |
+| Dimension | OmniCursor (foundation) | omniclaude (reference scale) |
 |---|---|---|
-| Hook event types | 4 | 8 |
-| Agents | 17 (see note re: plan vs extra Cursor-specific agents) | 53 |
-| Skills | 12 | 80+ |
-| ONEX nodes | 4 stubs | 80+ real implementations |
-| Kafka emission | Optional Unix socket (`emit_client`); logs to `~/.omnicursor/events.jsonl` | Full aiokafka publisher |
-| Linear integration | settings.json enabled | Full DoD enforcement pipeline |
-| Pattern learning | `learned_patterns.json` + hook load; capstone writes local / PG | File + omniintelligence REST (full stack) |
+| Hook event types | 4 (mapped from 8 CC concepts) | 8 |
+| Agents | ~17 JSON + hardcoded routing categories | ~53 |
+| Skills | ~12 (ceiling ~17 curated) | 80+ |
+| ONEX nodes | **5** contracts (4 hooks + pattern read compute); stubs + thin `handler.py` | 80+ |
+| Kafka emission | Optional Unix socket (`emit_client`); `~/.omnicursor/events.jsonl` | Full publisher |
+| Linear / DoD | Config + hooks where implemented | Full pipeline |
+| Patterns | Local file + optional HTTP pull (dev) | Broader stack |
 
-The strategic goal is to close the gap using **Cursor-native execution** (`.cursor/rules/`, `.cursor/agents/`, `.cursor/hooks/`, Cursor MCP). Sponsor near-term capstone priority for **integration** is **MCP → omnimarket**; this repo focuses on **hook + library** depth (agents, skills, contracts) without absorbing unrelated bridge or persistence work by default.
+**Strategic goal:** Harden **Cursor-native execution** (rules, agents JSON, hooks, small library). Add agents, skills, or node bodies **incrementally** when a feature or demo requires them — not by porting omniclaude wholesale.
 
 ---
 
@@ -58,9 +60,9 @@ Claude Code exposes 8 lifecycle hook types. Cursor exposes 4. The table below do
 
 ## Phases
 
-### Phase 1 — Hook Surface Parity
+### Phase 1 — Hook surface (8 → 4 Cursor events)
 
-**Goal:** Cover all 8 Claude Code hook types using Cursor's 4, with no regression on existing guards.
+**Goal:** Map all 8 Claude Code hook **concepts** onto Cursor’s 4 hook events, with no regression on existing guards. This is **behavioral coverage on Cursor**, not “identical omniclaude hook code.”
 
 **Status (2026-04-20):** Delivered in-tree (hooks under `.cursor/hooks/scripts/`).
 
@@ -96,73 +98,41 @@ Claude Code exposes 8 lifecycle hook types. Cursor exposes 4. The table below do
 
 ---
 
-### Phase 2 — Agent Coverage (17 → 53)
+### Phase 2 — Agent layer (foundation + optional adds)
 
-**Goal:** Port all omniclaude agents to `.cursor/agents/*.json` format.
+**Foundation (default):** Keep the existing `.cursor/agents/*.json` set (~17 files), **dynamic loading** in `src/omnicursor/agents.py`, hook routing in sync with library scoring, and **tests green**. That is enough to build on.
 
-The omniclaude agent YAML → OmniCursor JSON mapping is already established. The 36 missing agents fall into these categories:
-
-| Category | Examples | Count |
-|---|---|---|
-| Skill orchestrators | ticket-pipeline, merge-sweep, pr-review, autopilot, ci-watch, golden-chain | ~15 |
-| Channel adapters | slack, discord, email, telegram, sms | 5 |
-| Specialized | adversarial-pipeline, baseline, build-loop, bus-audit, compliance-sweep, aislop-sweep | ~10 |
-| Debugging/QA | debug-database, debug-intelligence, security-audit, performance | 4 |
-| Misc | content-summarizer, repository-crawler, research, documentation-architect | 4 |
-
-Each agent JSON must include: `name`, `description`, `category`, `activation_patterns` (with `explicit_triggers`, `context_triggers`, `activation_keywords`), `instructions`, `recommended_skill`.
-
-**Deliverables:** 36 new `.cursor/agents/*.json` files.
+**Optional (only if needed):** Add a new JSON agent when a capstone or product workflow needs it; use omniclaude YAML/JSON as **copy-paste reference** for fields (`name`, `description`, `category`, `activation_patterns`, `instructions`, `recommended_skill`). Do **not** treat “match omniclaude’s ~53 agents” as success criteria.
 
 ---
 
-### Phase 3 — Skill Coverage (12 → 80+)
+### Phase 3 — Skill layer (foundation + optional adds)
 
-**Goal:** Port omniclaude SKILL.md files to OmniCursor `skills/*.md` with compliance registry entries.
+**Foundation (default):** Maintain **~12 methodology skills** today; treat **~17 curated skills** as a **soft ceiling** unless the team explicitly widens scope. Every shipped skill needs `skills/<name>.md`, `compliance.py` entries (3–5 checks), and tests — see CI compliance step.
 
-Prioritized by bucket:
-
-| Bucket | Count | Notes |
-|---|---|---|
-| Bucket 1 (no external deps) | ~60 | Direct port from `omniclaude/plugins/onex/skills/*/SKILL.md` |
-| Bucket 2 (local files only) | ~10 | Port with file-path adjustments |
-| Bucket 3 stubs (external deps) | ~10 | Port as dry-run/manual-steps only, clearly labeled |
-
-Each skill requires:
-1. `skills/<name>.md` — methodology document
-2. Compliance registry entry in `compliance.py` with 3–5 keyword checks
-3. Corresponding `.cursor/rules/<n>-<name>.mdc` if the skill needs auto-activation on keyword match
+**Optional (only if needed):** Port additional OmniClaude `SKILL.md` content in small batches. Prefer **Bucket 1** (no external deps); **Bucket 3** skills must stay explicitly manual/dry-run if they mention Kafka, Linear, or other integrations — never silent fakes.
 
 ---
 
-### Phase 4 — Real ONEX Node Implementations
+### Phase 4 — ONEX nodes (foundation stubs → real when justified)
 
-**Goal:** Upgrade 4 stub nodes to real `omnibase_core` implementations; add critical missing nodes.
+**Foundation (default):** Under `src/omnicursor/nodes/` there are **five** contracts: the four lifecycle hook nodes plus **`node_cursor_pattern_injection_compute`** (read-side pattern selection for prompts; **no writes**). Each has `contract.yaml` + thin `handler.py`; tests cover contracts, hook binding parity, and pattern read logic. **Harden runtime behavior further** only when a demo or integration needs it — not to mirror omniclaude’s full node catalog.
 
-**Existing stubs to implement:**
+**Optional (only if needed):** Additional nodes (e.g. routing compute, delegation orchestrator, pattern injection compute) follow the same rule: add when there is a concrete consumer; align pattern **read** paths with local/file contracts; **writes** and bus semantics stay with the persistence / infra tracks.
 
-| Node | Type | Emits |
+| Stub (existing) | Type | Emits (declared) |
 |---|---|---|
 | `node_cursor_prompt_orchestrator` | `NodeOrchestrator` | `onex.evt.omnicursor.prompt-submitted.v1` |
 | `node_cursor_shell_guard_effect` | `NodeEffect` | `onex.evt.omnicursor.shell-executed.v1` |
 | `node_cursor_file_edit_effect` | `NodeEffect` | `onex.evt.omnicursor.file-edited.v1` |
 | `node_cursor_session_outcome_orchestrator` | `NodeOrchestrator` | `onex.evt.omnicursor.session-ended.v1` |
-
-**New nodes to add:**
-
-| Node | Type | Purpose |
-|---|---|---|
-| `node_cursor_agent_routing_compute` | `NodeCompute` | Fuzzy + optional LLM routing (port of omniclaude's `node_agent_routing_compute`) |
-| `node_cursor_delegation_orchestrator` | `NodeOrchestrator` | Delegates complex prompts to Kafka for multi-agent tasks |
-| `node_cursor_pattern_injection_compute` | `NodeCompute` | **Long-term:** inject patterns into hook context. **Capstone:** align with **local / PG** store + optional omnimarket helpers — **not** raw omniintelligence API as the only path |
-
-Each node requires: `contract.yaml`, `handler.py`, `__init__.py`, unit tests.
+| `node_cursor_pattern_injection_compute` | `COMPUTE` (read) | Local `learned_patterns.json` only; hook still `user-prompt-submit.py` |
 
 ---
 
-### Phase 5 — Kafka / Event Emission (long-term parity)
+### Phase 5 — Kafka / event emission (optional infra)
 
-**Goal:** Wire hooks to a bus via Unix socket + daemon, matching omniclaude’s `emit_client_wrapper` pattern when full ONEX streaming is required.
+**Goal:** When the team needs it, wire hooks to a bus via Unix socket + daemon, **similar in spirit** to omniclaude’s emit pattern — not a prerequisite for the foundation.
 
 **Capstone note (sponsor):** **Do not** block hook work in this repo on the full bus. **Hooks already call** `emit_client` (`.cursor/hooks/lib/emit_client.py`). Omnimarket/MCP demos and daemon expansion are **coordinated** across the team.
 
@@ -191,7 +161,7 @@ Each node requires: `contract.yaml`, `handler.py`, `__init__.py`, unit tests.
 
 ### Phase 7 — Pattern lifecycle (revised for sponsor)
 
-**Long-term goal:** Full omniclaude-style loop (events → intelligence → patterns in context).
+**Long-term (optional):** Richer pattern loop (events → store → patterns in context) if the team invests in that stack — **not** a foundation requirement.
 
 **Capstone goal:** **Local-first** pattern store (file today; **PostgreSQL** per team plan). **Writes to upstream omniintelligence are out of capstone scope** (year-2). Optional **HTTP GET** refresh exists for dev (`OMNICURSOR_PATTERN_SYNC_HTTP=1` on stop); default is **off**.
 
@@ -205,34 +175,34 @@ Each node requires: `contract.yaml`, `handler.py`, `__init__.py`, unit tests.
 
 ## Execution Order
 
-**Parallel track:** Omnimarket MCP bridge per sponsor — **not** step 1 of this repo’s hook/library checklist. See [SPONSOR_ALIGNMENT_2026-04-16.md](./dev/SPONSOR_ALIGNMENT_2026-04-16.md).
+**Parallel track:** Omnimarket MCP bridge per sponsor — **not** step 1 of this repo’s foundation. See [SPONSOR_ALIGNMENT_2026-04-16.md](./dev/SPONSOR_ALIGNMENT_2026-04-16.md).
 
-**Port track only:** Phases **2, 3, 4** (agents, skills, nodes) can overlap in batches — see [MIGRATION_PHASES_HANDOFF.md](./dev/MIGRATION_PHASES_HANDOFF.md). No dependency on Phase 5–7 for that checklist.
+**Port track:** Keep **Phase 2–4** green at **foundation** depth first (current agents/skills/nodes + tests). Add agents, skills, or node behavior **incrementally** per [MIGRATION_PHASES_HANDOFF.md](./dev/MIGRATION_PHASES_HANDOFF.md). Phases **5–7** are **optional** and infra-driven.
 
-**Full repo:** Phases 1, 2, and 3 can proceed in parallel **in this repo**. Phase 5 is not required to finish hook/library milestones here. Phase 6 depends on Phase 1. Phase 7 read path: **file now**; **PG** when the team defines the store contract.
+**Full repo:** Phase **1** is the maintained hook base. Phases **6–7** and **5** ship only when those tracks are explicitly prioritized.
 
 ```
-Port (agents / skills / nodes):  Phase 2 ──► Phase 3 ──► Phase 4   →  MIGRATION_PHASES_HANDOFF.md
+Foundation (default):     Phase 1 (hooks) + current agents/skills/node stubs + CI
 
-Hooks + Linear:                  Phase 1 ──────────────────────► Phase 6
-Kafka daemon + bus consumers:    Phase 5 (team / infra; optional for port)
-Pattern lifecycle + PG bridge:   Phase 7 (split with persistence track)
-Omnimarket MCP bridge:           integration track (sponsor)
+Optional expansion:       Phase 2 / 3 / 4  — add only when needed  →  MIGRATION_PHASES_HANDOFF.md
+
+Hooks + Linear:           Phase 6 (when assigned)
+Kafka + consumers:        Phase 5 (when team commits)
+Patterns + PG:            Phase 7 (with persistence track)
+Omnimarket MCP bridge:    integration track (sponsor)
 ```
 
-### Recommended start order (**port track** — agents, skills, nodes)
+### Recommended order (**foundation**)
 
-1. **Phase 2** — Agent coverage (`.cursor/agents` + `src/omnicursor/agents.py` tests)
-2. **Phase 3 (Bucket 1)** — Skills + `compliance.py` + rules
-3. **Phase 4** — ONEX nodes and `contract.yaml` under `src/omnicursor/nodes/`
-4. **Phase 3 (Buckets 2–3)** — As dependencies and labeling allow
+1. Keep **Phase 1** hooks and session/emit behavior healthy.
+2. Keep **Phase 2–3** at foundation depth: routing tests, compliance, and docs updated when you touch agents or skills.
+3. **Phase 4:** deepen stub nodes **when** a demo or contract needs it.
 
-### Recommended start order (**hooks / integration / bus** — full repo)
+### Optional order (**when assigned**)
 
-1. **Phase 1** — Maintained (done); extend only for new hook needs (e.g. Phase 6 Linear injection)
-2. **Phase 6** — Linear in hooks + rules, building on Phase 1 DoD/session JSON
-3. **Phase 7** — Keep `learned_patterns.json` + loader; wire to team pattern store when ready; optional `OMNICURSOR_PATTERN_SYNC_HTTP` for dev
-4. **Phase 5** — When the **team** commits to bus + consumers; align topics with omnimarket / infra (ONEX **node ports** in Phase 4 can proceed on the port track without waiting for Kafka)
+1. **Phase 6** — Linear in hooks + rules (builds on Phase 1).
+2. **Phase 7** — Pattern store + optional dev HTTP pull.
+3. **Phase 5** — Bus + consumers when infra is ready.
 
 ---
 

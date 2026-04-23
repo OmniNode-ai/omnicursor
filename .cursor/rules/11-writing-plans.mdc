@@ -168,5 +168,5 @@ Replace with the actual filename. Do not write "paste above."
 ## OmniCursor backend (library + files)
 
 1. Prefer hook-injected routing when present.
-2. Read **`skills/writing-plans.md`** for the full methodology.
+2. Read **`.cursor/skills/writing-plans/SKILL.md`** for the full methodology.
 3. Optional: `get_agent_context` / `check_compliance` in `src/omnicursor/` for tests and scripting only.

@@ -23,7 +23,7 @@ ruff check src/ tests/ .cursor/hooks/
 ## Local pre-commit gate
 
 - Shared hook path: `.githooks/pre-commit`
-- Runs local CI-parity checks before commit:
+- Runs the same checks as CI before commit:
 	- `ruff check src/ tests/ .cursor/hooks/`
 	- `pytest tests/ -v`
 	- skill compliance coverage validation
@@ -35,7 +35,7 @@ ruff check src/ tests/ .cursor/hooks/
 OmniCursor is **Cursor-native**: **rules** + **hooks** define IDE behavior. A **Python library** under `src/omnicursor/` supports **tests**, **CI**, and optional scripting.
 
 1. **Cursor Rules** (`.cursor/rules/`, 11 `.mdc` files) — behavior surface. Rules `00`–`02` are always-on; `10`–`17` activate on keyword match (`16` / `17` = Linear create / consume). Rules direct the model to read **`skills/*.md`** and to use hook-injected routing when present.
-2. **Cursor Hooks** (`.cursor/hooks/`) — 4 hook entrypoints in `.cursor/hooks.json`, plus `_common.py` and `pattern_loader.py`. Deterministic lifecycle scripts, stdlib only, no LLM. Each hook is described by an **OmniClaude-shaped node contract** in `src/omnicursor/nodes/*/contract.yaml`; see `docs/dev/OMNICURSOR_NODE_CONTRACTS.md` and `omnicursor.node_contracts`.
+2. **Cursor Hooks** (`.cursor/hooks/`) — 4 hook entrypoints in `.cursor/hooks.json`, plus `_common.py` and `pattern_loader.py`. Deterministic lifecycle scripts, stdlib only, no LLM. Each hook is described by an **OmniClaude-shaped node contract** in `src/omnicursor/nodes/*/contract.yaml`; see `docs/dev/OMNICURSOR_NODE_CONTRACTS.md` and `omnicursor.node_contracts`. For how OmniClaude-style logic is shared (or intentionally duplicated) between hooks and `src/omnicursor/`, read **`docs/dev/OMNICLAUDE_TO_CURSOR_PORT.md`**.
 3. **Python library** (`src/omnicursor/`) — `get_agent_context`, `SkillRepository`, `check_compliance`, and schemas — for **tests and automation**.
 
 ### Agent routing — two merge layers + three-strategy scoring

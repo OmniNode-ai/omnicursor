@@ -10,21 +10,23 @@ from .schemas import SkillDocument
 
 
 class SkillRepository:
-    """Load Markdown skills from the repository-local skills directory."""
+    """Load skills from .cursor/skills/<name>/SKILL.md (Cursor-native format)."""
 
     def __init__(self, skills_dir: Path = SKILLS_DIR) -> None:
         self.skills_dir = skills_dir
 
     def available_skills(self) -> List[str]:
+        """Return sorted list of skill names (directory names containing SKILL.md)."""
+        if not self.skills_dir.is_dir():
+            return []
         return sorted(
-            path.stem
-            for path in self.skills_dir.glob("*.md")
-            if path.stem.lower() != "readme"
+            d.name
+            for d in self.skills_dir.iterdir()
+            if d.is_dir() and (d / "SKILL.md").exists()
         )
 
     def resolve_path(self, skill_name: str) -> Path:
-        filename = skill_name if skill_name.endswith(".md") else f"{skill_name}.md"
-        return self.skills_dir / filename
+        return self.skills_dir / skill_name / "SKILL.md"
 
     def load_skill(self, skill_name: str) -> SkillDocument:
         path = self.resolve_path(skill_name)
@@ -36,7 +38,7 @@ class SkillRepository:
             )
 
         return SkillDocument(
-            skill_name=path.stem,
+            skill_name=skill_name,
             path=str(path.relative_to(REPO_ROOT)),
             content=path.read_text(encoding="utf-8"),
         )
