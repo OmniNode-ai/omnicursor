@@ -539,3 +539,34 @@ class TestRobustness:
         monkeypatch.setattr(sys, "stdout", buf)
         _mod.main()
         assert json.loads(buf.getvalue().strip()) == {}
+
+
+class TestRecapFile:
+    def test_last_recap_written_on_stop(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        recap_path = tmp_path / "last-recap.md"
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "test-conv", "status": "success"})
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        monkeypatch.setattr(_mod, "log_event", lambda e: None)
+        monkeypatch.setattr(_mod, "_RECAP_PATH", recap_path)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        buf = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", buf)
+        _mod.main()
+        assert recap_path.exists()
+        assert "Session Recap" in recap_path.read_text()
+
+    def test_last_recap_contains_outcome(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        recap_path = tmp_path / "last-recap.md"
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "test-conv", "status": "failed"})
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        monkeypatch.setattr(_mod, "log_event", lambda e: None)
+        monkeypatch.setattr(_mod, "_RECAP_PATH", recap_path)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        buf = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", buf)
+        _mod.main()
+        assert "failed" in recap_path.read_text()
