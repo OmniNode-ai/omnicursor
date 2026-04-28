@@ -169,7 +169,12 @@ for entry in "${LINKS[@]}"; do
     dst="$TARGET/$dst_rel"
 
     if [ -e "$dst" ] && [ ! -L "$dst" ]; then
-        echo "  SKIP $dst_rel — real file exists; remove it manually to install"
+        echo "  SKIP $dst_rel — real file found at $dst; remove it manually to install"
+        continue
+    fi
+
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+        echo "  ok   $dst_rel  (already linked)"
         continue
     fi
 

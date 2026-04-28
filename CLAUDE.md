@@ -99,9 +99,9 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 - **Bucket 2**: (unused — formerly plan-ticket YAML-only mode)
 - **Bucket 3** (plan-ticket, plan-to-tickets, execute-plan): Linear MCP integration via `tracker.*` tools. Requires Linear MCP configured in `~/.cursor/mcp.json`.
 
-### Compliance registry (`compliance.py`)
+### Smoke-check registry (`compliance.py`)
 
-`COMPLIANCE_REGISTRY` maps each of the 16 skills to 3–5 keyword-based checks. `check_compliance(skill_name, response_summary)` returns a `ComplianceResult` with per-check pass/fail and an overall `compliant` boolean.
+`COMPLIANCE_REGISTRY` maps each of the 16 skills to 3–5 keyword/phrase checks. `check_compliance(skill_name, response_summary)` returns a `ComplianceResult` with per-check pass/fail. These are **vocabulary smoke-checks** (does the response use the right terminology?), not behavioral compliance — a well-worded response can pass without doing real work. Renamed to "smoke-check" in docs; function/class names kept for API stability.
 
 ## Key constraints
 
@@ -111,7 +111,7 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 - `on_edit.py` runs `ruff check` diagnostically — never `--fix`, never modifies files.
 - `schemas.py` defines 5 Pydantic v2 models: `AgentContext`, `SkillDocument`, `ComplianceResult`, `PatternRecord`, `DatabaseStatus`. The agents, skills, and compliance modules depend on these models.
 - When adding a new agent: create `.cursor/agents/<name>.json` with `name`, `description`, `category`, `activation_patterns` (must include `explicit_triggers`, `context_triggers`, and `activation_keywords`), `instructions`, `recommended_skill`. It auto-loads on startup.
-- When adding a new skill: create `skills/<name>.md` AND copy it to `.cursor/skills/<name>/SKILL.md` (both paths are required — CI scans `skills/*.md`, `SkillRepository` loads from `.cursor/skills/<name>/SKILL.md`). Add a compliance registry entry in `compliance.py` with 3–5 keyword checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
+- When adding a new skill: create `skills/<name>.md` AND copy it to `.cursor/skills/<name>/SKILL.md` (both paths are required — CI scans `skills/*.md`, `SkillRepository` loads from `.cursor/skills/<name>/SKILL.md`). Add a smoke-check entry in `compliance.py` with 3–5 keyword/phrase checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
 - **Port track** (agents, skills, ONEX nodes & contracts from OmniClaude): `docs/dev/MIGRATION_PHASES_HANDOFF.md`. Hooks, Kafka, Linear-in-hooks, MCP bridge, and authoritative pattern writes are covered in `docs/OMNICURSOR_MIGRATION_PLAN.md` / other tracks.
 
 ## Source-of-truth hierarchy

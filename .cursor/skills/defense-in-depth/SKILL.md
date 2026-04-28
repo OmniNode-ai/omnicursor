@@ -1,9 +1,3 @@
----
-name: defense-in-depth
-description: >-
-  Trace data flow end-to-end and add validation at every system boundary. Use when hardening against missing error handling, injection, or incomplete input validation.
----
-
 # Defense in Depth
 
 Use this skill when fixing a bug caused by invalid data reaching deep into execution. The goal is to add validation at every layer the data passes through, making the bug structurally impossible to reproduce.

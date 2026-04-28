@@ -21,13 +21,26 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+# v0 calibration — chosen to match routing HARD_FLOOR; patterns from low-confidence
+# classifications are too noisy to learn from. Tune with scoring eval harness.
 HARD_FLOOR: float = 0.55
+
+# v0 calibration — moderate initial confidence so new patterns matter but don't
+# dominate. Each repeated success adds 0.05 (takes 7 successes to reach cap).
+# Neither value has been evaluated against session outcome data.
 INITIAL_WEIGHT: float = 0.60
 WEIGHT_INCREMENT: float = 0.05
 WEIGHT_CAP: float = 0.95
+
+# Eviction floor — patterns below this are removed regardless of recency.
 WEIGHT_FLOOR: float = 0.10
+
+# v0 calibration — 30-day window before decay, 0.10 per period.
+# Not tuned against real session frequency data.
 DECAY_DAYS: int = 30
 DECAY_AMOUNT: float = 0.10
+
+# Cap per domain — prevents any single domain from monopolizing the cache.
 MAX_PATTERNS_PER_DOMAIN: int = 20
 
 STOPWORDS: frozenset = frozenset({

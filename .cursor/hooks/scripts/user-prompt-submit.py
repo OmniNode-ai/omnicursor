@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import re
 import sys
 import time
@@ -541,8 +542,22 @@ def main() -> None:
     recap_prefix = ""
     if _RECAP_PATH.exists():
         try:
-            recap_prefix = _RECAP_PATH.read_text(encoding="utf-8") + "\n\n"
-            _RECAP_PATH.unlink()
+            consumed = _RECAP_PATH.with_name(
+                f"last-recap.consumed.{int(time.time())}"
+            )
+            os.rename(_RECAP_PATH, consumed)
+            recap_prefix = consumed.read_text(encoding="utf-8") + "\n\n"
+            # Prune old consumed files — keep only the 5 most recent.
+            siblings = sorted(
+                _RECAP_PATH.parent.glob("last-recap.consumed.*"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for old in siblings[5:]:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
         except OSError:
             recap_prefix = ""
 

@@ -1,9 +1,3 @@
----
-name: writing-plans
-description: >-
-  Write bite-sized TDD-ordered implementation steps with exact file paths and acceptance criteria. Use when converting a design doc into a code-ready plan.
----
-
 # Writing Plans
 
 Use this skill when the user has a completed design doc and needs a comprehensive implementation plan with exact file paths, complete code examples, and a TDD approach.

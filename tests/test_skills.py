@@ -1,6 +1,10 @@
+from pathlib import Path
+
 import pytest
 
 from omnicursor.skills import SkillRepository
+
+_REPO = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
@@ -90,3 +94,21 @@ def test_load_execute_plan_skill(repository: SkillRepository) -> None:
 def test_load_nonexistent_skill_raises(repository: SkillRepository) -> None:
     with pytest.raises(FileNotFoundError, match="nonexistent"):
         repository.load_skill("nonexistent")
+
+
+def test_skills_dual_path_parity() -> None:
+    """skills/*.md and .cursor/skills/*/SKILL.md must have identical content."""
+    canonical_dir = _REPO / "skills"
+    cursor_dir = _REPO / ".cursor" / "skills"
+    mismatches = []
+    for canonical in sorted(canonical_dir.glob("*.md")):
+        if canonical.stem.upper() == "README":
+            continue
+        name = canonical.stem
+        cursor_copy = cursor_dir / name / "SKILL.md"
+        if not cursor_copy.exists():
+            mismatches.append(f"{name}: .cursor/skills/{name}/SKILL.md missing")
+            continue
+        if canonical.read_text(encoding="utf-8") != cursor_copy.read_text(encoding="utf-8"):
+            mismatches.append(f"{name}: skills/{name}.md and .cursor/skills/{name}/SKILL.md differ")
+    assert not mismatches, "Skill dual-path divergence:\n" + "\n".join(mismatches)

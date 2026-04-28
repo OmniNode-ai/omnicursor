@@ -1,9 +1,3 @@
----
-name: systematic-debugging
-description: >-
-  Find the smallest verified root cause before proposing a fix. Use when debugging failures, regressions, tracebacks, flaky tests, or any unexpected behavior.
----
-
 # Systematic Debugging
 
 Use this skill when the user is debugging a failure, regression, flaky behavior, traceback, or unclear root cause.
@@ -46,3 +40,4 @@ When you finish, summarize:
 - fix
 - verification
 - follow-up risks
+

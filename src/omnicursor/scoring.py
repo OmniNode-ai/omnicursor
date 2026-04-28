@@ -15,6 +15,10 @@ import re
 from difflib import SequenceMatcher
 from typing import Any
 
+# v0 calibration — chosen so fuzzy keyword hits (0.55–0.75) are decisive
+# enough to be useful, while exact matches (0.95) are always unambiguous.
+# Not yet evaluated against a labeled prompt set; tune with a small eval
+# harness (100 labeled prompts, expected agent, precision/recall per agent).
 HARD_FLOOR: float = 0.55
 
 STOPWORDS: frozenset[str] = frozenset({
@@ -65,11 +69,13 @@ def score_agent(
     best_reason = ""
 
     for trigger in explicit:
+        # 0.95 — exact verbatim match; near-certain signal (v0, unevaluated)
         if trigger.lower() in prompt_lower and 0.95 > best_score:
             best_score = 0.95
             best_reason = "Exact trigger: '{}'".format(trigger)
 
     for trigger in context:
+        # 0.80 — context phrase match; strong but not definitive (v0, unevaluated)
         if trigger.lower() in prompt_lower and 0.80 > best_score:
             best_score = 0.80
             best_reason = "Context trigger: '{}'".format(trigger)
@@ -93,6 +99,9 @@ def score_agent(
         if keyword_set:
             overlap = prompt_words & keyword_set
             if len(overlap) >= 2:
+                # Scale: 0.55 base + up to 0.30 for full keyword coverage.
+                # Range 0.55–0.85 (v0, unevaluated). Minimum 2 keywords to
+                # reduce false positives from single-word overlap.
                 scaled = 0.55 + (len(overlap) / len(keyword_set) * 0.30)
                 if scaled > best_score:
                     best_score = scaled

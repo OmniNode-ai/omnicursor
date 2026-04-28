@@ -1,4 +1,4 @@
-"""Pydantic schemas for the OmniCursor Python library (agents, skills, compliance)."""
+"""Pydantic schemas for the OmniCursor Python library (agents, skills, smoke-check)."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ class SkillDocument(BaseModel):
 
 
 class ComplianceResult(BaseModel):
-    """Result of a skill compliance check."""
+    """Result of a skill vocabulary smoke-check (keyword presence, not behavioral compliance)."""
 
     skill_name: str
     checks: Dict[str, bool]

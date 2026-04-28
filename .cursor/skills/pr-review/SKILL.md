@@ -1,9 +1,3 @@
----
-name: pr-review
-description: >-
-  Classify PR findings by severity and assess merge readiness. Use when reviewing a pull request for correctness, style, and completeness.
----
-
 # PR Review
 
 Use this skill when reviewing a pull request for merge readiness. The goal is to produce a priority-organized assessment that clearly communicates what must be fixed before merge.
