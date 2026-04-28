@@ -1,0 +1,9 @@
+---
+description: Plan to tickets — parse a plan file and batch-create Linear tickets
+globs:
+alwaysApply: false
+---
+
+When the user says `/plan-to-tickets` or "create tickets from plan" or "tickets from plan" or "batch create tickets":
+
+Read the plan file at the path provided. Then follow `skills/plan-to-tickets.md` exactly.

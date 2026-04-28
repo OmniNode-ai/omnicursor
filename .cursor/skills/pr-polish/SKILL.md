@@ -1,9 +1,3 @@
----
-name: pr-polish
-description: >-
-  Resolve merge conflicts and address reviewer comments to get a PR ready to merge. Use when a PR has outstanding review feedback or conflicts.
----
-
 # PR Polish
 
 Use this skill when a PR exists but is not yet merge-ready. The goal is to take an open PR through conflict resolution, review feedback, and iterative quality passes until it is clean enough to merge.

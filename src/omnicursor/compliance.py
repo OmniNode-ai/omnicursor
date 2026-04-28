@@ -1,4 +1,12 @@
-"""Compliance checking for OmniCursor skill outputs."""
+"""Vocabulary smoke-check for OmniCursor skill outputs.
+
+These checks verify that a response summary contains expected terminology for
+a given skill — not that the skill was executed correctly. A response that uses
+the right words can pass all checks without doing real work. This is a smoke
+check (vocabulary sniff), not behavioral compliance.
+
+For real compliance, see: docs/dev/COMPLIANCE_FUTURE_WORK.md (planned).
+"""
 
 from __future__ import annotations
 
@@ -9,6 +17,7 @@ from .schemas import ComplianceResult
 
 # Each skill maps to a list of (check_name, keywords) tuples.
 # A check passes if ANY of its keywords appear in the response summary.
+# NOTE: This is vocabulary matching only — not behavioral verification.
 COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
     "systematic-debugging": [
         ("states_problem_clearly", [
@@ -87,6 +96,9 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "verification", "pytest", "lint", "ruff", "mypy",
             "unit_test", "unit test", "blocking",
         ]),
+        ("creates_linear_ticket", [
+            "tracker.create_issue", "linear", "ticket", "created", "url",
+        ]),
     ],
     "pr-review": [
         ("classifies_by_severity", [
@@ -96,7 +108,8 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "merge", "ready", "not ready", "blocking", "verdict",
         ]),
         ("reviews_changed_files", [
-            "diff", "changed", "modified", "file", "review",
+            "diff", "changed file", "modified file", "file review",
+            "reviewed file", "files changed",
         ]),
         ("provides_actionable_findings", [
             "fix", "suggest", "should", "must", "change", "update",
@@ -110,7 +123,8 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "review", "comment", "thread", "feedback", "reply",
         ]),
         ("iterates_to_convergence", [
-            "iteration", "pass", "consecutive", "converge", "clean",
+            "iteration", "consecutive clean", "converge", "clean pass",
+            "pass 1", "pass 2", "round 1", "round 2",
         ]),
         ("reports_phase_status", [
             "phase", "status", "ready", "push", "summary",
@@ -127,10 +141,12 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "file", "evidence", "impact", "fix", "what to change",
         ]),
         ("iterates_to_convergence", [
-            "convergence", "consecutive", "clean pass", "iterate", "pass",
+            "convergence", "consecutive clean", "clean pass", "iterate",
+            "pass 1", "pass 2", "round 1",
         ]),
         ("states_verdict", [
-            "verdict", "clean", "risks_noted", "blocking", "stable",
+            "verdict", "clean verdict", "risks_noted", "blocking_issue",
+            "overall verdict", "stable",
         ]),
     ],
     "defense-in-depth": [
@@ -144,10 +160,12 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "business logic", "semantic", "context", "operation",
         ]),
         ("adds_environment_guards", [
-            "environment", "guard", "test", "temp", "production",
+            "environment guard", "env guard", "env check", "temp dir",
+            "production guard", "ci guard",
         ]),
         ("tests_each_layer", [
-            "test", "bypass", "independently", "verify", "layer",
+            "test each layer", "layer test", "bypass each", "independently verify",
+            "unit test each", "layer independently",
         ]),
     ],
     "merge-planner": [
@@ -161,7 +179,8 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "order", "merge", "queue", "sequence", "first",
         ]),
         ("checks_conflicts", [
-            "conflict", "rebase", "base branch", "clean", "target",
+            "conflict", "rebase", "base branch", "no conflict", "clean merge",
+            "merge target",
         ]),
     ],
     "insights-to-plan": [
@@ -203,14 +222,40 @@ COMPLIANCE_REGISTRY: Dict[str, List[Tuple[str, List[str]]]] = {
             "worktree", "branch", "create", "add", "isolat",
         ]),
         ("runs_baseline_tests", [
-            "test", "baseline", "passing", "clean", "ready",
+            "baseline test", "tests pass", "passing baseline", "clean worktree",
+            "worktree ready", "baseline passing",
         ]),
+    ],
+    "recap": [
+        ("states_outcome", ["outcome", "success", "failed", "abandoned", "unknown"]),
+        ("lists_files_edited", ["files edited", "file edited"]),
+        ("suggests_next_steps", ["next step", "suggested", "suggest"]),
+    ],
+    "plan-review": [
+        ("checks_count_integrity", ["count", "task", "numeric", "found", "prose"]),
+        ("checks_acceptance_criteria", ["acceptance", "criteria", "testable", "vague"]),
+        ("states_verdict", ["verdict", "pass", "fail", "critical", "major"]),
+    ],
+    "plan-to-tickets": [
+        ("parses_task_sections", ["task", "## task", "heading", "section", "found"]),
+        ("creates_epic", ["epic", "parent epic"]),
+        ("returns_ticket_ids", ["ticket", "linear", "created", "OMN-", "id"]),
+    ],
+    "execute-plan": [
+        ("calls_plan_review", ["plan-review", "review", "r1", "r2", "verdict"]),
+        ("calls_plan_to_tickets", ["plan-to-tickets", "ticket", "linear", "epic", "OMN-"]),
+        ("reports_summary", ["passed", "blocked", "skipped", "summary"]),
     ],
 }
 
 
 def check_compliance(skill_name: str, response_summary: str) -> ComplianceResult:
-    """Check a response summary against the compliance registry for a skill."""
+    """Vocabulary smoke-check: verify a response summary contains expected skill keywords.
+
+    This is a presence check, not behavioral compliance. A well-worded response
+    that does nothing useful can pass all checks. The function name is kept for
+    API stability; the intent is smoke-check, not enforcement.
+    """
 
     registry_entry = COMPLIANCE_REGISTRY.get(skill_name)
 

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
-from types import ModuleType
 from typing import Any, Dict, List, Set, Tuple
 
 from .schemas import AgentContext
+from .scoring import HARD_FLOOR, STOPWORDS, extract_keywords, fuzzy_threshold, score_agent
 
 __all__ = [
     "AGENT_CONTEXTS",
@@ -24,39 +23,10 @@ __all__ = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Scoring engine — loaded from .cursor/hooks/lib/agent_scoring.py
-#
-# The canonical implementation is stdlib-only and lives next to the Cursor
-# hook library.  Hooks import it directly; this module loads it by path so
-# omnicursor never becomes a hook dependency, while pytest and library
-# callers still use ``import omnicursor``.  Same pattern as prompt_pattern_read.py.
-# ---------------------------------------------------------------------------
-
-def _load_agent_scoring() -> ModuleType:
-    path = Path(__file__).resolve().parents[2] / ".cursor" / "hooks" / "lib" / "agent_scoring.py"
-    if not path.is_file():
-        raise RuntimeError(
-            "agent_scoring.py not found at {}; full OmniCursor checkout required. "
-            "See docs/dev/ROUTING_DEDUPLICATION.md.".format(path)
-        )
-    name = "_omnicursor_hook_agent_scoring"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Cannot load agent_scoring from {}".format(path))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
-
-
-_as = _load_agent_scoring()
-
-# Re-export canonical constants and functions under their original private names
-# so callers in this module and in tests are unaffected.
-HARD_FLOOR: float = _as.HARD_FLOOR
-_STOPWORDS: frozenset[str] = _as.STOPWORDS
-_score_agent = _as.score_agent
-_fuzzy_threshold = _as.fuzzy_threshold
+# Private aliases used within this module.
+_STOPWORDS: frozenset[str] = STOPWORDS
+_score_agent = score_agent
+_fuzzy_threshold = fuzzy_threshold
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +292,7 @@ def get_agent_context(category: str) -> AgentContext:
 
 def _extract_keywords(text: str) -> List[str]:
     """Extract meaningful keywords from *text*, filtering stopwords."""
-    return _as.extract_keywords(text)
+    return extract_keywords(text)
 
 
 # _fuzzy_threshold and _score_agent are re-exported from the scoring engine

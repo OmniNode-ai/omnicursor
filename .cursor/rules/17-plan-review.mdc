@@ -1,0 +1,9 @@
+---
+description: Plan review — adversarial R1-R6 pre-execution check on a plan file
+globs:
+alwaysApply: false
+---
+
+When the user says `/plan-review` or "review plan" or "check plan" or "review this plan":
+
+Read the plan file at the path provided. Then follow `skills/plan-review.md` exactly.

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+import omnicursor.shell_guard as _shell_guard  # canonical source; patch _load_dod_config here
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -26,7 +27,6 @@ def _load(name: str, path: Path) -> Any:
     sys.modules[name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
-
 
 _lib_common = _load("_common", _LIB / "_common.py")
 _mod = _load("shell_guard", _SCRIPTS / "shell-guard.py")
@@ -346,9 +346,9 @@ class TestDoDAndDispatch:
         sessions = tmp_path / "sessions"
         (sessions / "conv-d").mkdir(parents=True)
         monkeypatch.setattr(
-            _mod,
+            _shell_guard,
             "_load_dod_config",
-            lambda: {
+            lambda path=None: {
                 "dod_enabled": False,
                 "dod_linear_transition_regex": "",
                 "dispatch_enabled": True,

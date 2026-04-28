@@ -11,14 +11,20 @@ Cursor-native adaptation of OmniClaude — **rules**, **hooks**, and **file-back
 ## Quick Start
 
 ```bash
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit
-pytest tests/ -v
+# 1. Clone to a permanent location
+git clone https://github.com/OmniNode-ai/OmniCursor ~/tools/OmniCursor
+cd ~/tools/OmniCursor
+
+# 2. Install the package
+python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+
+# 3. Install into your project (once per project)
+./install.sh /path/to/your-project
 ```
 
-See [`docs/QUICKSTART.md`](./docs/QUICKSTART.md) for Cursor setup, hooks, and end-to-end flow.
+Then open your project in Cursor — hooks and rules are active.
+
+See **[`docs/QUICKSTART.md`](./docs/QUICKSTART.md)** for the full guide, skill reference, and uninstall instructions.
 
 ## Git Pre-Commit Gate
 

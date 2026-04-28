@@ -1,0 +1,9 @@
+---
+description: Session recap — summarize what happened this session
+globs: []
+alwaysApply: false
+---
+
+When the user says "recap", "/recap", or "summarize this session":
+read `skills/recap.md` and follow it exactly.
+Do not write output to any file — display inline in chat only.

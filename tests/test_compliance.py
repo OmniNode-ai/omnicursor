@@ -76,6 +76,10 @@ def test_all_skills_have_registry_entries() -> None:
         "insights-to-plan",
         "handoff",
         "using-git-worktrees",
+        "recap",
+        "plan-review",
+        "plan-to-tickets",
+        "execute-plan",
     }
     assert set(COMPLIANCE_REGISTRY.keys()) == expected
 
@@ -98,7 +102,8 @@ def test_plan_ticket_compliance() -> None:
         "Detected repo: omniclaude. "
         "Generated YAML template with title: 'Add webhook endpoint'. "
         "Requirements section with R1 statement and acceptance criteria. "
-        "Verification: pytest and ruff lint checks. Blocking: true."
+        "Verification: pytest and ruff lint checks. Blocking: true. "
+        "Created Linear ticket via tracker.create_issue. Ticket url: linear.app/..."
     )
     result = check_compliance("plan-ticket", summary)
     assert result.compliant is True
@@ -153,3 +158,95 @@ def test_hostile_reviewer_missing_verdict() -> None:
     result = check_compliance("hostile-reviewer", summary)
     assert result.compliant is False
     assert "states_verdict" in result.missing
+
+
+def test_recap_fully_compliant() -> None:
+    summary = (
+        "Session outcome was success. "
+        "Files edited: src/foo.py, src/bar.py. "
+        "Suggested next steps: continue the refactor."
+    )
+    result = check_compliance("recap", summary)
+    assert result.compliant is True
+    assert result.missing == []
+
+
+def test_recap_missing_next_steps() -> None:
+    summary = (
+        "Session outcome was success. "
+        "Files edited: src/foo.py."
+    )
+    result = check_compliance("recap", summary)
+    assert result.compliant is False
+    assert "suggests_next_steps" in result.missing
+
+
+def test_plan_review_fully_compliant() -> None:
+    summary = (
+        "Checking plan file docs/plans/my-plan.md. "
+        "Count integrity: 5 tasks found, prose says 5. Pass. "
+        "Acceptance criteria: all criteria are testable. Pass. "
+        "Verdict: PASS — no critical or major findings."
+    )
+    result = check_compliance("plan-review", summary)
+    assert result.compliant is True
+    assert result.missing == []
+
+
+def test_plan_review_missing_verdict() -> None:
+    summary = (
+        "Checking count integrity and acceptance criteria. "
+        "Found 3 tasks. Criteria look testable."
+    )
+    result = check_compliance("plan-review", summary)
+    assert result.compliant is False
+    assert "states_verdict" in result.missing
+
+
+def test_plan_to_tickets_fully_compliant() -> None:
+    summary = (
+        "Parsing plan file docs/plans/my-plan.md. "
+        "Found 5 task sections (## Task N: headings). "
+        "Created Linear epic: OMN-100. "
+        "Created tickets: OMN-101, OMN-102, OMN-103, OMN-104, OMN-105. "
+        "Ticket IDs returned to caller."
+    )
+    result = check_compliance("plan-to-tickets", summary)
+    assert result.compliant is True
+    assert result.missing == []
+
+
+def test_plan_to_tickets_missing_epic() -> None:
+    summary = (
+        "Parsing plan file. Found 3 tasks. "
+        "Created tickets: OMN-1, OMN-2, OMN-3."
+    )
+    result = check_compliance("plan-to-tickets", summary)
+    assert result.compliant is False
+    assert "creates_epic" in result.missing
+
+
+def test_execute_plan_fully_compliant() -> None:
+    summary = (
+        "Running execute_plan on docs/plans/my-plan.md. "
+        "plan-review: PASS. "
+        "plan-to-tickets: created 3 tickets (OMN-101, OMN-102, OMN-103). "
+        "Implemented ticket OMN-101: passed. "
+        "Implemented ticket OMN-102: passed. "
+        "Implemented ticket OMN-103: blocked after 2 fix attempts. "
+        "Summary: 2 passed, 1 blocked, 0 skipped."
+    )
+    result = check_compliance("execute-plan", summary)
+    assert result.compliant is True
+    assert result.missing == []
+
+
+def test_execute_plan_missing_summary() -> None:
+    summary = (
+        "Running plan-review: PASS. "
+        "Created tickets via plan-to-tickets."
+    )
+    result = check_compliance("execute-plan", summary)
+    assert result.compliant is False
+    assert "reports_summary" in result.missing
+

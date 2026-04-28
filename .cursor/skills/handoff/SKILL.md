@@ -1,9 +1,3 @@
----
-name: handoff
-description: >-
-  Capture current session context, progress, and next steps into a handoff doc. Use at the end of a session or before switching tasks to preserve continuity.
----
-
 # Handoff
 
 Use this skill when ending a session and you want the next session to pick up where you left off. The goal is to capture enough context for seamless session continuity.

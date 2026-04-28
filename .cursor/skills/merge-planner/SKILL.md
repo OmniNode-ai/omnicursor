@@ -1,9 +1,3 @@
----
-name: merge-planner
-description: >-
-  Determine safe PR merge order and surface integration conflicts before they happen. Use when multiple PRs are ready and merge sequencing matters.
----
-
 # Merge Planner
 
 Use this skill when multiple PRs target the same branch and you need to decide merge order, or when a PR has complex dependencies that affect merge safety. The goal is to classify PRs and produce a priority-ordered merge plan.

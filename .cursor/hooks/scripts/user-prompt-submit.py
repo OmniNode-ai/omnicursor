@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import re
 import sys
 import time
@@ -66,6 +67,8 @@ from prompt_pattern_selection import (
 
 # Private names kept for hook self-tests (tests/test_suite_event1_prompt.py).
 _score_pattern_relevance = score_pattern_relevance
+
+_RECAP_PATH: Path = Path.home() / ".omnicursor" / "last-recap.md"
 _filter_patterns_by_relevance = filter_patterns_by_relevance
 
 
@@ -536,7 +539,29 @@ def main() -> None:
     except Exception:
         pass
 
-    write_context(build_context(
+    recap_prefix = ""
+    if _RECAP_PATH.exists():
+        try:
+            consumed = _RECAP_PATH.with_name(
+                f"last-recap.consumed.{int(time.time())}"
+            )
+            os.rename(_RECAP_PATH, consumed)
+            recap_prefix = consumed.read_text(encoding="utf-8") + "\n\n"
+            # Prune old consumed files — keep only the 5 most recent.
+            siblings = sorted(
+                _RECAP_PATH.parent.glob("last-recap.consumed.*"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for old in siblings[5:]:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        except OSError:
+            recap_prefix = ""
+
+    write_context(recap_prefix + build_context(
         agent_name, score, reason, patterns, prompt, conversation_id,
         agent_config=agent_config,
         correlation_id=correlation_id,

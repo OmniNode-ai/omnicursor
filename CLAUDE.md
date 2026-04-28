@@ -72,14 +72,14 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 - **Gate 3 — Abandoned**: no completion markers AND session duration < 60 seconds.
 - **Gate 4 — Unknown**: ambiguous signals (catch-all).
 
-### Skills (12 total)
+### Skills (16 total)
 
 | Skill | Bucket | Source |
 |-------|--------|--------|
 | `systematic-debugging` | 1 | Original |
 | `brainstorming` | 1 | Original |
 | `writing-plans` | 1 | Original |
-| `plan-ticket` | 2 | Original |
+| `plan-ticket` | 3 | Original (upgraded to Linear MCP) |
 | `pr-review` | 1 | Ported from OmniClaude |
 | `pr-polish` | 1 | Ported from OmniClaude |
 | `hostile-reviewer` | 1 | Ported from OmniClaude |
@@ -88,16 +88,20 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 | `insights-to-plan` | 1 | Ported from OmniClaude |
 | `handoff` | 1 | Ported from OmniClaude |
 | `using-git-worktrees` | 1 | Ported from OmniClaude |
+| `recap` | 1 | Original |
+| `plan-review` | 1 | Original |
+| `plan-to-tickets` | 3 | Original (Linear MCP) |
+| `execute-plan` | 3 | Original (Linear MCP + autonomous pipeline) |
 
 ### 3-bucket classification (from Cursor rules)
 
-- **Bucket 1** (systematic-debugging, brainstorming, writing-plans, pr-review, pr-polish, hostile-reviewer, defense-in-depth, merge-planner, insights-to-plan, handoff, using-git-worktrees): pure methodology, no external calls.
-- **Bucket 2** (plan-ticket): reads bounded local files only.
-- **Bucket 3** (concept only in this repo): external integration — see `docs/ARCHITECTURE.md` and rule `00-omninode-concepts`. There is **no** `adapter-stub` skill or `@20-adapter-stub` rule in-tree; handle Linear/Kafka/validator work outside Cursor rules or document manual steps.
+- **Bucket 1** (systematic-debugging, brainstorming, writing-plans, pr-review, pr-polish, hostile-reviewer, defense-in-depth, merge-planner, insights-to-plan, handoff, using-git-worktrees, recap, plan-review): pure methodology, no external calls.
+- **Bucket 2**: (unused — formerly plan-ticket YAML-only mode)
+- **Bucket 3** (plan-ticket, plan-to-tickets, execute-plan): Linear MCP integration via `tracker.*` tools. Requires Linear MCP configured in `~/.cursor/mcp.json`.
 
-### Compliance registry (`compliance.py`)
+### Smoke-check registry (`compliance.py`)
 
-`COMPLIANCE_REGISTRY` maps each of the 12 skills to 3–5 keyword-based checks. `check_compliance(skill_name, response_summary)` returns a `ComplianceResult` with per-check pass/fail and an overall `compliant` boolean.
+`COMPLIANCE_REGISTRY` maps each of the 16 skills to 3–5 keyword/phrase checks. `check_compliance(skill_name, response_summary)` returns a `ComplianceResult` with per-check pass/fail. These are **vocabulary smoke-checks** (does the response use the right terminology?), not behavioral compliance — a well-worded response can pass without doing real work. Renamed to "smoke-check" in docs; function/class names kept for API stability.
 
 ## Key constraints
 
@@ -107,7 +111,7 @@ Both `on_prompt.py` and `agents.py` use identical three-strategy scoring:
 - `on_edit.py` runs `ruff check` diagnostically — never `--fix`, never modifies files.
 - `schemas.py` defines 5 Pydantic v2 models: `AgentContext`, `SkillDocument`, `ComplianceResult`, `PatternRecord`, `DatabaseStatus`. The agents, skills, and compliance modules depend on these models.
 - When adding a new agent: create `.cursor/agents/<name>.json` with `name`, `description`, `category`, `activation_patterns` (must include `explicit_triggers`, `context_triggers`, and `activation_keywords`), `instructions`, `recommended_skill`. It auto-loads on startup.
-- When adding a new skill: create `skills/<name>.md`, then add a compliance registry entry in `compliance.py` with 3–5 keyword checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
+- When adding a new skill: create `skills/<name>.md` AND copy it to `.cursor/skills/<name>/SKILL.md` (both paths are required — CI scans `skills/*.md`, `SkillRepository` loads from `.cursor/skills/<name>/SKILL.md`). Add a smoke-check entry in `compliance.py` with 3–5 keyword/phrase checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
 - **Port track** (agents, skills, ONEX nodes & contracts from OmniClaude): `docs/dev/MIGRATION_PHASES_HANDOFF.md`. Hooks, Kafka, Linear-in-hooks, MCP bridge, and authoritative pattern writes are covered in `docs/OMNICURSOR_MIGRATION_PLAN.md` / other tracks.
 
 ## Omnimarket bridge

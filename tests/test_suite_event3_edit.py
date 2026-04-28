@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+import omnicursor.file_edit as _file_edit  # canonical source; patch subprocess here
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -26,7 +27,6 @@ def _load(name: str, path: Path) -> Any:
     sys.modules[name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
-
 
 _lib_common = _load("_common", _LIB / "_common.py")
 _mod = _load("post_edit", _SCRIPTS / "post-edit.py")
@@ -112,8 +112,7 @@ class TestRuffDiagnostics:
     def test_python_file_triggers_ruff_check(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Original stub: Python file causes ruff to be invoked."""
         calls: List[Any] = []
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.handle_edit({"file_path": "foo.py", "edits": []})
         assert len(calls) == 1
         assert "ruff" in calls[0]
@@ -121,47 +120,42 @@ class TestRuffDiagnostics:
     def test_non_python_file_skips_ruff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Original stub: non-Python file never calls ruff."""
         calls: List[Any] = []
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.handle_edit({"file_path": "foo.ts", "edits": []})
         assert len(calls) == 0
 
     def test_ruff_never_runs_fix_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Original stub: ruff must never be called with --fix."""
         calls: List[Any] = []
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.run_ruff_check("foo.py")
         assert len(calls) == 1
         assert "--fix" not in calls[0]
 
     def test_ruff_called_with_check_subcommand(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: List[Any] = []
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.run_ruff_check("foo.py")
         assert "check" in calls[0]
 
     def test_ruff_findings_counted(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Two output lines → ruff_findings == 2."""
         monkeypatch.setattr(
-            _mod.subprocess, "run",
+            _file_edit.subprocess, "run",
             lambda cmd, **kw: _ruff_result("foo.py:1:1: E501 line too long\nfoo.py:2:1: W291 trailing whitespace"),
         )
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
-        monkeypatch.setattr(_mod, "LINT_LOG", Path("/dev/null"))
         result = _mod.run_ruff_check("foo.py")
         assert result == 2
 
     def test_ruff_findings_zero_on_clean_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: _FakeRunResult(stdout="", returncode=0))
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: _FakeRunResult(stdout="", returncode=0))
         result = _mod.run_ruff_check("foo.py")
         assert result == 0
 
     def test_ruff_not_found_returns_zero(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """ruff not installed → FileNotFoundError → returns 0, does not crash."""
         monkeypatch.setattr(
-            _mod.subprocess, "run",
+            _file_edit.subprocess, "run",
             lambda cmd, **kw: (_ for _ in ()).throw(FileNotFoundError("ruff")),
         )
         result = _mod.run_ruff_check("foo.py")
@@ -169,7 +163,7 @@ class TestRuffDiagnostics:
 
     def test_ruff_timeout_returns_zero(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            _mod.subprocess, "run",
+            _file_edit.subprocess, "run",
             lambda cmd, **kw: (_ for _ in ()).throw(subprocess.TimeoutExpired("ruff", 5)),
         )
         result = _mod.run_ruff_check("foo.py")
@@ -177,18 +171,16 @@ class TestRuffDiagnostics:
 
     def test_ruff_findings_reflected_in_handle_edit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            _mod.subprocess, "run",
+            _file_edit.subprocess, "run",
             lambda cmd, **kw: _ruff_result("foo.py:1:1: E501 line too long"),
         )
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
-        monkeypatch.setattr(_mod, "LINT_LOG", Path("/dev/null"))
         result = _mod.handle_edit({"file_path": "foo.py", "edits": []})
         assert result["ruff_findings"] == 1
 
     def test_non_python_ruff_findings_zero(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Non-Python file has ruff_findings == 0 without calling ruff."""
         calls: List[Any] = []
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         result = _mod.handle_edit({"file_path": "foo.ts", "edits": []})
         assert result["ruff_findings"] == 0
         assert len(calls) == 0
@@ -276,8 +268,7 @@ class TestCorrelationThreading:
         assert e["correlation_id"] == ""
 
     def test_correlation_id_on_python_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(_mod.subprocess, "run", lambda cmd, **kw: _FakeRunResult())
-        monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: _FakeRunResult())
         e = self._run(monkeypatch, file_path="main.py", session={"latest_correlation_id": "py000001abc1"})
         assert e["correlation_id"] == "py000001abc1"
 

@@ -976,3 +976,49 @@ class TestSessionCorrelationUpdate:
         data = json.loads((fake_sessions / "current.json").read_text())
         # After 3 prompts the field exists and is a fresh 12-char hex ID
         assert len(data["latest_correlation_id"]) == 12
+
+
+# ---------------------------------------------------------------------------
+# Recap injection
+# ---------------------------------------------------------------------------
+
+
+class TestRecapInjection:
+    def test_recap_injected_when_file_exists(
+        self, tmp_path: Path, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recap_path = tmp_path / "last-recap.md"
+        recap_path.write_text("## Session Recap (auto)\n**Outcome:** success")
+        monkeypatch.setattr(_mod, "_RECAP_PATH", recap_path)
+        payload = {"prompt": "hello", "conversation_id": "recap-test-001"}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        out = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", out)
+        _mod.main()
+        system_msg = json.loads(out.getvalue().strip()).get("systemMessage", "")
+        assert "Session Recap" in system_msg
+
+    def test_recap_file_deleted_after_inject(
+        self, tmp_path: Path, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recap_path = tmp_path / "last-recap.md"
+        recap_path.write_text("## Session Recap (auto)\n**Outcome:** success")
+        monkeypatch.setattr(_mod, "_RECAP_PATH", recap_path)
+        payload = {"prompt": "hello", "conversation_id": "recap-test-002"}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        assert not recap_path.exists()
+
+    def test_no_recap_when_file_absent(
+        self, tmp_path: Path, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recap_path = tmp_path / "last-recap.md"
+        monkeypatch.setattr(_mod, "_RECAP_PATH", recap_path)
+        payload = {"prompt": "hello", "conversation_id": "recap-test-003"}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        out = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", out)
+        _mod.main()
+        system_msg = json.loads(out.getvalue().strip()).get("systemMessage", "")
+        assert "Session Recap" not in system_msg

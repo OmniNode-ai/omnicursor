@@ -1,9 +1,3 @@
----
-name: insights-to-plan
-description: >-
-  Parse code review findings or analysis output into categorized, prioritized tasks. Use when converting a review report into actionable implementation work.
----
-
 # Insights to Plan
 
 Use this skill when you have analysis results, review findings, or session insights that need to be converted into an actionable implementation plan. The goal is to transform observations into prioritized, executable tasks.

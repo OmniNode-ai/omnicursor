@@ -1,146 +1,155 @@
 # OmniCursor Quickstart
 
-OmniCursor has **three layers** — rules and hooks in the IDE, plus a **Python library** for tests and automation:
+OmniCursor is a Cursor plugin that adds agent routing, shell guards, session recaps, and 13 methodology skills to any project. Clone it once to a permanent location, then install it into as many projects as you want.
 
-1. **Cursor Rules** (`.cursor/rules/`, 11 `.mdc` files) — behavior surface
-2. **Cursor Hooks** (`.cursor/hooks/`) — 4 hook entrypoints in `.cursor/hooks.json`, plus `_common.py` and `pattern_loader.py`. Deterministic, stdlib only, no LLM
-3. **Python library** (`src/omnicursor/`) — `get_agent_context`, skill loading, `check_compliance` — use from tests, CI, or one-off `python -c` snippets
+---
 
-## Prerequisites
+## Requirements
 
-- Python 3.10 or newer (developed on 3.12)
-- A virtual environment for this repo
+- [Cursor](https://cursor.com) (any recent version)
+- Python 3.10 or newer
 
-## Install
+---
+
+## Step 1 — Clone to a permanent location
+
+Pick somewhere you won't delete it. The plugin lives here permanently; your projects symlink back to it.
 
 ```bash
-python3.12 -m venv .venv
+git clone https://github.com/OmniNode-ai/OmniCursor ~/tools/OmniCursor
+cd ~/tools/OmniCursor
+```
+
+## Step 2 — Install the Python package
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+## Step 3 — Install into your project
+
+Run this once for each project you want OmniCursor on:
+
+```bash
+~/tools/OmniCursor/install.sh /path/to/your-project
+```
+
+This creates symlinks in your project's `.cursor/` and `skills/` directories pointing back to OmniCursor. No files are copied — updating OmniCursor (`git pull`) automatically updates every installed project.
+
+> **Note:** Cursor hooks and rules are per-project. There is no global Cursor plugin system, so this one-time install step per project is unavoidable.
+
+**Check what was installed:**
+
+```bash
+~/tools/OmniCursor/install.sh /path/to/your-project --status
+```
+
+## Step 4 — Open your project in Cursor
+
+Restart Cursor (or reload the window with `Ctrl+Shift+P → Reload Window`) to activate hooks and rules.
+
+That's it — OmniCursor is running.
+
+---
+
+## What you get
+
+### Hooks (automatic, no trigger needed)
+
+| Hook | When it fires | What it does |
+|------|--------------|--------------|
+| `beforeSubmitPrompt` | Every prompt | Routes your prompt to the best agent, injects routing context and learned patterns |
+| `beforeShellExecution` | Every shell command | Blocks dangerous commands (e.g. `rm -rf /`, `--no-verify`), warns on risky ones |
+| `afterFileEdit` | Every file save | Runs `ruff check` diagnostically on Python files |
+| `stop` | Session end | Classifies session outcome (success / failed / abandoned), writes recap for next session |
+
+### Skills (keyword-triggered)
+
+Say the keyword in chat and Cursor reads the skill file and follows it.
+
+| Keyword | Skill | What it does |
+|---------|-------|--------------|
+| `recap` or `/recap` | recap | Summarizes the current session inline; auto-injects previous session recap at start |
+| `brainstorm` | brainstorming | Structured ideation with diverge → converge flow |
+| `debug` / `root cause` | systematic-debugging | 5-phase root cause analysis — no guessing |
+| `write a plan` | writing-plans | Implementation plan with TDD tasks and acceptance criteria |
+| `create ticket` | plan-ticket | Converts a plan task into a structured Linear ticket |
+| `review this PR` | pr-review | Structured PR review with severity classification |
+| `polish this PR` | pr-polish | Pre-merge checklist: description, diff, CI, changelog |
+| `hostile review` | hostile-reviewer | Adversarial multi-pass review — finds what polite review misses |
+| `defense in depth` | defense-in-depth | Adds validation layers at system boundaries |
+| `merge plan` | merge-planner | Safe merge sequencing for complex branch stacks |
+| `insights to plan` | insights-to-plan | Converts retrospective notes into actionable tasks |
+| `handoff` | handoff | Saves session context so the next session picks up cleanly |
+| `worktree` | using-git-worktrees | Isolated branch workspaces without stashing |
+| `/plan-review` | plan-review | Adversarial R1–R6 check on a plan file before execution |
+| `/plan-to-tickets` | plan-to-tickets | Parse a plan file and batch-create Linear tickets |
+| `/execute_plan` | execute-plan | Full autonomous pipeline: review → tickets → implement |
+
+---
+
+## Linear MCP Setup (for plan-to-tickets and execute_plan)
+
+`plan-to-tickets` and `execute_plan` create tickets in Linear via MCP. Skip this section if you don't use Linear.
+
+**1. Get your Linear API key**
+
+Linear → Settings → API → Personal API Keys → Create key.
+
+**2. Edit `~/.cursor/mcp.json`** (create the file if it doesn't exist):
+
+```json
+{
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "@linear/mcp-server"],
+      "env": {
+        "LINEAR_API_KEY": "lin_api_XXXX"
+      }
+    }
+  }
+}
+```
+
+Replace `lin_api_XXXX` with your actual key.
+
+**3. Restart Cursor** — the `tracker.*` MCP tools become available in chat.
+
+**4. Verify** — open a Cursor chat and say "list my Linear teams". It should return your teams.
+
+---
+
+## Updating OmniCursor
+
+Because install uses symlinks, a `git pull` updates all installed projects immediately — no reinstall needed.
+
+```bash
+cd ~/tools/OmniCursor && git pull
+```
+
+## Removing from a project
+
+```bash
+~/tools/OmniCursor/install.sh /path/to/your-project --uninstall
+```
+
+Removes the symlinks. Your project's other `.cursor/rules/` and `skills/` files are left intact.
+
+---
+
+## Developer setup (contributing to OmniCursor)
+
+```bash
+cd ~/tools/OmniCursor
 source .venv/bin/activate
 pip install -e ".[dev]"
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit
+pytest tests/ -v
+ruff check src/ tests/ .cursor/hooks/
 ```
 
-## Local Pre-Commit Checks
-
-This repo includes a tracked git pre-commit hook in `.githooks/pre-commit`.
-
-- It runs `ruff check src/ tests/ .cursor/hooks/`.
-- It runs `pytest tests/ -v`.
-- It validates skill compliance coverage using the **same rule as CI** (every `skills/*.md` has a `compliance.py` entry).
-- GitHub Actions CI runs on pull requests to `main`.
-
-Use `git commit --no-verify` only for emergency bypasses.
-
-## Use in Cursor
-
-1. Open the repository root, not a parent folder.
-2. Confirm the rules under `.cursor/rules/` are visible in Cursor Settings.
-3. Hooks are active via `.cursor/hooks.json` — no extra configuration.
-4. Use `@`-rules for brainstorming, planning, ticketing, debugging, PR review, handoff, etc.
-5. The model loads skills by reading **`.cursor/skills/<name>/SKILL.md`** (see table below). Hook output may include routing hints in `systemMessage` (`beforeSubmitPrompt`).
-
-## Structured API (Python library)
-
-For structured payloads in code or tests:
-
-### `get_agent_context(category: str)`
-
-Returns routing context (`AgentContext` — agent name, instructions, recommended skill). Used in tests; rules typically rely on hooks + reading `.cursor/skills/<name>/SKILL.md`.
-
-| Category | Agent | Matching Rule | Recommended Skill |
-|----------|-------|---------------|-------------------|
-| `debugging` | systematic-debugger | 13-systematic-debugging.mdc | systematic-debugging |
-| `brainstorming` | brainstorming-guide | 10-brainstorming.mdc | brainstorming |
-| `planning` | plan-writer | 11-writing-plans.mdc | writing-plans |
-| `ticketing` | ticket-planner | 12-plan-ticket.mdc | plan-ticket |
-| `review` | pr-review | 14-pr-review.mdc | pr-review |
-| `handoff` | handoff-guide | 15-handoff.mdc | handoff |
-
-Unrecognized categories fall back to `omnicursor-generalist`.
-
-Example:
-
-```bash
-python -c "from omnicursor.agents import get_agent_context; import json; print(json.dumps(get_agent_context('debugging').model_dump(), indent=2))"
-```
-
-### Skills on disk
-
-Read `.cursor/skills/<skill_name>/SKILL.md` from the repo root, or use `SkillRepository` in Python / tests.
-
-### `check_compliance(skill_name, response_summary)`
-
-Implemented in `src/omnicursor/compliance.py`. Run via `pytest tests/test_compliance.py` or call from Python.
-
-## Available Skills (12)
-
-| Skill | File | Purpose |
-|-------|------|---------|
-| `systematic-debugging` | `.cursor/skills/systematic-debugging/SKILL.md` | Structured debugging |
-| `brainstorming` | `.cursor/skills/brainstorming/SKILL.md` | Design exploration |
-| `writing-plans` | `.cursor/skills/writing-plans/SKILL.md` | TDD-oriented plans |
-| `plan-ticket` | `.cursor/skills/plan-ticket/SKILL.md` | YAML ticket templates |
-| `pr-review` | `.cursor/skills/pr-review/SKILL.md` | PR review methodology |
-| `pr-polish` | `.cursor/skills/pr-polish/SKILL.md` | PR refinement |
-| `hostile-reviewer` | `.cursor/skills/hostile-reviewer/SKILL.md` | Adversarial multi-pass review |
-| `defense-in-depth` | `.cursor/skills/defense-in-depth/SKILL.md` | Data-flow validation |
-| `merge-planner` | `.cursor/skills/merge-planner/SKILL.md` | Merge planning |
-| `insights-to-plan` | `.cursor/skills/insights-to-plan/SKILL.md` | Findings → plan |
-| `handoff` | `.cursor/skills/handoff/SKILL.md` | Session handoff |
-| `using-git-worktrees` | `.cursor/skills/using-git-worktrees/SKILL.md` | Worktree workflow |
-
-## End-to-End Flow in Cursor
-
-1. **User invokes `@10-brainstorming`.**
-   - Hook may classify the prompt and inject `systemMessage`.
-   - Model reads `.cursor/skills/brainstorming/SKILL.md` and follows the methodology.
-   - Design saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
-
-2. **User invokes `@11-writing-plans`** with the design path.
-   - Model reads `.cursor/skills/writing-plans/SKILL.md`.
-   - Plan saved under `docs/plans/`.
-
-3. **User invokes `@12-plan-ticket`** with the plan path.
-   - Model reads `.cursor/skills/plan-ticket/SKILL.md`; repo detection per rule.
-
-**Other external systems (Kafka, full ONEX runtime):** out of scope — see `docs/ARCHITECTURE.md`.
-
-## Hooks
-
-Cursor hooks are deterministic Python scripts. No pip dependencies in hook code (stdlib only).
-
-### Configuration
-
-`.cursor/hooks.json` — rename to disable all hooks: `hooks.json.disabled`.
-
-### Active Hooks
-
-**`beforeSubmitPrompt` → `on_prompt.py`** — Classifies each prompt against agent configs (three-strategy scoring). `HARD_FLOOR = 0.55`. Emits `{"systemMessage": ...}` with agent, confidence, learned patterns from `~/.omnicursor/learned_patterns.json`.
-
-**`beforeShellExecution` → `on_shell.py`** — Hard-block and soft-warn regex tiers.
-
-**`afterFileEdit` → `on_edit.py`** — Logs edits; diagnostic `ruff check` on Python.
-
-**`stop` → `on_stop.py`** — Session outcome (4-gate) and `~/.omnicursor/sessions/`.
-
-### Verifying Hooks
-
-```bash
-echo '{"prompt": "help me debug this error"}' | python3 .cursor/hooks/on_prompt.py
-echo '{"command": "rm -rf /"}' | python3 .cursor/hooks/on_shell.py
-echo '{"conversation_id": "test-123", "status": "completed"}' | python3 .cursor/hooks/on_stop.py
-```
-
-- Event log: `~/.omnicursor/events.jsonl`
-- Session summaries: `~/.omnicursor/sessions/`
-
-### Requirements
-
-- Python 3.10+ for hooks
-- `ruff` (optional) for `on_edit.py` diagnostics
-
-## Notes
-
-- [`docs/dev/HOW_TO_RUN_IN_CURSOR.md`](./dev/HOW_TO_RUN_IN_CURSOR.md) — historical starter walkthrough
-- [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — bucket model and adapter contract
+CI runs the same checks on every PR to `main`.

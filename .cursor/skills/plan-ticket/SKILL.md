@@ -1,9 +1,3 @@
----
-name: plan-ticket
-description: >-
-  Generate YAML ticket templates with deterministic repo detection. Use when creating a Linear ticket from a feature request, design doc, or plan.
----
-
 # Plan Ticket
 
 Use this skill when the user has a plan or task description and needs a ticket contract template with deterministic repo detection and YAML output.
@@ -38,17 +32,32 @@ Generate a structured YAML ticket contract template that can be handed to a team
    - Include verification blocks (unit tests, lint)
    - Leave `relevant_files` empty if file paths are unknown
 
-4. **Hand off.**
-   Point the user to the `linear` rule for Stage 2 ticket creation, or suggest saving the template to `contract.yaml`.
+4. **Create the Linear ticket via MCP.**
+
+   Call `tracker.list_teams` to get available teams. If multiple teams exist, ask the user
+   which to use (or pick the one matching the detected repo name).
+
+   Then call:
+   ```
+   tracker.create_issue(
+     title="<imperative title>",
+     teamId="<team id>",
+     description="<requirements + verification as markdown>",
+   )
+   ```
+
+   Report the created ticket URL to the user.
 
 ## Expected Output Format
 
-A YAML ticket contract template containing:
+A YAML contract template (shown in chat for review) containing:
 - `title`: imperative description
 - `repo`: detected repository name
 - `requirements`: list with id, statement, rationale, acceptance criteria
 - `verification`: list with id, title, kind, command, expected, blocking
 - `context`: relevant_files, patterns_found, notes
+
+Followed by the Linear ticket creation result.
 
 ## Quality Checklist
 
@@ -58,4 +67,5 @@ A YAML ticket contract template containing:
 - [ ] Title uses imperative verb form
 - [ ] Requirements have specific, testable acceptance criteria
 - [ ] Verification section includes at least unit tests and lint
-- [ ] Handoff line is present
+- [ ] `tracker.list_teams` was called before `tracker.create_issue`
+- [ ] Linear ticket URL is reported to the user

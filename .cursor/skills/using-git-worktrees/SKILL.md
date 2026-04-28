@@ -1,9 +1,3 @@
----
-name: using-git-worktrees
-description: >-
-  Set up an isolated git worktree, run baseline checks, and tear down cleanly. Use when starting any ticket that requires file edits in isolation.
----
-
 # Using Git Worktrees
 
 Use this skill when starting feature work that needs isolation from the current workspace, or when you need to work on multiple branches simultaneously. The goal is to create an isolated worktree with a verified clean baseline.
