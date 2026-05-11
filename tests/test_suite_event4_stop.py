@@ -570,3 +570,233 @@ class TestRecapFile:
         monkeypatch.setattr(sys, "stdout", buf)
         _mod.main()
         assert "failed" in recap_path.read_text()
+
+
+# ---------------------------------------------------------------------------
+# Writer invocation by outcome
+# ---------------------------------------------------------------------------
+
+
+class TestWriterInvocation:
+    def _run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        conv: str = "w-001",
+        status: str = "completed",
+        events: List[Dict[str, Any]] = [],
+    ) -> Dict:
+        writer_calls: List[Dict] = []
+
+        def fake_writer(patterns_file, evts, files_edited, session_outcome):
+            writer_calls.append({
+                "session_outcome": session_outcome,
+                "files_edited": files_edited,
+            })
+            return 0
+
+        monkeypatch.setattr(_mod, "write_session_patterns", fake_writer)
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: list(events))
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        return {"calls": writer_calls}
+
+    def test_success_session_calls_writer_with_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        result = self._run(monkeypatch, status="completed", events=[
+            _make_event("file_edited", file_path="a.py", language="python",
+                        timestamp="2026-04-14T10:00:00+00:00"),
+            _make_event("prompt_classified", reason="done",
+                        timestamp="2026-04-14T10:00:30+00:00"),
+        ])
+        assert len(result["calls"]) == 1
+        assert result["calls"][0]["session_outcome"] == "success"
+
+    def test_failed_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        result = self._run(monkeypatch, status="failed")
+        assert len(result["calls"]) == 1
+        assert result["calls"][0]["session_outcome"] == "failed"
+
+    def test_abandoned_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        result = self._run(monkeypatch, status="ok", events=[])
+        assert len(result["calls"]) == 1
+        assert result["calls"][0]["session_outcome"] == "abandoned"
+
+    def test_unknown_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        result = self._run(monkeypatch, status="completed", events=[
+            _make_event("shell_guard", decision="allow",
+                        timestamp="2026-04-14T10:00:00+00:00"),
+            _make_event("shell_guard", decision="allow",
+                        timestamp="2026-04-14T10:02:00+00:00"),
+        ])
+        assert len(result["calls"]) == 1
+        assert result["calls"][0]["session_outcome"] == "unknown"
+
+    def test_session_without_conversation_id_does_not_call_writer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result = self._run(monkeypatch, conv="", status="completed")
+        assert result["calls"] == []
+
+    def test_session_without_injected_ids_does_not_crash(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        plain_events = [_make_event("prompt_classified", matched_agent="debugging", score=0.9)]
+        result = self._run(monkeypatch, status="failed", events=plain_events)
+        assert len(result["calls"]) == 1  # writer called, no crash
+
+
+# ---------------------------------------------------------------------------
+# Session outbox — Option B mínima
+# ---------------------------------------------------------------------------
+
+
+class TestSessionOutbox:
+    """Verify that stop.py writes one outbox line per session."""
+
+    def _run_with_outbox(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        outbox_path: Path,
+        conv: str = "ob-001",
+        status: str = "completed",
+        events: List[Dict[str, Any]] = [],
+    ) -> None:
+        """Run stop.py main() routing outbox writes to *outbox_path*."""
+        monkeypatch.setenv("OMNICURSOR_OUTBOX_FILE", str(outbox_path))
+        monkeypatch.setattr(_mod, "write_session_patterns", lambda *a, **k: 0)
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: list(events))
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+
+    def test_outbox_written_once_per_session(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, events=[
+            _make_event("prompt_classified", matched_agent="debugging",
+                        matched_confidence=0.9, patterns_injected=2,
+                        injected_pattern_ids=["auto-aaa", "auto-bbb"],
+                        timestamp="2026-04-14T10:00:30+00:00"),
+        ])
+        lines = outbox.read_text().splitlines()
+        assert len(lines) == 1
+        data = json.loads(lines[0])
+        assert data["schema_version"] == "omnicursor.session_outcome.v1"
+        assert data["source"] == "omnicursor"
+        assert data["conversation_id"] == "ob-001"
+
+    def test_multiple_prompts_sum_patterns_injected(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, events=[
+            _make_event("prompt_classified", patterns_injected=3,
+                        injected_pattern_ids=["auto-aaa"],
+                        timestamp="2026-04-14T10:00:00+00:00"),
+            _make_event("prompt_classified", patterns_injected=2,
+                        injected_pattern_ids=["auto-bbb"],
+                        timestamp="2026-04-14T10:01:00+00:00"),
+        ])
+        data = json.loads(outbox.read_text().strip())
+        assert data["patterns_injected"] == 5
+
+    def test_injected_pattern_ids_deduped_preserving_order(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, events=[
+            _make_event("prompt_classified", patterns_injected=2,
+                        injected_pattern_ids=["auto-aaa", "auto-bbb"],
+                        timestamp="2026-04-14T10:00:00+00:00"),
+            _make_event("prompt_classified", patterns_injected=2,
+                        injected_pattern_ids=["auto-bbb", "auto-ccc"],
+                        timestamp="2026-04-14T10:01:00+00:00"),
+        ])
+        data = json.loads(outbox.read_text().strip())
+        # auto-bbb appears in both events but must be deduped; order of first appearance kept
+        assert data["injected_pattern_ids"] == ["auto-aaa", "auto-bbb", "auto-ccc"]
+
+    def test_outbox_uses_score_and_timestamp_from_prompt_events(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, events=[
+            _make_event("prompt_classified", matched_agent="debug-intelligence",
+                        score=0.95, patterns_injected=1,
+                        injected_pattern_ids=["auto-aaa"],
+                        timestamp="2026-04-14T10:00:00+00:00"),
+        ])
+        data = json.loads(outbox.read_text().strip())
+        assert data["matched_confidence"] == 0.95
+        assert data["started_at"] == "2026-04-14T10:00:00+00:00"
+
+    def test_outbox_written_for_failed_outcome(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, status="failed")
+        data = json.loads(outbox.read_text().strip())
+        assert data["session_outcome"] == "failed"
+
+    def test_outbox_written_for_abandoned_outcome(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, status="ok", events=[])
+        data = json.loads(outbox.read_text().strip())
+        assert data["session_outcome"] == "abandoned"
+
+    def test_outbox_failure_does_not_break_stop_hook(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        buf = io.StringIO()
+        monkeypatch.setattr(_mod, "write_session_outcome", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+        monkeypatch.setattr(_mod, "write_session_patterns", lambda *a, **k: 0)
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "ob-err", "status": "completed"})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        monkeypatch.setattr(sys, "stdout", buf)
+        _mod.main()
+        assert json.loads(buf.getvalue()) == {}
+
+    def test_no_conversation_id_skips_outbox(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        self._run_with_outbox(monkeypatch, outbox, conv="", status="completed")
+        assert not outbox.exists()
+
+    def test_option_a_learned_patterns_still_written(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Regression: outbox addition must not prevent write_session_patterns from running."""
+        writer_called = [False]
+
+        def fake_writer(*a: object, **k: object) -> int:
+            writer_called[0] = True
+            return 0
+
+        outbox = tmp_path / "outbox.jsonl"
+        monkeypatch.setattr(_mod, "write_session_patterns", fake_writer)
+        monkeypatch.setenv("OMNICURSOR_OUTBOX_FILE", str(outbox))
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "reg-001", "status": "completed"})
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        _stub_stop_emit_and_pattern_sync(monkeypatch)
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        assert writer_called[0], "write_session_patterns must still be called when outbox is present"

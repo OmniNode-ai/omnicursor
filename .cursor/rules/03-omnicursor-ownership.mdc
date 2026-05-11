@@ -1,0 +1,35 @@
+---
+description: Always-on ownership boundary for OmniCursor as the Cursor-native layer and OmniMarket as the backend workflow/tool provider.
+globs:
+alwaysApply: true
+---
+
+# OmniCursor / OmniMarket Ownership
+
+This rule is always active. It defines the boundary between OmniCursor and OmniMarket.
+
+---
+
+## Ownership Boundary
+
+**OmniMarket owns:**
+- Workflow and business logic.
+- Node behavior, contracts, validation, and workflow state.
+- Tool-provider semantics for nodes such as local-review, aislop-sweep, bus-audit, and gap.
+
+**OmniCursor owns:**
+- Collecting user intent through Cursor rules and hooks.
+- Calling MCP tools or other approved tool transports.
+- Rendering tool results back to the user.
+
+---
+
+## Rules For Cursor Behavior
+
+1. Do not duplicate OmniMarket node logic inside Cursor rules, prompts, or hooks.
+2. If workflow or business logic is needed, invoke the appropriate OmniMarket-backed tool.
+3. Keep OmniCursor wrappers thin: map intent to arguments, call the tool, and present the result.
+4. Keep hooks cheap, local, and read-only. Do not run heavy workflows, network calls, or secret-dependent nodes from hooks.
+5. Subprocess invocation is acceptable for the demo bridge.
+6. REST `dry_run` and Kafka/event-bus transports are the stated target direction per Jonah; do not implement them as part of Phase 1.
+

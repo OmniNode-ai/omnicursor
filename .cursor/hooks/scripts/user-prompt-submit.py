@@ -544,6 +544,11 @@ def main() -> None:
         raw = cache.get(domain) or cache.get("general") or []
         prompt_words_set = prompt_keyword_set(prompt)
         patterns = filter_patterns_by_relevance(raw, domain, prompt_words_set)
+        injected_pattern_ids = [
+            p.get("pattern_id", "")
+            for p in patterns[:MAX_PATTERNS]
+            if p.get("pattern_id")
+        ]
 
         # Complexity estimation gates delegation enforcement framing.
         delegation_required = _estimate_complexity(prompt)
@@ -559,6 +564,7 @@ def main() -> None:
             "score": round(score, 4),
             "reason": reason,
             "patterns_injected": len(patterns),
+            "injected_pattern_ids": injected_pattern_ids,
             "delegation_required": delegation_required,
             "prompt_snippet": prompt[:100],
             "hook_duration_ms": hook_ms,
@@ -575,6 +581,7 @@ def main() -> None:
                 "score": round(score, 4),
                 "reason": reason,
                 "patterns_injected": len(patterns),
+                "injected_pattern_ids": injected_pattern_ids,
                 "delegation_required": delegation_required,
             },
         )

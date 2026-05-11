@@ -6,7 +6,7 @@
       "cwd": "/Users/jirustaroure/Desktop/OmniCursor",
       "env": {
         "PYTHONPATH": "/Users/jirustaroure/Desktop/OmniCursor/src",
-        "OMNIMARKET_ROOT": "/Users/jirustaroure/Desktop/OmniCursor/omnimarket-main"
+        "OMNIMARKET_ROOT": "/Users/jirustaroure/Desktop/OmniCursor/omnimarket"
       }
     }
   }

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import urllib.error
 from pathlib import Path
 from unittest import mock
 
@@ -64,3 +66,134 @@ def test_run_returns_false_on_network_error(tmp_path: Path) -> None:
     ):
         assert run(target, base_url="http://127.0.0.1:1", timeout_s=0.1) is False
     assert not target.exists()
+
+
+# ---------------------------------------------------------------------------
+# Defensive behaviour — new in Option B mínima
+# ---------------------------------------------------------------------------
+
+class _Resp:
+    """Minimal urlopen context-manager stub."""
+
+    def __init__(self, body: bytes = b"[]") -> None:
+        self._body = body
+
+    def __enter__(self) -> "_Resp":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._body
+
+
+class TestPatternSyncDefensive:
+    def test_health_probe_fails_offline_returns_false_no_file(self, tmp_path: Path) -> None:
+        target = tmp_path / "out.json"
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen",
+            side_effect=OSError("refused"),
+        ):
+            assert run(target, base_url="http://127.0.0.1:1", timeout_s=0.1) is False
+        assert not target.exists()
+
+    def test_health_ok_patterns_404_returns_false_preserves_existing(
+        self, tmp_path: Path
+    ) -> None:
+        target = tmp_path / "out.json"
+        original = {"patterns": [{"pattern_id": "keep"}]}
+        target.write_text(json.dumps(original))
+        call_count = [0]
+
+        def _two_calls(req: object, **_kw: object) -> "_Resp":
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return _Resp(b"{}")  # /health succeeds
+            raise urllib.error.HTTPError(  # /api/v1/patterns → 404
+                url="http://x/api/v1/patterns",
+                code=404,
+                msg="Not Found",
+                hdrs={},  # type: ignore[arg-type]
+                fp=None,
+            )
+
+        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _two_calls):
+            assert run(target, base_url="http://x", timeout_s=1.0) is False
+        assert json.loads(target.read_text()) == original
+
+    def test_unexpected_body_returns_false_preserves_existing(self, tmp_path: Path) -> None:
+        target = tmp_path / "out.json"
+        original = {"patterns": [{"pattern_id": "keep"}]}
+        target.write_text(json.dumps(original))
+
+        # Both calls (health + patterns) return unexpected body
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen",
+            lambda *_a, **_kw: _Resp(b'{"not_patterns": 42}'),
+        ):
+            assert run(target, base_url="http://x", timeout_s=1.0) is False
+        assert json.loads(target.read_text()) == original
+
+    def test_env_omniintelligence_url_takes_precedence(
+        self, tmp_path: Path, monkeypatch: mock.MagicMock
+    ) -> None:
+        target = tmp_path / "out.json"
+        captured: list[str] = []
+
+        def _capture(req: urllib.request.Request, **_kw: object) -> "_Resp":
+            captured.append(req.full_url)
+            return _Resp(b"[]")
+
+        monkeypatch.setenv("OMNIINTELLIGENCE_URL", "http://custom-host:9999")
+        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+            run(target, timeout_s=1.0)
+        assert all("custom-host:9999" in u for u in captured)
+
+    def test_default_url_contains_18091(
+        self, tmp_path: Path, monkeypatch: mock.MagicMock
+    ) -> None:
+        target = tmp_path / "out.json"
+        captured: list[str] = []
+
+        def _capture(req: urllib.request.Request, **_kw: object) -> "_Resp":
+            captured.append(req.full_url)
+            return _Resp(b"[]")
+
+        monkeypatch.delenv("OMNIINTELLIGENCE_URL", raising=False)
+        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+            run(target, timeout_s=1.0)
+        assert all("18091" in u for u in captured)
+
+    def test_successful_write_produces_valid_json(self, tmp_path: Path) -> None:
+        target = tmp_path / "out.json"
+        body = [{"pattern_id": "p1", "domain": "test", "description": "d"}]
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen",
+            lambda *_a, **_kw: _Resp(json.dumps(body).encode()),
+        ):
+            assert run(target, base_url="http://x", timeout_s=1.0) is True
+        data = json.loads(target.read_text())
+        assert isinstance(data.get("patterns"), list)
+
+    def test_shim_delegates_to_canonical_run(self, tmp_path: Path) -> None:
+        """lib/pattern_sync.py shim executes the same logic as the canonical run."""
+        shim_path = (
+            Path(__file__).parent.parent / ".cursor" / "hooks" / "lib" / "pattern_sync.py"
+        )
+        spec = importlib.util.spec_from_file_location("_test_shim_ps", shim_path)
+        assert spec is not None and spec.loader is not None
+        shim = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(shim)  # type: ignore[union-attr]
+
+        target = tmp_path / "shim_out.json"
+        body = [{"pattern_id": "s1", "domain": "d"}]
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen",
+            lambda *_a, **_kw: _Resp(json.dumps(body).encode()),
+        ):
+            result = shim.sync_learned_patterns(target, timeout_s=1.0)
+
+        assert result is True
+        data = json.loads(target.read_text())
+        assert data["patterns"] == body

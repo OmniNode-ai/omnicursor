@@ -115,7 +115,7 @@ class TestRuffDiagnostics:
         monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.handle_edit({"file_path": "foo.py", "edits": []})
         assert len(calls) == 1
-        assert "ruff" in calls[0]
+        assert any(Path(part).name.startswith("ruff") for part in calls[0])
 
     def test_non_python_file_skips_ruff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Non-Python file never calls ruff (tsc may still fire for .ts)."""
@@ -137,6 +137,22 @@ class TestRuffDiagnostics:
         monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
         _mod.run_ruff_check("foo.py")
         assert "check" in calls[0]
+
+    def test_ruff_prefers_repo_venv_binary(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        venv_bin = tmp_path / ".venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        ruff = venv_bin / "ruff"
+        ruff.write_text("#!/bin/sh\n", encoding="utf-8")
+        ruff.chmod(0o755)
+
+        calls: List[Any] = []
+        monkeypatch.setattr(_file_edit, "_REPO_ROOT", tmp_path)
+        monkeypatch.setattr(_file_edit.shutil, "which", lambda _name: "/usr/bin/ruff")
+        monkeypatch.setattr(_file_edit.subprocess, "run", lambda cmd, **kw: calls.append(cmd) or _FakeRunResult())
+
+        _mod.run_ruff_check("foo.py")
+
+        assert calls[0][0] == str(ruff)
 
     def test_ruff_findings_counted(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Two output lines → ruff_findings == 2."""

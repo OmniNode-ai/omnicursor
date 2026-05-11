@@ -1271,3 +1271,110 @@ class TestPriorSessionContext:
             if i == 1:
                 msg = json.loads(out.getvalue().strip())["systemMessage"]
                 assert "Prior Session Context" not in msg
+
+
+# ---------------------------------------------------------------------------
+# injected_pattern_ids in prompt_classified log and send_event payload
+# ---------------------------------------------------------------------------
+
+
+class TestInjectedPatternIds:
+    def _run_main_capture_log(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sessions: Path,
+        prompt: str = "fix bug",
+        conv_id: str = "ids-001",
+    ) -> Dict:
+        events: List[Dict] = []
+        monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
+        payload = {"prompt": prompt, "conversation_id": conv_id}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        return events[0]
+
+    def test_event_has_injected_pattern_ids_list(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        e = self._run_main_capture_log(monkeypatch, fake_sessions)
+        assert "injected_pattern_ids" in e
+        assert isinstance(e["injected_pattern_ids"], list)
+
+    def test_injected_pattern_ids_contains_real_ids(
+        self, tmp_path: Path, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Pattern in debug_intelligence domain — exact domain match → score 1.0 → always injected.
+        learned = tmp_path / "learned.json"
+        learned.write_text(json.dumps({"patterns": [
+            {
+                "pattern_id": "auto-abc123def456",
+                "domain": "debug_intelligence",
+                "description": "use breakpoints to isolate failures",
+                "pattern": "breakpoints debug error",
+                "weight": 0.8,
+                "success_count": 3,
+                "injection_count": 0,
+                "utilization_successes": 0,
+                "last_seen": 0,
+            },
+        ]}))
+        monkeypatch.setattr(_mod, "LEARNED_PATTERNS_FILE", learned)
+        from omnicursor.pattern_cache import PatternCache
+        fresh_cache = PatternCache()
+        monkeypatch.setattr(_mod, "get_pattern_cache", lambda: fresh_cache)
+        # Prompt explicitly triggers debug-intelligence → domain=debug_intelligence → exact match.
+        e = self._run_main_capture_log(
+            monkeypatch, fake_sessions,
+            prompt="I need to debug this error in the authentication module",
+            conv_id="ids-002",
+        )
+        assert "auto-abc123def456" in e["injected_pattern_ids"]
+
+    def test_pattern_without_id_is_omitted(
+        self, tmp_path: Path, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        learned = tmp_path / "learned.json"
+        learned.write_text(json.dumps({"patterns": [
+            {
+                "domain": "general",
+                "description": "no id pattern",
+                "pattern": "some pattern",
+                "weight": 0.8,
+                "success_count": 1,
+                "injection_count": 0,
+                "utilization_successes": 0,
+                "last_seen": 0,
+            },
+        ]}))
+        monkeypatch.setattr(_mod, "LEARNED_PATTERNS_FILE", learned)
+        from omnicursor.pattern_cache import PatternCache
+        fresh_cache = PatternCache()
+        monkeypatch.setattr(_mod, "get_pattern_cache", lambda: fresh_cache)
+        e = self._run_main_capture_log(monkeypatch, fake_sessions, conv_id="ids-003")
+        for pid in e["injected_pattern_ids"]:
+            assert pid != ""
+
+    def test_injected_pattern_ids_respects_max_patterns(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        e = self._run_main_capture_log(monkeypatch, fake_sessions, conv_id="ids-004")
+        assert len(e["injected_pattern_ids"]) <= _mod.MAX_PATTERNS
+
+    def test_send_event_payload_contains_injected_pattern_ids(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        send_calls: List[Dict] = []
+        monkeypatch.setattr(_mod, "send_event", lambda topic, payload: send_calls.append({"topic": topic, "payload": payload}))
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        payload = {"prompt": "fix bug", "conversation_id": "ids-005"}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        hook_event = next(
+            (c for c in send_calls if c["topic"] == "onex.cmd.omnicursor.cursor-hook-event.v1"),
+            None,
+        )
+        assert hook_event is not None
+        assert "injected_pattern_ids" in hook_event["payload"]
+        assert isinstance(hook_event["payload"]["injected_pattern_ids"], list)

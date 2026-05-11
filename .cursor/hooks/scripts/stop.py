@@ -12,8 +12,9 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 _hooks = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_hooks / "lib"))
@@ -33,6 +34,7 @@ from _common import (  # noqa: E402
 from emit_client import send_event  # noqa: E402
 from omnicursor.pattern_writer import write_session_patterns  # noqa: E402
 from omnicursor.session_outcome import derive_session_outcome, format_recap  # noqa: E402
+from omnicursor.session_outbox import write_session_outcome  # noqa: E402
 from pattern_sync import sync_learned_patterns  # noqa: E402
 
 _RECAP_PATH: Path = Path.home() / ".omnicursor" / "last-recap.md"
@@ -62,6 +64,59 @@ def _load_events(conversation_id: str) -> List[Dict[str, Any]]:
     except OSError:
         pass
     return events
+
+
+def _build_outbox_payload(
+    summary: Dict[str, Any],
+    events: List[Dict[str, Any]],
+    conversation_id: str,
+    correlation_id: str,
+) -> Dict[str, Any]:
+    """Aggregate prompt_classified events into the outbox payload schema v1."""
+    matched_agent: Optional[str] = None
+    matched_confidence: Optional[float] = None
+    patterns_injected = 0
+    seen_ids: Dict[str, None] = {}
+
+    for evt in events:
+        if evt.get("event") != "prompt_classified":
+            continue
+        matched_agent = evt.get("matched_agent", matched_agent)
+        matched_confidence = evt.get(
+            "matched_confidence",
+            evt.get("score", matched_confidence),
+        )
+        patterns_injected += int(evt.get("patterns_injected", 0))
+        for pid in evt.get("injected_pattern_ids", []):
+            if pid:
+                seen_ids[pid] = None
+
+    started_at: Optional[str] = None
+    for evt in events:
+        ts = evt.get("ts") or evt.get("timestamp")
+        if ts:
+            started_at = str(ts)
+            break
+
+    return {
+        "schema_version": "omnicursor.session_outcome.v1",
+        "source": "omnicursor",
+        "correlation_id": correlation_id,
+        "conversation_id": conversation_id,
+        "started_at": started_at,
+        "ended_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "session_status": summary.get("session_status", ""),
+        "session_outcome": summary.get("session_outcome", ""),
+        "session_outcome_reason": summary.get("session_outcome_reason", ""),
+        "prompts_classified": int(summary.get("prompts_classified", 0)),
+        "files_edited": int(summary.get("files_edited", 0)),
+        "shell_commands": summary.get("shell_commands", {}),
+        "languages": list(summary.get("languages", [])),
+        "matched_agent": matched_agent,
+        "matched_confidence": matched_confidence,
+        "patterns_injected": patterns_injected,
+        "injected_pattern_ids": list(seen_ids),
+    }
 
 
 def aggregate_session(conversation_id: str, status: str) -> Dict[str, Any]:
@@ -163,12 +218,16 @@ def main() -> None:
         except OSError:
             pass
 
-        if summary["session_outcome"] == "success":
+        if conversation_id:
             events = _load_events(conversation_id)
             write_session_patterns(
                 LEARNED_PATTERNS_FILE,
                 events,
                 summary["files_edited"],
+                summary["session_outcome"],
+            )
+            write_session_outcome(
+                _build_outbox_payload(summary, events, conversation_id, correlation_id)
             )
 
         send_event(
