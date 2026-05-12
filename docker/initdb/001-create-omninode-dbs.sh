@@ -11,4 +11,9 @@ SELECT 'CREATE DATABASE omniintelligence'
 WHERE NOT EXISTS (
     SELECT FROM pg_database WHERE datname = 'omniintelligence'
 )\gexec
+
+SELECT 'CREATE DATABASE omnidash_analytics'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'omnidash_analytics'
+)\gexec
 SQL
