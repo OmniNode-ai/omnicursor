@@ -21,7 +21,17 @@ FIXTURES="${OMNIDASH_FIXTURES_DIR:-/tmp/omnicursor-omnidash-fixtures}"
 INTERVAL="${OMNICURSOR_SIDECAR_INTERVAL:-2}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exec "$REPO_ROOT/.venv/bin/python" -m omnicursor.sidecar.daemon \
+
+# Locate the venv: prefer one in REPO_ROOT, fall back to the main worktree
+# (worktrees share the parent repo's .venv).
+if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+  PYTHON="$REPO_ROOT/.venv/bin/python"
+else
+  MAIN_ROOT="$(cd "$REPO_ROOT/../.." && pwd)"
+  PYTHON="$MAIN_ROOT/.venv/bin/python"
+fi
+
+exec "$PYTHON" -m omnicursor.sidecar.daemon \
   --outbox "$OUTBOX" \
   --socket "$SOCKET" \
   --cursor "$CURSOR" \
