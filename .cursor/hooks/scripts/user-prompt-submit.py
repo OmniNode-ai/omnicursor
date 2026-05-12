@@ -39,6 +39,8 @@ import os
 import re
 import sys
 import time
+import urllib.parse
+import urllib.request
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -492,6 +494,44 @@ def build_context(
 
 
 # ---------------------------------------------------------------------------
+# Per-prompt pattern fetch from omniintelligence HTTP API
+# ---------------------------------------------------------------------------
+
+_INTELLIGENCE_API_URL = os.environ.get(
+    "INTELLIGENCE_SERVICE_URL",
+    "http://localhost:8053",
+).rstrip("/")
+
+_API_TIMEOUT_S: float = float(os.environ.get("OMNICURSOR_CONTEXT_API_TIMEOUT_MS", "900")) / 1000.0
+_API_FETCH_LIMIT: int = 50
+
+
+def _fetch_patterns_from_api(domain: str) -> Optional[List[Dict[str, Any]]]:
+    """GET /api/v1/patterns from omniintelligence; return list or None on failure.
+
+    Uses stdlib urllib only (no pip deps in hooks). Caller falls back to the
+    local file cache when this returns None.
+    """
+    try:
+        params = urllib.parse.urlencode({
+            "domain": domain,
+            "limit": str(_API_FETCH_LIMIT),
+            "min_confidence": "0.5",
+        })
+        url = f"{_INTELLIGENCE_API_URL}/api/v1/patterns?{params}"
+        req = urllib.request.Request(url, method="GET")  # noqa: S310
+        with urllib.request.urlopen(req, timeout=_API_TIMEOUT_S) as resp:  # noqa: S310
+            body = json.loads(resp.read().decode("utf-8"))
+        if isinstance(body, list):
+            return body
+        if isinstance(body, dict) and isinstance(body.get("patterns"), list):
+            return body["patterns"]
+        return None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -535,13 +575,18 @@ def main() -> None:
         reset_turn_state(conversation_id)
 
         # Pattern loading with relevance filtering.
-        # Fall back to repo seed file when the user file doesn't exist yet.
-        cache = get_pattern_cache()
-        if not cache.is_warm() or cache.is_stale():
-            source = LEARNED_PATTERNS_FILE if LEARNED_PATTERNS_FILE.exists() else SEED_PATTERNS_FILE
-            cache.warm_from_json(source)
+        # Primary: omniintelligence HTTP API (per-prompt, fresh patterns).
+        # Fallback: local file cache (session-start sync or seed file).
         domain = _agent_domain(agent_name)
-        raw = cache.get(domain) or cache.get("general") or []
+        api_patterns = _fetch_patterns_from_api(domain)
+        if api_patterns is not None:
+            raw = api_patterns
+        else:
+            cache = get_pattern_cache()
+            if not cache.is_warm() or cache.is_stale():
+                source = LEARNED_PATTERNS_FILE if LEARNED_PATTERNS_FILE.exists() else SEED_PATTERNS_FILE
+                cache.warm_from_json(source)
+            raw = cache.get(domain) or cache.get("general") or []
         prompt_words_set = prompt_keyword_set(prompt)
         patterns = filter_patterns_by_relevance(raw, domain, prompt_words_set)
         injected_pattern_ids = [
