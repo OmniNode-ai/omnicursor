@@ -135,14 +135,14 @@ Add a prompt_length field to the session outbox schema so we can track
 how long each prompt was. /plan-ticket
 ```
 
-Claude will:
+OmniCursor will automatically:
 1. Read the codebase to understand `session_outbox.py`
 2. Generate a YAML ticket contract
 3. Call `tracker.create_issue` → creates a Linear ticket (e.g. `OMN-XX`)
 4. Report the ticket URL
 
-**Narrate:** "OmniCursor just read the repo, determined what the task requires,
-and registered it in Linear — that's the intake phase."
+**Narrate:** "OmniCursor read the repo, determined what the task requires,
+and registered it in Linear — no manual ticket writing."
 
 ### Step 2 — Execute the ticket autonomously
 
@@ -154,20 +154,20 @@ Still in Cursor's composer, type:
 
 (Replace `OMN-XX` with the ticket ID from Step 1.)
 
-Claude will:
-1. Read the Linear ticket via MCP
-2. Identify files to change (`session_outbox.py`, relevant tests)
-3. Implement the change
-4. Run `pytest tests/ -q`
-5. Open a PR via `gh pr create`
-6. Update the Linear ticket to Done
+OmniCursor drives the full pipeline unattended:
+1. Reads the Linear ticket via MCP
+2. Identifies files to change (`session_outbox.py`, relevant tests)
+3. Implements the change
+4. Runs `pytest tests/ -q`
+5. Opens a PR via `gh pr create`
+6. Updates the Linear ticket to Done
 
-**Step away from the keyboard after typing the command.** Let it run unattended.
-This is the key moment — the audience should see Claude working without you.
+**Step away from the keyboard after typing the command.** This is the key
+moment — the audience should see the pipeline running with no human input.
 
-**Narrate while it runs:** "This is OmniCursor's `execute-plan` pipeline. It
-reads the ticket, writes code, runs the test suite, and opens a PR — no
-human in the loop between ticket creation and the PR."
+**Narrate while it runs:** "One command. OmniCursor reads the ticket contract,
+writes the code, runs the test suite, opens the PR, and closes the ticket —
+fully unattended."
 
 ### Step 3 — Show the result
 
