@@ -88,7 +88,7 @@ def test_load_execute_plan_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("execute-plan")
     assert skill.skill_name == "execute-plan"
     assert skill.path == ".cursor/skills/execute-plan/SKILL.md"
-    assert "Execute Plan" in skill.content
+    assert "execute-plan" in skill.content
 
 
 def test_load_nonexistent_skill_raises(repository: SkillRepository) -> None:

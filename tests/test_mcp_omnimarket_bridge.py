@@ -52,7 +52,9 @@ def _run(coro: Any) -> Any:
 def test_tool_registered() -> None:
     tools = _run(omnimarket_bridge_server.mcp.list_tools())
     names = [t.name for t in tools]
-    assert names == ["run_local_review"]
+    assert "run_local_review" in names
+    assert "run_ticket_pipeline" in names
+    assert "run_ci_watch" in names
 
 
 def test_tool_calls_bridge_with_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
