@@ -1,3 +1,10 @@
+---
+name: "onex:plan-review"
+description: >-
+  Adversarial pre-execution check on a plan file. Run this before execute_plan or manually.
+disable-model-invocation: true
+---
+
 # onex:plan-review
 
 Adversarial pre-execution check on a plan file. Run this before execute_plan or manually.

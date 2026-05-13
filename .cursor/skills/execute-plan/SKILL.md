@@ -1,3 +1,10 @@
+---
+name: "onex:execute-plan"
+description: >-
+  Autonomous implementation pipeline. Reads a plan file, reviews it adversarially,
+disable-model-invocation: true
+---
+
 # onex:execute-plan
 
 Autonomous implementation pipeline. Reads a plan file, reviews it adversarially,

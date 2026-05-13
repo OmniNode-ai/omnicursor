@@ -1,3 +1,10 @@
+---
+name: "onex:writing-plans"
+description: >-
+  Use this skill when the user has a completed design doc and needs a comprehensive implementation plan with exact file paths, complete code examples, and a TDD approach.
+disable-model-invocation: true
+---
+
 # onex:writing-plans
 
 Use this skill when the user has a completed design doc and needs a comprehensive implementation plan with exact file paths, complete code examples, and a TDD approach.

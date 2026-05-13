@@ -252,11 +252,13 @@ def run_ticket_pipeline(
     Returns BridgeResult with state keys: final_phase, pr_number.
     Timeout: 10 minutes (pipeline includes CI wait).
     """
-    args = ["--ticket-id", ticket_id]
+    # omnimarket node_ticket_pipeline: optional flags then positional ticket_id.
+    args: List[str] = []
     if skip_test_iterate:
         args.append("--skip-test-iterate")
     if dry_run:
         args.append("--dry-run")
+    args.append(ticket_id)
     return _run_node(
         "omnimarket.nodes.node_ticket_pipeline",
         args,

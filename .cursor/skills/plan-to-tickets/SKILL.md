@@ -1,3 +1,10 @@
+---
+name: "onex:plan-to-tickets"
+description: >-
+  Parse a plan file and batch-create Linear tickets — one per `## Task N:` section.
+disable-model-invocation: true
+---
+
 # onex:plan-to-tickets
 
 Parse a plan file and batch-create Linear tickets — one per `## Task N:` section.

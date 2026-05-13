@@ -1,3 +1,10 @@
+---
+name: "onex:pr-review"
+description: >-
+  Use this skill when reviewing a pull request for merge readiness. The goal is to produce a priority-organized assessment that clearly communicates what must be fixed before merge.
+disable-model-invocation: true
+---
+
 # onex:pr-review
 
 Use this skill when reviewing a pull request for merge readiness. The goal is to produce a priority-organized assessment that clearly communicates what must be fixed before merge.

@@ -1,3 +1,10 @@
+---
+name: "onex:plan-ticket"
+description: >-
+  Use this skill when the user has a plan or task description and needs a ticket contract template with deterministic repo detection and YAML output.
+disable-model-invocation: true
+---
+
 # onex:plan-ticket
 
 Use this skill when the user has a plan or task description and needs a ticket contract template with deterministic repo detection and YAML output.

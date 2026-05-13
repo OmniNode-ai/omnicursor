@@ -62,7 +62,7 @@ Supporting modules: `_common.py`, `pattern_loader.py`. All hooks use stdlib only
 
 ## Skills
 
-17 Markdown skills in [`skills/`](./skills/): methodology documents the model reads from disk (paths in each rule / QUICKSTART). Each has a canonical id **`onex:<slug>`** (matching the filename stem and `.cursor/skills/<slug>/`), a compliance registry entry in `src/omnicursor/compliance.py`, and a mirrored copy at `.cursor/skills/<slug>/SKILL.md`.
+17 Markdown skills in [`skills/`](./skills/): methodology documents the model reads from disk (paths in each rule / QUICKSTART). Each begins with YAML frontmatter whose **`name`** is **`onex:<slug>`** (matching the filename stem), uses `# onex:<slug>` as the Markdown title for humans, carries a compliance registry entry in `src/omnicursor/compliance.py`, and has a mirrored copy at `.cursor/skills/<slug>/SKILL.md` (Cursor **`/`** picker shows the frontmatter **`name`**).
 
 ## Directory guides
 

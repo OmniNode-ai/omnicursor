@@ -1,3 +1,10 @@
+---
+name: "onex:brainstorming"
+description: >-
+  Use this skill when the user has a rough idea, wants to explore a feature, or says "let's brainstorm" or "help me design." The goal is to refine an idea into a validated design doc before any code is written.
+disable-model-invocation: true
+---
+
 # onex:brainstorming
 
 Use this skill when the user has a rough idea, wants to explore a feature, or says "let's brainstorm" or "help me design." The goal is to refine an idea into a validated design doc before any code is written.

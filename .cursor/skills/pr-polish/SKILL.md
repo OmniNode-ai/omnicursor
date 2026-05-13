@@ -1,3 +1,10 @@
+---
+name: "onex:pr-polish"
+description: >-
+  Use this skill when a PR exists but is not yet merge-ready. The goal is to take an open PR through conflict resolution, review feedback, and iterative quality passes until it is clean enough to merge.
+disable-model-invocation: true
+---
+
 # onex:pr-polish
 
 Use this skill when a PR exists but is not yet merge-ready. The goal is to take an open PR through conflict resolution, review feedback, and iterative quality passes until it is clean enough to merge.

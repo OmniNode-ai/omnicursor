@@ -69,6 +69,8 @@ That's it — OmniCursor is running.
 
 Say the keyword in chat and Cursor reads the skill file and follows it.
 
+**Slash menu (`/`):** Each skill file uses Cursor Agent Skills YAML frontmatter. The `name` field matches the canonical id (`onex:<slug>` — for example `onex:brainstorming`). Typing `/` in chat shows those names so the picker aligns with OmniCursor hooks and docs that reference the `onex:` namespace.
+
 | Keyword | Skill | What it does |
 |---------|-------|--------------|
 | `recap` or `/recap` | onex:recap | Summarizes the current session inline; auto-injects previous session recap at start |
