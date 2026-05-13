@@ -58,7 +58,7 @@ Thin wrappers `on_prompt.py`, `on_shell.py`, `on_edit.py`, `on_stop.py` may stil
 
 ## Agent Configs
 
-17 JSON configs in [`.cursor/agents/`](./.cursor/agents/) define activation patterns for prompt-based routing. Hooks (`user-prompt-submit.py` → `agent_scoring.score_agent`) and `agents.py` share the same scoring engine (`HARD_FLOOR = 0.55`; see `src/omnicursor/scoring.py`).
+17 JSON configs in [`.cursor/agents/`](./.cursor/agents/) define activation patterns for prompt-based routing. Hooks (`.cursor/hooks/scripts/user-prompt-submit.py` → `agent_scoring.score_agent`) and `agents.py` share the same scoring engine (`HARD_FLOOR = 0.55`; see `src/omnicursor/scoring.py`).
 
 ## Skills
 
