@@ -2,11 +2,13 @@
 
 python -m omnicursor.sidecar.daemon [--publisher kafka|omnidash|noop]
 
-Runs two concurrent loops:
+Runs concurrent loops:
   1. socket_listener  — binds ~/.omnicursor/emit.sock, receives live hook events,
                         appends them to outbox.jsonl (bridges live → durable path)
   2. drain_loop       — polls outbox.jsonl every --interval seconds and publishes
                         new rows via the selected Publisher
+  3. status HTTP      — optional GET /status on 127.0.0.1 (--status-port, default 9847;
+                        use 0 to disable) — publisher mode, outbox byte offset, publish count
 
 Publishers:
   kafka     Produce to Redpanda/Kafka (requires confluent-kafka, KAFKA_BOOTSTRAP_SERVERS)
@@ -27,6 +29,8 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from omnicursor.drainer.publisher import CountingPublisher, NoopPublisher, PublishCounter
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -43,7 +47,6 @@ def _make_publisher(name: str, fixtures_dir: Optional[Path], bootstrap: Optional
         from omnicursor.drainer.omnidash_publisher import OmniDashFixturePublisher
         fd = fixtures_dir or Path("/tmp/omnicursor-omnidash-fixtures")
         return OmniDashFixturePublisher(fixtures_dir=fd, log=_log)
-    from omnicursor.drainer.publisher import NoopPublisher
     return NoopPublisher(log=_log)
 
 
@@ -101,63 +104,93 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Drain once and exit (no socket listener, no loop)",
     )
+    parser.add_argument(
+        "--status-port",
+        type=int,
+        default=9847,
+        metavar="PORT",
+        help=(
+            "Listen on 127.0.0.1:PORT for GET /status (JSON metrics); "
+            "0 disables (default: 9847)"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    publisher = _make_publisher(args.publisher, args.fixtures, args.kafka_bootstrap)
+    inner_publisher = _make_publisher(args.publisher, args.fixtures, args.kafka_bootstrap)
+    publish_counter = PublishCounter()
+    publisher = CountingPublisher(inner_publisher, publish_counter)
+
+    http_server = None
+    if args.status_port != 0:
+        from omnicursor.sidecar.status_server import start_status_server
+
+        http_server, _ = start_status_server(
+            port=args.status_port,
+            publisher_mode=args.publisher,
+            cursor_path=args.cursor,
+            publish_counter=publish_counter,
+            logger=_log,
+        )
+
     _log.info(
-        "sidecar starting | publisher=%s outbox=%s socket=%s interval=%.1fs",
+        "sidecar starting | publisher=%s outbox=%s socket=%s interval=%.1fs status_port=%s",
         args.publisher,
         args.outbox,
         args.socket,
         args.interval,
+        args.status_port if args.status_port else "off",
     )
 
     from omnicursor.drainer.loop import drain_loop, drain_once
 
-    if args.once:
-        stats = drain_once(
+    try:
+        if args.once:
+            stats = drain_once(
+                publisher,
+                outbox_path=args.outbox,
+                cursor_path=args.cursor,
+            )
+            _log.info("drain_once stats: %s", stats)
+            return 0
+
+        stop_event = threading.Event()
+
+        def _shutdown(signum, frame):
+            _log.info("sidecar received signal %s — shutting down", signum)
+            stop_event.set()
+
+        signal.signal(signal.SIGTERM, _shutdown)
+        signal.signal(signal.SIGINT, _shutdown)
+
+        # Start socket listener in background thread.
+        from omnicursor.sidecar.socket_listener import start as start_listener
+        try:
+            start_listener(
+                socket_path=args.socket,
+                outbox_path=args.outbox,
+                stop_event=stop_event,
+                logger=_log,
+            )
+        except OSError as exc:
+            _log.error("socket listener failed to start: %s", exc)
+            return 1
+
+        # Run drain loop in the main thread (blocks until stop_event).
+        drain_loop(
             publisher,
             outbox_path=args.outbox,
             cursor_path=args.cursor,
-        )
-        _log.info("drain_once stats: %s", stats)
-        _flush(publisher)
-        return 0
-
-    stop_event = threading.Event()
-
-    def _shutdown(signum, frame):
-        _log.info("sidecar received signal %s — shutting down", signum)
-        stop_event.set()
-
-    signal.signal(signal.SIGTERM, _shutdown)
-    signal.signal(signal.SIGINT, _shutdown)
-
-    # Start socket listener in background thread.
-    from omnicursor.sidecar.socket_listener import start as start_listener
-    try:
-        start_listener(
-            socket_path=args.socket,
-            outbox_path=args.outbox,
+            interval_s=args.interval,
             stop_event=stop_event,
-            logger=_log,
         )
-    except OSError as exc:
-        _log.error("socket listener failed to start: %s", exc)
-        return 1
 
-    # Run drain loop in the main thread (blocks until stop_event).
-    drain_loop(
-        publisher,
-        outbox_path=args.outbox,
-        cursor_path=args.cursor,
-        interval_s=args.interval,
-        stop_event=stop_event,
-    )
-
-    _flush(publisher)
-    _log.info("sidecar stopped")
-    return 0
+        _log.info("sidecar stopped")
+        return 0
+    finally:
+        if http_server is not None:
+            http_server.shutdown()
+            http_server.server_close()
+        _flush(inner_publisher)
 
 
 def _flush(publisher) -> None:

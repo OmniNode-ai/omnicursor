@@ -6,14 +6,17 @@ import json
 import socket
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest import mock
 
 
-from omnicursor.drainer.loop import drain_loop
-from omnicursor.drainer.publisher import NoopPublisher
+from omnicursor.drainer.loop import drain_loop, drain_once
+from omnicursor.drainer.publisher import CountingPublisher, NoopPublisher, PublishCounter
 from omnicursor.drainer.kafka_publisher import KafkaPublisher, topics_for
 from omnicursor.sidecar.socket_listener import start as start_listener
+from omnicursor.sidecar.status_server import start_status_server
 
 
 # ---------------------------------------------------------------------------
@@ -187,3 +190,81 @@ class TestDrainLoopStopEvent:
         stop.set()
         t.join(timeout=2.0)
         assert not t.is_alive(), "drain_loop did not terminate after stop_event"
+
+
+# ---------------------------------------------------------------------------
+# GET /status — metrics HTTP
+# ---------------------------------------------------------------------------
+
+
+class TestStatusHTTP:
+    def test_get_status_returns_metrics_json(self, tmp_path: Path) -> None:
+        cursor = tmp_path / "sidecar.cursor"
+        cursor.write_text("42\n")
+        counter = PublishCounter()
+        counter.record(5)
+        server, _thread = start_status_server(
+            port=0,
+            publisher_mode="noop",
+            cursor_path=cursor,
+            publish_counter=counter,
+        )
+        assert server is not None
+        bound_port = server.server_address[1]
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{bound_port}/status", timeout=3
+            ) as resp:
+                assert resp.status == 200
+                body = json.loads(resp.read().decode())
+        finally:
+            server.shutdown()
+            server.server_close()
+
+        assert body == {
+            "publisher_mode": "noop",
+            "outbox_offset": 42,
+            "events_published": 5,
+        }
+
+    def test_status_unknown_path_is_404(self, tmp_path: Path) -> None:
+        counter = PublishCounter()
+        server, _thread = start_status_server(
+            port=0,
+            publisher_mode="kafka",
+            cursor_path=tmp_path / "c",
+            publish_counter=counter,
+        )
+        assert server is not None
+        bound_port = server.server_address[1]
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{bound_port}/nope", timeout=3
+            ):
+                pass
+            raise AssertionError("expected HTTPError")
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 404
+        finally:
+            server.shutdown()
+            server.server_close()
+
+
+class TestCountingPublisher:
+    def test_counting_publisher_increments_on_successful_publish(self, tmp_path: Path) -> None:
+        outbox = tmp_path / "outbox.jsonl"
+        cursor = tmp_path / "cursor"
+        row = {
+            "schema_version": "omnicursor.session_outcome.v1",
+            "session_outcome": "success",
+            "session_outcome_reason": "test",
+            "conversation_id": "conv-1",
+            "correlation_id": "corr-1",
+        }
+        outbox.write_text(json.dumps(row) + "\n")
+        ctr = PublishCounter()
+        inner = NoopPublisher()
+        pub = CountingPublisher(inner, ctr)
+        drain_once(pub, outbox_path=outbox, cursor_path=cursor)
+        assert ctr.value() == 1
+        assert len(inner.events) == 1
