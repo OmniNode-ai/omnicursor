@@ -73,7 +73,7 @@ Ensure `OMNIMARKET_ROOT` points to a local omnimarket checkout. The omnimarket b
 uses this to invoke `node_ticket_pipeline` via subprocess.
 
 ```bash
-export OMNIMARKET_ROOT=/home/andyw/cs490/omninode/omnimarket
+export OMNIMARKET_ROOT=/path/to/omnimarket
 ```
 
 ### 4. Linear MCP

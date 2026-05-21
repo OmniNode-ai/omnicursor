@@ -30,14 +30,14 @@ Demostrar que OmniCursor tiene una **intelligence layer local-first** completame
 
 | Ítem | Valor |
 |------|-------|
-| Repo | `/Users/jirustaroure/Desktop/OmniCursor` |
+| Repo | `/path/to/OmniCursor` |
 | Rama | `julian/option-b-from-main` |
 | Python venv | `.venv` (Python 3.12) |
 | `ruff` | disponible en `.venv/bin/ruff` |
 | `jq` | recomendado para evidencia legible |
 | `watch` | opcional para panel de learned_patterns en vivo |
 | Docker | NO requerido para A+B |
-| Omnimarket checkout | `/Users/jirustaroure/Desktop/OmniCursor/omnimarket` |
+| Omnimarket checkout | `/path/to/omnimarket` |
 | Omnimarket SHA | `ce0f3bec8a049bb9ae728adee2d053fd4cebe28b` (branch `main`) |
 | `.cursor/mcp.json` | `OMNIMARKET_ROOT` apunta al checkout |
 
@@ -75,7 +75,7 @@ Correr antes de grabar/presentar:
 # Esperado: All checks passed!
 
 # 3. Bridge smoke (shell directo)
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket \
+OMNIMARKET_ROOT=/path/to/omnimarket \
   .venv/bin/python -c "
 import json
 from omnicursor.omnimarket_bridge import run_local_review
@@ -310,7 +310,7 @@ tail -n 1 ~/.omnicursor/outbox.jsonl | jq .
 
 **Fallback si no se puede desde UI (demo de contingencia):**
 ```bash
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket \
+OMNIMARKET_ROOT=/path/to/omnimarket \
   .venv/bin/python -c "
 import json
 from omnicursor.omnimarket_bridge import run_local_review

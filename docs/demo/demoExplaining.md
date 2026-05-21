@@ -46,7 +46,7 @@ Imagina una **oficina pequeña**:
 
 Lo "necesario" en tu máquina:
 
-- Repo en `/Users/jirustaroure/Desktop/OmniCursor`
+- Repo en `/path/to/OmniCursor`
 - Rama `julian/option-b-from-main`
 - Un entorno Python local `.venv` con dos cosas dentro: `ruff` (el corrector) y `mcp` (la librería del puente).
 - Una carpeta local de OmniMarket (`omnimarket/`) — el "almacén".
@@ -346,14 +346,14 @@ Si tuvieras que vender esto en 30 segundos:
 ## 10. Cómo replicar la demo tú mismo en 30 segundos
 
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor
+cd /path/to/OmniCursor
 
 # 1. Verifica que arranca verde
 .venv/bin/python -m pytest -q
 .venv/bin/python -m ruff check src/ tests/ .cursor/hooks/
 
 # 2. Bridge smoke
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket \
+OMNIMARKET_ROOT=/path/to/omnimarket \
   PYTHONPATH=src .venv/bin/python -c "
 import json
 from omnicursor.omnimarket_bridge import run_local_review

@@ -77,7 +77,7 @@ No recibe `session_outcome` — la lógica de éxito/fallo vive en `stop.py`, no
 | G | Verificar | `ruff check` + `pytest -q` completo, declarar Option A cerrada |
 | H | Opcional | Actualizar el doc `# Intelligence Layer — Current State and Options.md` |
 
-Los prompts exactos están en `/Users/jirustaroure/Desktop/OmniCursor/OptionA-Prompts.md`.
+Los prompts exactos están en `docs/archive/dev/OptionA-Prompts.md`.
 
 ---
 
@@ -356,7 +356,7 @@ Implementar **Option A → Option B mínima** como combinación local sólida. B
 | 6 — Verificación final | Hecho | ruff OK, 598 passed (572 originales + 26 nuevos). Option B mínima cerrada. |
 
 ### Checkout Omnimarket canónico
-- **Path:** `/Users/jirustaroure/Desktop/OmniCursor/omnimarket`
+- **Path:** `/path/to/omnimarket`
 - **SHA:** `ce0f3bec8a049bb9ae728adee2d053fd4cebe28b`
 - **Branch:** `main`
 - **Estado:** clone fresco real, `src/omnimarket/nodes/node_local_review/__main__.py` existe

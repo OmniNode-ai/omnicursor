@@ -304,7 +304,7 @@ To produce a **failed** outcome instead, swap `"completed"` for `"failed"` in th
 
 **Run it:**
 ```bash
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket \
+OMNIMARKET_ROOT=/path/to/omnimarket \
   python -c "
 import json
 from omnicursor.omnimarket_bridge import run_local_review
@@ -339,7 +339,7 @@ print(json.dumps(run_local_review(dry_run=True), indent=2, default=str))
 
 **Terminal 1 — Express bridge (serves fixtures on port 3002):**
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor/omnidash
+cd /path/to/omnidash
 OMNIDASH_DATA_SOURCE=file \
 FIXTURES_DIR=/tmp/omnicursor-omnidash-fixtures \
 npm run dev:server
@@ -348,7 +348,7 @@ Wait for: `[omnidash server] Listening on port 3002`.
 
 **Terminal 2 — Vite dashboard (serves the UI on port 3001):**
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor/omnidash
+cd /path/to/omnidash
 VITE_DATA_SOURCE=http \
 VITE_HTTP_DATA_SOURCE_URL=http://localhost:3002 \
 npm run dev
@@ -359,7 +359,7 @@ Wait for: `VITE v5.x.x ready ... Local: http://localhost:3001/`.
 
 **Terminal 3 — OmniCursor bridge (drains outbox into fixtures every 2s):**
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor
+cd /path/to/OmniCursor
 bash scripts/run_omnidash_bridge.sh
 ```
 This process runs silently. It writes JSON files into `/tmp/omnicursor-omnidash-fixtures/onex.snapshot.projection.live-events.v1/`.

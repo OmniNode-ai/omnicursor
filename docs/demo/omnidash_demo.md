@@ -33,7 +33,7 @@ Cursor stop hook
 ### Terminal 1 — Express bridge (file mode, port 3002)
 
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor/omnidash
+cd /path/to/omnidash
 OMNIDASH_DATA_SOURCE=file \
 FIXTURES_DIR=/tmp/omnicursor-omnidash-fixtures \
 npm run dev:server
@@ -45,7 +45,7 @@ is `sqlite`, which ignores `FIXTURES_DIR`.
 ### Terminal 2 — Vite SPA (HTTP data source, points to port 3002)
 
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor/omnidash
+cd /path/to/omnidash
 VITE_DATA_SOURCE=http \
 VITE_HTTP_DATA_SOURCE_URL=http://localhost:3002 \
 npm run dev
@@ -57,7 +57,7 @@ Navigate to the Live Event Stream widget.
 ### Terminal 3 — OmniCursor bridge (drains every 2 seconds)
 
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor
+cd /path/to/OmniCursor
 bash scripts/run_omnidash_bridge.sh
 ```
 

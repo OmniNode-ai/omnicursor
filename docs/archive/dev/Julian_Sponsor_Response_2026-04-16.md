@@ -1,4 +1,4 @@
-<!-- Converted from /Users/jirustaroure/Downloads/Julian_Sponsor_Response_2026-04-16.pdf -->
+<!-- Converted from Julian_Sponsor_Response_2026-04-16.pdf -->
 
 # Sponsor Response — Julian’s Intelligence/Docker Update
 

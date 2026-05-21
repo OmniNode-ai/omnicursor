@@ -32,7 +32,7 @@ Orden recomendado:
 [Usa Plan Mode]
 
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo global:
 Cerrar Option A del documento "INTELLIGENCE_LAYER_CURRENT_STATE_AND_OPTIONS.md" al 100%, sin implementar Option B.
@@ -98,7 +98,7 @@ No implementes. Solo plan. Pide confirmacion al final.
 
 ```text
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Cerrar la primera parte de Option A local, sin Option B.
@@ -158,7 +158,7 @@ Reporta:
 [Usa Plan Mode]
 
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Disenar el cierre semantico de Option A en src/omnicursor/pattern_writer.py, sin implementar Option B.
@@ -244,7 +244,7 @@ No implementes. Solo plan. Pide confirmacion al final.
 
 ```text
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Implementar el cierre semantico de Option A en src/omnicursor/pattern_writer.py, sin Option B.
@@ -317,7 +317,7 @@ Reporta:
 [Usa Plan Mode]
 
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Disenar el cableado final de Option A en .cursor/hooks/scripts/stop.py, sin Option B.
@@ -378,7 +378,7 @@ No implementes. Solo plan. Pide confirmacion al final.
 
 ```text
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Cablear .cursor/hooks/scripts/stop.py con la nueva API de Option A, sin Option B.
@@ -431,7 +431,7 @@ Reporta:
 
 ```text
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Verificar Option A completa. No implementar Option B.
@@ -476,7 +476,7 @@ Reporta:
 
 ```text
 Restore de contexto:
-Estamos en /Users/jirustaroure/Desktop/OmniCursor.
+Estamos en /path/to/OmniCursor.
 
 Objetivo:
 Actualizar solo el documento "INTELLIGENCE_LAYER_CURRENT_STATE_AND_OPTIONS.md" para reflejar que Option A quedo completa, sin tocar Option B ni Option C.

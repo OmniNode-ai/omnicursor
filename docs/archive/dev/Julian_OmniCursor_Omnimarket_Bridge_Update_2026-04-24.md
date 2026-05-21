@@ -143,7 +143,7 @@ Full suite:
 
 Real bridge smoke:
 
-- `OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket-main`
+- `OMNIMARKET_ROOT=/path/to/omnimarket-main`
 - `run_local_review(dry_run=True)`
 - Result: `ok: true`
 - Parsed state included:
@@ -197,7 +197,7 @@ Changed:
 From the OmniCursor repo:
 
 ```bash
-cd /Users/jirustaroure/Desktop/OmniCursor
+cd /path/to/OmniCursor
 source .venv/bin/activate
 
 ruff check src/omnicursor/omnimarket_bridge.py \
@@ -212,7 +212,7 @@ pytest tests/ -v
 Direct bridge smoke:
 
 ```bash
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket-main \
+OMNIMARKET_ROOT=/path/to/omnimarket-main \
 python - <<'PY'
 from omnicursor.omnimarket_bridge import run_local_review
 import json
@@ -224,7 +224,7 @@ PY
 MCP-level smoke:
 
 ```bash
-OMNIMARKET_ROOT=/Users/jirustaroure/Desktop/OmniCursor/omnimarket-main \
+OMNIMARKET_ROOT=/path/to/omnimarket-main \
 python - <<'PY'
 import asyncio
 import json
@@ -266,7 +266,7 @@ This delivers the first bridge target, but there are a few explicit boundaries:
 
 ## Appendix A - April 16 Sponsor Feedback Converted to Markdown
 
-Source PDF: `/Users/jirustaroure/Downloads/Julian_Sponsor_Response_2026-04-16.pdf`  
+Source PDF: `Julian_Sponsor_Response_2026-04-16.pdf`  
 Converted Markdown: `docs/dev/Julian_Sponsor_Response_2026-04-16.md`
 
 The text below is included for traceability so the delivered work can be checked directly against the sponsor's April 16 direction.
