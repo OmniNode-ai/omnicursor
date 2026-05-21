@@ -20,7 +20,7 @@ It does not replace `00-omninode-concepts`, `01-codebase-research`, `02-no-secre
 
 ## Working Style
 
-- Prefer writing a **dated artifact** under `docs/plans/` or `docs/dev/handoffs/` (e.g. `docs/dev/handoffs/YYYY-MM-DD-session.md`) so `docs/dev/HANDOFF.md` (team continuity doc) is not overwritten unless the user asks for that file by name.
+- Prefer writing a **dated artifact** under `docs/plans/` or `docs/archive/dev/handoffs/` (e.g. `docs/archive/dev/handoffs/YYYY-MM-DD-session.md`) so archived continuity docs are not overwritten unless the user asks for a specific path by name.
 - Include branch, recent commits, files in play, ordered next steps, and blockers.
 
 ## Handoffs

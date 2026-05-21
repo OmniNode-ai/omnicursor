@@ -36,12 +36,10 @@ When the documents disagree, use this order:
 
 1. **This brief** for implementation decisions in this repo
 2. [`omnicursor-team-guidance.md`](../../omnicursor-team-guidance.md) for demo-focused implementation details
-3. The OmniCursor architecture deliverables:
-   - [`OmniCursor_Architecture_FINAL2.pdf`](../../OmniCursor_Architecture_FINAL2.pdf)
-   - [`OmniCursor_Architecture_Visual_Guide55.pages`](../../OmniCursor_Architecture_Visual_Guide55.pages)
+3. Architecture diagrams in-repo: [`OMNICURSOR_SYSTEM_DESIGN.md`](./OMNICURSOR_SYSTEM_DESIGN.md) (capstone PDF/Pages deliverables are not stored in this repo).
 4. Repo architecture and starter-kit constraints:
    - [`README.md`](../../README.md)
-   - [`cursor.md`](../../cursor.md)
+   - [`CLAUDE.md`](../../CLAUDE.md)
    - [`.cursor/rules/README.md`](../../.cursor/rules/README.md)
 5. `omniclaude-main/` as a **reference library**, not a source of mandatory parity
 

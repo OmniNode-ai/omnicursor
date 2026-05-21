@@ -15,4 +15,4 @@ Deterministic **Python 3** scripts — **stdlib only**, no pip dependencies. The
 
 **Phase 1 extras:** `lib/emit_client.py` (Unix socket, `OMNICURSOR_EMIT_SOCKET`), `lib/pattern_sync.py` (optional omniintelligence HTTP pull — **stop** runs it only when `OMNICURSOR_PATTERN_SYNC_HTTP=1`; default off per sponsor), `config/dod_enforcement.json` (DoD + optional dispatch-claim regexes).
 
-**Constraints:** Summarized in [cursor.md](../../cursor.md). Tests live under `tests/test_hooks_*.py` and `tests/test_suite_event*.py`.
+**Constraints:** Summarized in [CLAUDE.md](../../CLAUDE.md). Tests live under `tests/test_hooks_*.py` and `tests/test_suite_event*.py`.

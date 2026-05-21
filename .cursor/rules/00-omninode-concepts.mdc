@@ -66,7 +66,7 @@ Stages 4–5 require external services (Bucket 3); they are outside in-repo Curs
 Cursor does not expose a **PreCompact** hook. Before context is compacted or when the session is long, preserve critical state yourself:
 
 - **Session facts** live in `~/.omnicursor/sessions/<conversation_id>.json` (updated by hooks). Do not rely only on chat memory for ticket IDs, CI status, or routing outcomes.
-- Re-open or `@file` local plans under `docs/plans/` rather than expecting the model to recall pre-compaction detail.
+- Re-open or `@file` local plans under `docs/plans/` or `docs/CURRENT_STATE.md` rather than expecting the model to recall pre-compaction detail.
 
 ---
 

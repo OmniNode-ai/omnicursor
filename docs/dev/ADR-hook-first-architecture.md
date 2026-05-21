@@ -74,6 +74,6 @@ Adopt a **hook-first** default for **lifecycle-triggered, deterministic** work t
 
 ## References
 
-- [`CURSOR_VS_CLAUDE_HOOKS.md`](./CURSOR_VS_CLAUDE_HOOKS.md)
-- `cursor.md`, [`DEVELOPER.md`](./DEVELOPER.md), [`HANDOFF.md`](./HANDOFF.md)
-- `OmniCursor_DoD_Rubric.md`
+- [`CURSOR_VS_CLAUDE_HOOKS.md`](../archive/dev/CURSOR_VS_CLAUDE_HOOKS.md) (archived)
+- [`CLAUDE.md`](../../CLAUDE.md), [`DEVELOPER.md`](./DEVELOPER.md), [`HANDOFF.md`](../archive/dev/HANDOFF.md) (archived)
+- [`OmniCursor_DoD_Rubric.md`](../archive/root/OmniCursor_DoD_Rubric.md) (archived)

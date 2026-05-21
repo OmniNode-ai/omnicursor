@@ -86,7 +86,7 @@ Execution remains the **hook script** path listed in `hooks.json`. See
 
 ## 5. Related docs
 
-- [`OMNICURSOR_MIGRATION_PLAN.md`](../OMNICURSOR_MIGRATION_PLAN.md) — phases and foundation scope
-- [`MIGRATION_PHASES_HANDOFF.md`](./MIGRATION_PHASES_HANDOFF.md) — checklist
-- [`CURSOR_VS_CLAUDE_HOOKS.md`](./CURSOR_VS_CLAUDE_HOOKS.md) — lifecycle mapping
-- [`CURSOR_FEATURE_SURFACE_MAP.md`](./CURSOR_FEATURE_SURFACE_MAP.md) — capability map
+- [`OMNICURSOR_MIGRATION_PLAN.md`](../archive/OMNICURSOR_MIGRATION_PLAN.md) — phases and foundation scope (archived)
+- [`MIGRATION_PHASES_HANDOFF.md`](../archive/dev/MIGRATION_PHASES_HANDOFF.md) — port-track checklist (archived)
+- [`CURSOR_VS_CLAUDE_HOOKS.md`](../archive/dev/CURSOR_VS_CLAUDE_HOOKS.md) — lifecycle mapping (archived)
+- [`CURSOR_FEATURE_SURFACE_MAP.md`](../archive/dev/CURSOR_FEATURE_SURFACE_MAP.md) — capability map (archived)

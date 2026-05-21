@@ -15,7 +15,7 @@ OmniCursor keeps the **same artifact shape** (per-node directory + `contract.yam
 
 1. **`contract.yaml`** — documents the node (name, type, description, capabilities, **Cursor binding**).
 2. **`.cursor/hooks.json`** — the executable registry Cursor loads. Every contract’s `cursor_native.hooks_json_command` must appear under the matching `hook_event` key.
-3. **Hook script** — `cursor_native.implementation`; must stay stdlib-only per `cursor.md`.
+3. **Hook script** — `cursor_native.implementation`; must stay stdlib-only per `CLAUDE.md`.
 4. **`handler.py`** (next to `contract.yaml`) — thin **library** surface: documents the same binding (`hook_binding()`) for tests and tooling. May import `omnicursor` (e.g. `prompt_pattern_read`, which loads stdlib helpers from `.cursor/hooks/lib/`). **Hook scripts must not `import omnicursor`**; they use `lib/*.py` only.
 
 When adding a new lifecycle integration, add or extend a contract **and** register the command in `hooks.json` in the same change.

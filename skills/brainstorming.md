@@ -21,7 +21,7 @@ Transform vague ideas into fully-formed designs through collaborative dialogue. 
 ## Workflow
 
 1. **Bounded context check.**
-   Announce what you will read before reading anything. Follow the `01-codebase-research` rule. Read only README.md, cursor.md, and one relevant directory listing.
+   Announce what you will read before reading anything. Follow the `01-codebase-research` rule. Read only README.md, CLAUDE.md, and one relevant directory listing.
 
 2. **Clarify with one question at a time.**
    Ask questions to understand purpose, constraints, success criteria, and affected components. Only one question per message. Prefer multiple-choice when the answer space is finite. Stop asking when you have enough context to propose approaches.

@@ -13,9 +13,13 @@ OmniCursor **behavior surface** for the model. Rules `00` and `01` are **always 
 | [`13-systematic-debugging.mdc`](./13-systematic-debugging.mdc) | Debugging methodology + hook/skill alignment. |
 | [`14-pr-review.mdc`](./14-pr-review.mdc) | PR / merge-readiness review + severity rubric. |
 | [`15-handoff.mdc`](./15-handoff.mdc) | Session continuity — structured handoff manifest. |
+| [`16-plan-to-tickets.mdc`](./16-plan-to-tickets.mdc) | Bucket 3 — batch Linear tickets from a plan (Linear MCP). |
+| [`17-plan-review.mdc`](./17-plan-review.mdc) | Bucket 1 — adversarial plan review (R1–R6). |
+| [`18-recap.mdc`](./18-recap.mdc) | Session recap inline. |
+| [`19-execute-plan.mdc`](./19-execute-plan.mdc) | Bucket 3 — autonomous execute-plan pipeline (Linear MCP). |
 
 **Skills:** Rules direct the model to read `.cursor/skills/onex-<slug>/SKILL.md`. Structured routing/compliance for tests lives in `src/omnicursor/`. See [docs/QUICKSTART.md](../../docs/QUICKSTART.md).
 
-**Teaching / capstone:** [docs/dev/STUDENT_GUIDE.md](../../docs/dev/STUDENT_GUIDE.md), [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (bucket model; Bucket 3 is conceptual — no `adapter-stub` rule in this repo).
+**Teaching / capstone:** [docs/archive/dev/STUDENT_GUIDE.md](../../docs/archive/dev/STUDENT_GUIDE.md), [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (bucket model; Bucket 3 is conceptual — no `adapter-stub` rule in this repo).
 
 **Tests:** Prompts under [`../../tests/prompts/`](../../tests/prompts/), rubrics under [`../../tests/rubrics/`](../../tests/rubrics/).

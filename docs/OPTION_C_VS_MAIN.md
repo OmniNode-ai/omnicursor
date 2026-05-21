@@ -1,10 +1,12 @@
 # Option C vs Main — What Changed
 
-This document compares the `intelligence/option-c` branch against `main`.
-Option C is a superset of main — everything in main works exactly the same,
-and Option C adds the event pipeline on top.
+> **Current state (May 2026):** Option C (sidecar, outbox, drainer, Kafka publisher) is **merged on `main`**. Use [`CURRENT_STATE.md`](./CURRENT_STATE.md) for what works today. This file is a **historical diff** from when Option C lived on branch `intelligence/option-c`.
 
-**Summary:** 60 files changed, 7,451 lines added, 158 lines modified.
+This document compares the `intelligence/option-c` branch against `main` at merge time.
+Option C was a superset of main — everything in main worked the same,
+and Option C added the event pipeline on top.
+
+**Summary (at merge):** 60 files changed, 7,451 lines added, 158 lines modified.
 
 ---
 
@@ -194,24 +196,19 @@ Sidecar (run_sidecar.sh, always running)
 
 ---
 
-## How to run option-c
+## How to run Option C (on `main` today)
 
 ```bash
-# One-time setup
-source /home/andyw/cs490/omninode/OmniCursor/.venv/bin/activate
-cd /home/andyw/cs490/omninode/OmniCursor/.worktrees/intelligence-option-c
+cd /path/to/OmniCursor
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Run tests
-pytest tests/ -q                          # 691 tests
-pytest tests/test_sidecar.py -v           # sidecar unit tests only
+pytest tests/ -q
+pytest tests/test_sidecar.py -v
 
-# Run the sidecar
 bash scripts/run_sidecar.sh --publisher noop
-
-# Smoke test (sidecar must be running)
 python3 scripts/smoke_test.py
-
-# Watch events in real time
 python3 scripts/watch_outbox.py
 ```
+
+See also [`CURRENT_STATE.md`](./CURRENT_STATE.md) and [`PIPELINE.md`](./PIPELINE.md).

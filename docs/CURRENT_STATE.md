@@ -29,7 +29,7 @@ OmniCursor/
 │   └── skills/             — 17 skill directories (mirrored from skills/)
 ├── skills/                 — 17 skill markdown definitions (plus skills/README.md)
 ├── src/omnicursor/         — Python library (tests, CI, automation)
-├── tests/                  — 27 `test_*.py` modules, `conftest.py`, 698 tests
+├── tests/                  — 28 `test_*.py` modules, `conftest.py`, 714 tests
 ├── eval/                   — routing evaluation scripts + labeled data
 ├── docs/                   — documentation
 ├── compose.yaml            — local Docker stack (Redpanda, Postgres, intelligence services)
@@ -42,10 +42,10 @@ OmniCursor/
 
 | Hook | Fires when | What it does |
 |---|---|---|
-| `user-prompt-submit.py` | User submits a prompt | Classifies prompt → selects agent → injects patterns + agent persona into system message |
-| `shell-guard.py` | Before a shell command runs | Blocks 9 dangerous patterns, warns on 11 risky ones |
-| `post-edit.py` | After a file is edited | Runs `ruff check` and `tsc --noEmit` diagnostically (never modifies files) |
-| `stop.py` | Session ends | Classifies outcome (success/failed/abandoned/unknown), writes outbox record, emits events to sidecar socket |
+| `scripts/user-prompt-submit.py` | User submits a prompt | Classifies prompt → selects agent → injects patterns + agent persona into system message |
+| `scripts/shell-guard.py` | Before a shell command runs | Blocks 9 dangerous patterns, warns on 11 risky ones |
+| `scripts/post-edit.py` | After a file is edited | Runs `ruff check` and `tsc --noEmit` diagnostically (never modifies files) |
+| `scripts/stop.py` | Session ends | Classifies outcome (success/failed/abandoned/unknown), writes outbox record, emits events to sidecar socket |
 
 ---
 
@@ -64,27 +64,27 @@ Every prompt is scored against **17 agents**. For each agent, `score_agent` in `
 
 ## The 17 skills
 
-Skills are Markdown files that teach Claude how to run a structured workflow. They activate when the user types `/skill-name` in Cursor.
+Skills are Markdown files under `skills/<slug>.md`, mirrored at `.cursor/skills/onex-<slug>/SKILL.md`. Canonical ids are **`onex-<slug>`** (YAML frontmatter `name` and slash picker). Activate via keywords in chat or `/onex-<slug>` in Cursor.
 
-| Skill | What it does |
+| Skill id | What it does |
 |---|---|
-| `systematic-debugging` | Structured root-cause debugging |
-| `brainstorming` | Structured ideation |
-| `docs-reality-sync` | Align documentation with current behavior |
-| `writing-plans` | Write implementation plans |
-| `plan-ticket` | Generate YAML contract + create Linear ticket |
-| `plan-to-tickets` | Batch ticket creation from a plan file |
-| `execute-plan` | Full pipeline: plan review → tickets → implement → PR |
-| `pr-review` | Structured pull request review |
-| `pr-polish` | Final PR cleanup before merge |
-| `hostile-reviewer` | Multi-model adversarial review (v4.0, with gate mode) |
-| `defense-in-depth` | Security review methodology |
-| `merge-planner` | Plan a complex merge |
-| `insights-to-plan` | Convert observations into an implementation plan |
-| `handoff` | Structure a session handoff |
-| `using-git-worktrees` | Worktree-based parallel development |
-| `recap` | Summarise the current session |
-| `plan-review` | Adversarially review a plan before execution |
+| `onex-systematic-debugging` | Structured root-cause debugging |
+| `onex-brainstorming` | Structured ideation |
+| `onex-docs-reality-sync` | Align documentation with current behavior |
+| `onex-writing-plans` | Write implementation plans |
+| `onex-plan-ticket` | Generate YAML contract + create Linear ticket |
+| `onex-plan-to-tickets` | Batch ticket creation from a plan file |
+| `onex-execute-plan` | Full pipeline: plan review → tickets → implement → PR |
+| `onex-pr-review` | Structured pull request review |
+| `onex-pr-polish` | Final PR cleanup before merge |
+| `onex-hostile-reviewer` | Multi-model adversarial review (v4.0, with gate mode) |
+| `onex-defense-in-depth` | Security review methodology |
+| `onex-merge-planner` | Plan a complex merge |
+| `onex-insights-to-plan` | Convert observations into an implementation plan |
+| `onex-handoff` | Structure a session handoff |
+| `onex-using-git-worktrees` | Worktree-based parallel development |
+| `onex-recap` | Summarise the current session |
+| `onex-plan-review` | Adversarially review a plan before execution |
 
 ---
 
@@ -181,11 +181,11 @@ Start just Redpanda: `docker compose up redpanda -d`
 
 ```bash
 source .venv/bin/activate
-pytest tests/ -q          # 698 tests (pytest --collect-only)
+pytest tests/ -q          # 714 tests (pytest --collect-only)
 ruff check src/ tests/ .cursor/hooks/   # lint
 ```
 
-**698** tests collect under `tests/`; the full suite passes in CI and via `.githooks/pre-commit` on a healthy `main` checkout (verify locally with `pytest tests/ -q`).
+**714** tests collect under `tests/`; the full suite passes in CI and via `.githooks/pre-commit` on a healthy `main` checkout (verify locally with `pytest tests/ -q`).
 
 ---
 

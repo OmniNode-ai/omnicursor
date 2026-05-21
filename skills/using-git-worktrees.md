@@ -23,7 +23,7 @@ Git worktrees create isolated workspaces sharing the same repository, allowing w
 1. **Select the worktree directory.**
    Follow this priority order:
    - Check if `.worktrees/` or `worktrees/` already exists. If both exist, prefer `.worktrees/`.
-   - Check cursor.md or project docs for a stated preference.
+   - Check CLAUDE.md or project docs for a stated preference.
    - If neither exists, ask the user: `.worktrees/` (project-local, hidden) or a global location like `~/.config/worktrees/<project>/`.
 
 2. **Verify .gitignore for project-local directories.**

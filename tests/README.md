@@ -8,4 +8,4 @@
 | Hooks | `test_hooks_prompt.py`, `test_hooks_shell.py`, `test_hooks_edit.py`, `test_hooks_stop.py` |
 | Prompts & rubrics | [`prompts/`](./prompts/), [`rubrics/`](./rubrics/) — manual / rubric-driven rule evaluation |
 
-**Run:** `pytest tests/ -v` (see [cursor.md](../cursor.md)).
+**Run:** `pytest tests/ -v` (see [CLAUDE.md](../CLAUDE.md)).

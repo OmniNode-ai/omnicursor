@@ -10,21 +10,17 @@ Cursor-native adaptation of OmniClaude — **rules**, **hooks**, and **file-back
 
 ## Quick Start
 
+Install once as a [Cursor plugin](https://cursor.com/docs/plugins). Rules, skills, agents, and hooks then apply to **every** workspace you open.
+
 ```bash
-# 1. Clone to a permanent location
 git clone https://github.com/OmniNode-ai/OmniCursor ~/tools/OmniCursor
 cd ~/tools/OmniCursor
-
-# 2. Install the package
-python3 -m venv .venv && source .venv/bin/activate && pip install -e .
-
-# 3. Install into your project (once per project)
-./install.sh /path/to/your-project
+./scripts/install-plugin.sh
 ```
 
-Then open your project in Cursor — hooks and rules are active.
+Restart Cursor (or **Developer: Reload Window**). Check **Settings → Rules** for OmniCursor rules and skills.
 
-See **[`docs/QUICKSTART.md`](./docs/QUICKSTART.md)** for the full guide, skill reference, and uninstall instructions.
+Manifest: [`.cursor-plugin/plugin.json`](./.cursor-plugin/plugin.json). Full guide: **[`docs/QUICKSTART.md`](./docs/QUICKSTART.md)**.
 
 ## Git Pre-Commit Gate
 
@@ -72,10 +68,13 @@ Major folders include **`README.md`** (e.g. `.cursor/`, `docs/`, `skills/`, `src
 
 ```text
 OmniCursor/
+├── .cursor-plugin/
+│   └── plugin.json         # Official Cursor plugin manifest
 ├── .cursor/
 │   ├── rules/              # Cursor rules (.mdc)
 │   ├── hooks/              # Hook scripts + helpers
 │   ├── hooks.json
+│   ├── skills/             # Agent skills (onex-*/SKILL.md)
 │   └── agents/             # Agent JSON configs
 ├── docs/
 ├── skills/                 # Markdown skills
@@ -83,7 +82,7 @@ OmniCursor/
 ├── tests/
 ├── omniclaude-main/        # Read-only OmniClaude reference
 ├── pyproject.toml
-└── cursor.md
+└── CLAUDE.md
 ```
 
 ## Tests
@@ -98,8 +97,9 @@ ruff check src/ tests/ .cursor/hooks/
 
 ## Documentation
 
-- [`cursor.md`](./cursor.md) — Conventions and architecture
+- [`CLAUDE.md`](./CLAUDE.md) — Commands, architecture, conventions
+- [`docs/INDEX.md`](./docs/INDEX.md) — Map of all active docs
 - [`docs/QUICKSTART.md`](./docs/QUICKSTART.md) — Setup, hooks, skills
-- [`docs/archive/dev/HANDOFF.md`](./docs/archive/dev/HANDOFF.md) — Archived implementation state handoff
-- [`OmniCursor_DoD_Rubric.md`](./OmniCursor_DoD_Rubric.md) — Capstone rubric
+- [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md) — What works today (Options A/B/C)
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — Starter-pack buckets / adapter contract
+- [`docs/archive/`](./docs/archive/README.md) — Completed plans, handoffs, capstone artifacts

@@ -1,6 +1,6 @@
 # Cursor configuration
 
-This directory holds everything Cursor loads for **OmniCursor**: AI behavior rules, lifecycle hooks, and agent routing configs.
+This directory holds OmniCursor plugin assets: rules, hooks, agents, and skills. End users install via **`./scripts/install-plugin.sh`** (symlink to `~/.cursor/plugins/local/omnicursor`); see [QUICKSTART](../docs/QUICKSTART.md).
 
 | Subfolder | Purpose |
 |-----------|---------|
@@ -10,4 +10,4 @@ This directory holds everything Cursor loads for **OmniCursor**: AI behavior rul
 
 **Also here:** [`hooks.json`](./hooks.json) — maps Cursor lifecycle events (`beforeSubmitPrompt`, `beforeShellExecution`, etc.) to hook scripts.
 
-**Docs:** [Root README](../README.md), [Quickstart](../docs/QUICKSTART.md), [cursor.md](../cursor.md) (commands and constraints).
+**Docs:** [Root README](../README.md), [Quickstart](../docs/QUICKSTART.md), [CLAUDE.md](../CLAUDE.md) (commands and constraints).

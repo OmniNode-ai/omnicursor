@@ -26,7 +26,7 @@ No hay frontend propio. No hay backend siempre-encendido. **El "frontend" es Cur
 | Librería de tests/CI | Pydantic v2, PyYAML, Pytest, Ruff |
 | Rules & Skills | Markdown (`.mdc` y `.md`) |
 | Configs de agentes | JSON (17 archivos en `.cursor/agents/`) |
-| Instalador | Bash (`install.sh`, symlinks) |
+| Instalador | Bash (`scripts/install-plugin.sh` → `~/.cursor/plugins/local/omnicursor`) |
 | Orquestación externa (opcional) | `omnimarket/` con `uv` — registro ONEX con ~135 nodos |
 
 ---
@@ -62,7 +62,7 @@ OmniCursor/
 ├── docs/                      ← QUICKSTART, ARCHITECTURE, HANDOFF, system design
 ├── tests/                     ← pytest
 ├── .githooks/pre-commit       ← corre ruff + pytest + compliance antes de commit
-├── install.sh                 ← symlinkea el plugin en tu proyecto target
+├── scripts/install-plugin.sh  ← instala el plugin en ~/.cursor/plugins/local/
 └── pyproject.toml
 ```
 
@@ -140,10 +140,10 @@ chmod +x .githooks/pre-commit
 ### Instalar OmniCursor en un proyecto target
 
 ```bash
-./install.sh /ruta/a/tu-proyecto           # instala (symlinks)
-./install.sh /ruta/a/tu-proyecto --status  # ver estado
-./install.sh /ruta/a/tu-proyecto --uninstall
-./install.sh /ruta/a/tu-proyecto --dry-run
+./scripts/install-plugin.sh                # instala plugin global
+./scripts/install-plugin.sh --status       # ver estado
+./scripts/install-plugin.sh --uninstall
+./scripts/install-plugin.sh --dry-run
 ```
 
 > Los symlinks apuntan de vuelta a `~/tools/OmniCursor`. Actualizar OmniCursor actualiza todos los proyectos instalados.
@@ -193,12 +193,12 @@ Esta rama está construyendo **"Option B" de la capa de inteligencia**:
 | Cómo se cablean los hooks | `.cursor/hooks.json` + `.cursor/hooks/scripts/*.py` |
 | La arquitectura completa | `docs/ARCHITECTURE.md` |
 | Diagramas del runtime | `docs/dev/OMNICURSOR_SYSTEM_DESIGN.md` |
-| Estado de implementación | `docs/archive/dev/HANDOFF.md` |
+| Estado de implementación | `docs/CURRENT_STATE.md` |
 | Cómo arrancar hoy | `docs/QUICKSTART.md` |
-| Criterios de "done" | `OmniCursor_DoD_Rubric.md` |
+| Criterios de "done" (archivado) | `docs/archive/root/OmniCursor_DoD_Rubric.md` |
 
 ---
 
 ## 10. Resumen de 30 segundos
 
-> OmniCursor = **plugin local para Cursor IDE**. 4 hooks Python se enganchan a eventos del IDE (`prompt`, `shell`, `edit`, `stop`), usan rules + skills en Markdown para guiar al modelo, y guardan patrones aprendidos en `~/.omnicursor/`. Se instala con `./install.sh <proyecto>` (symlinks). La rama actual añade sync HTTP read-only de patterns contra un backend Postgres. Tests corren con `pytest tests/` y pasan por el pre-commit gate en `.githooks/pre-commit` antes de cualquier commit.
+> OmniCursor = **plugin local para Cursor IDE**. 4 hooks Python se enganchan a eventos del IDE (`prompt`, `shell`, `edit`, `stop`), usan rules + skills en Markdown para guiar al modelo, y guardan patrones aprendidos en `~/.omnicursor/`. Se instala con `./scripts/install-plugin.sh` (plugin global en `~/.cursor/plugins/local/omnicursor`). La rama actual añade sync HTTP read-only de patterns contra un backend Postgres. Tests corren con `pytest tests/` y pasan por el pre-commit gate en `.githooks/pre-commit` antes de cualquier commit.

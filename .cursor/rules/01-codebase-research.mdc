@@ -15,13 +15,13 @@ This rule is always active. It restricts all file reading and directory listing 
 Before using any file content, you MUST output an announcement line naming exactly what you will read:
 
 ```
-Reading: README.md, cursor.md | Listing: plugins/onex/skills/
+Reading: README.md, CLAUDE.md | Listing: plugins/onex/skills/
 ```
 
 **Allowed reads (choose only what is needed):**
 - `README.md` at the repository root
-- `cursor.md` at the repository root (if present)
-- `docs/INDEX.md` (if present)
+- `CLAUDE.md` at the repository root
+- `docs/INDEX.md` or `docs/README.md` (if present)
 - A one-level directory listing of **ONE named directory**, chosen from the user's prompt and named explicitly in your announcement
 
 **Rules:**
@@ -52,7 +52,7 @@ Reading: <file1>, <file2> | Listing: <directory/>
 
 Examples:
 - `Reading: README.md | Listing: plugins/onex/skills/`
-- `Reading: README.md, cursor.md | Listing: src/omnicursor/`
+- `Reading: README.md, CLAUDE.md | Listing: src/omnicursor/`
 - `Reading: docs/INDEX.md | Listing: (none)`
 
 If you read files without announcing, the response is non-conformant per the rubric.

@@ -6,4 +6,4 @@ Seventeen files, one per specialized routing profile. Cursor hooks (`on_prompt.p
 
 **Editing:** Prefer copying an existing JSON file. Each config should include stable `name`, `description`, activation patterns, and optional `recommended_skill` / category hints consistent with the schema expected by `agents.py`.
 
-**Related:** Root [README](../../README.md) (agent table), [cursor.md](../../cursor.md).
+**Related:** Root [README](../../README.md) (agent table), [CLAUDE.md](../../CLAUDE.md).

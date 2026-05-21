@@ -1,56 +1,51 @@
 # OmniCursor Quickstart
 
-OmniCursor is a Cursor plugin that adds agent routing, shell guards, session recaps, and 17 methodology skills to any project. Clone it once to a permanent location, then install it into as many projects as you want.
+OmniCursor is a [Cursor plugin](https://cursor.com/docs/plugins): agent routing, shell guards, session recaps, and 17 methodology skills. Install it once on your machine; it applies to every project you open in Cursor.
 
 ---
 
 ## Requirements
 
-- [Cursor](https://cursor.com) (any recent version)
-- Python 3.10 or newer
+- [Cursor](https://cursor.com) (recent version with plugin support)
+- Python 3.10+ on your PATH (hooks invoke `python3`; stdlib only)
 
 ---
 
 ## Step 1 — Clone to a permanent location
-
-Pick somewhere you won't delete it. The plugin lives here permanently; your projects symlink back to it.
 
 ```bash
 git clone https://github.com/OmniNode-ai/OmniCursor ~/tools/OmniCursor
 cd ~/tools/OmniCursor
 ```
 
-## Step 2 — Install the Python package
+## Step 2 — Install the plugin
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e .
+./scripts/install-plugin.sh
 ```
 
-## Step 3 — Install into your project
-
-Run this once for each project you want OmniCursor on:
+This symlinks the repo to `~/.cursor/plugins/local/omnicursor`. Equivalent manual step:
 
 ```bash
-~/tools/OmniCursor/install.sh /path/to/your-project
+mkdir -p ~/.cursor/plugins/local
+ln -sfn ~/tools/OmniCursor ~/.cursor/plugins/local/omnicursor
 ```
 
-This creates symlinks in your project's `.cursor/` and `skills/` directories pointing back to OmniCursor. No files are copied — updating OmniCursor (`git pull`) automatically updates every installed project.
-
-> **Note:** Cursor hooks and rules are per-project. There is no global Cursor plugin system, so this one-time install step per project is unavoidable.
-
-**Check what was installed:**
+**Check status:**
 
 ```bash
-~/tools/OmniCursor/install.sh /path/to/your-project --status
+./scripts/install-plugin.sh --status
 ```
 
-## Step 4 — Open your project in Cursor
+## Step 3 — Reload Cursor
 
-Restart Cursor (or reload the window with `Ctrl+Shift+P → Reload Window`) to activate hooks and rules.
+Restart Cursor or run **Developer: Reload Window** (`Ctrl+Shift+P`).
 
-That's it — OmniCursor is running.
+In **Settings → Rules**, confirm OmniCursor rules and skills appear. Set important rules to **Always** or **Agent Decides** as you prefer.
+
+## Step 4 — Open any project
+
+No per-repo setup. Hooks and rules load from the plugin install path for every workspace.
 
 ---
 
@@ -69,7 +64,7 @@ That's it — OmniCursor is running.
 
 Say the keyword in chat and Cursor reads the skill file and follows it.
 
-**Slash menu (`/`):** Each skill file uses Cursor Agent Skills YAML frontmatter. The `name` field matches the canonical id (`onex-<slug>` — for example `onex-brainstorming`). Typing `/` in chat shows those names so the picker aligns with OmniCursor hooks and docs that reference the `onex-` namespace.
+**Slash menu (`/`):** Each skill uses YAML frontmatter with `name: onex-<slug>`. Typing `/` shows those ids (e.g. `onex-brainstorming`).
 
 | Keyword | Skill | What it does |
 |---------|-------|--------------|
@@ -78,30 +73,24 @@ Say the keyword in chat and Cursor reads the skill file and follows it.
 | `debug` / `root cause` | onex-systematic-debugging | 5-phase root cause analysis — no guessing |
 | `write a plan` | onex-writing-plans | Implementation plan with TDD tasks and acceptance criteria |
 | `create ticket` | onex-plan-ticket | Converts a plan task into a structured Linear ticket |
-| `review this PR` | onex-pr-review | Structured PR review with severity classification |
-| `polish this PR` | onex-pr-polish | Pre-merge checklist: description, diff, CI, changelog |
-| `hostile review` | onex-hostile-reviewer | Adversarial multi-pass review — finds what polite review misses |
-| `defense in depth` | onex-defense-in-depth | Adds validation layers at system boundaries |
-| `docs drift` / `reality sync` | onex-docs-reality-sync | Inventory docs vs code; fix or archive drift |
-| `merge plan` | onex-merge-planner | Safe merge sequencing for complex branch stacks |
-| `insights to plan` | onex-insights-to-plan | Converts retrospective notes into actionable tasks |
-| `handoff` | onex-handoff | Saves session context so the next session picks up cleanly |
-| `worktree` | onex-using-git-worktrees | Isolated branch workspaces without stashing |
-| `/plan-review` | onex-plan-review | Adversarial R1–R6 check on a plan file before execution |
-| `/plan-to-tickets` | onex-plan-to-tickets | Parse a plan file and batch-create Linear tickets |
-| `/execute_plan` | onex-execute-plan | Full autonomous pipeline: review → tickets → implement |
+| `pr review` | onex-pr-review | Severity-classified PR review (CRITICAL / MAJOR / MINOR / NIT) |
+| `handoff` | onex-handoff | Session summary for the next chat |
+
+See [`skills/`](../skills/) and [`.cursor/skills/`](../.cursor/skills/) for the full set.
+
+### Rules (always-on + keyword)
+
+Four rules in `.cursor/rules/` are always active (`00`–`03`). Ten others activate on keywords (brainstorm, plan, debug, PR review, handoff, recap, Linear tickets, execute-plan, etc.). See [`.cursor/rules/README.md`](../.cursor/rules/README.md).
 
 ---
 
-## Linear MCP Setup (for plan-to-tickets and execute_plan)
+## Optional: Linear MCP (Bucket 3 skills)
 
-`plan-to-tickets` and `execute_plan` create tickets in Linear via MCP. Skip this section if you don't use Linear.
+Skills like `onex-plan-to-tickets` and `onex-execute-plan` need the Linear MCP server.
 
-**1. Get your Linear API key**
+**1. Get a Linear API key** — Linear → Settings → API → Personal API keys.
 
-Linear → Settings → API → Personal API Keys → Create key.
-
-**2. Edit `~/.cursor/mcp.json`** (create the file if it doesn't exist):
+**2. Add to `~/.cursor/mcp.json`:**
 
 ```json
 {
@@ -127,19 +116,19 @@ Replace `lin_api_XXXX` with your actual key.
 
 ## Updating OmniCursor
 
-Because install uses symlinks, a `git pull` updates all installed projects immediately — no reinstall needed.
-
 ```bash
 cd ~/tools/OmniCursor && git pull
 ```
 
-## Removing from a project
+Reload Cursor if rules or hooks do not pick up changes immediately.
+
+## Uninstalling the plugin
 
 ```bash
-~/tools/OmniCursor/install.sh /path/to/your-project --uninstall
+./scripts/install-plugin.sh --uninstall
 ```
 
-Removes the symlinks. Your project's other `.cursor/rules/` and `skills/` files are left intact.
+Then reload Cursor. Local session data under `~/.omnicursor/` is not removed.
 
 ---
 
@@ -147,6 +136,7 @@ Removes the symlinks. Your project's other `.cursor/rules/` and `skills/` files 
 
 ```bash
 cd ~/tools/OmniCursor
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 git config core.hooksPath .githooks
@@ -156,8 +146,6 @@ ruff check src/ tests/ .cursor/hooks/
 ```
 
 CI runs the same checks on every PR to `main`.
-
----
 
 ## Privacy — what OmniCursor stores locally
 

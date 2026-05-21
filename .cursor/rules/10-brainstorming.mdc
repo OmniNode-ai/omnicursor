@@ -15,7 +15,7 @@ alwaysApply: false
 Before responding, announce and perform bounded file research per rule `01-codebase-research`:
 
 ```
-Reading: README.md, cursor.md | Listing: <most-relevant-directory-from-prompt/>
+Reading: README.md, CLAUDE.md | Listing: <most-relevant-directory-from-prompt/>
 ```
 
 Use this context to understand the project. Do not read anything beyond the announced set.

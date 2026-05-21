@@ -104,7 +104,7 @@ Canonical ids use the **`onex-<slug>`** prefix (`skills/` files keep bare `<slug
 
 ### Smoke-check registry (`compliance.py`)
 
-`COMPLIANCE_REGISTRY` maps each of the 16 skills (keys **`onex-<slug>`**) to 3–5 keyword/phrase checks. `check_compliance(skill_name, response_summary)` accepts either a slug or a canonical id and returns a `ComplianceResult` with per-check pass/fail. These are **vocabulary smoke-checks** (does the response use the right terminology?), not behavioral compliance — a well-worded response can pass without doing real work. Renamed to "smoke-check" in docs; function/class names kept for API stability.
+`COMPLIANCE_REGISTRY` maps each of the 17 skills (keys **`onex-<slug>`**) to 3–5 keyword/phrase checks. `check_compliance(skill_name, response_summary)` accepts either a slug or a canonical id and returns a `ComplianceResult` with per-check pass/fail. These are **vocabulary smoke-checks** (does the response use the right terminology?), not behavioral compliance — a well-worded response can pass without doing real work. Renamed to "smoke-check" in docs; function/class names kept for API stability.
 
 ## Key constraints
 
@@ -115,7 +115,7 @@ Canonical ids use the **`onex-<slug>`** prefix (`skills/` files keep bare `<slug
 - `schemas.py` defines 5 Pydantic v2 models: `AgentContext`, `SkillDocument`, `ComplianceResult`, `PatternRecord`, `DatabaseStatus`. The agents, skills, and compliance modules depend on these models.
 - When adding a new agent: create `.cursor/agents/<name>.json` with `name`, `description`, `category`, `activation_patterns` (must include `explicit_triggers`, `context_triggers`, and `activation_keywords`), `instructions`, `recommended_skill` (use **`onex-<slug>`**). It auto-loads on startup.
 - When adding a new skill: create `skills/<slug>.md` AND copy it to `.cursor/skills/onex-<slug>/SKILL.md` (both paths are required — CI scans `skills/*.md`, `SkillRepository` loads from `.cursor/skills/onex-<slug>/SKILL.md`). Add a smoke-check entry in `compliance.py` with 3–5 keyword/phrase checks. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
-- **Port track** (agents, skills, ONEX nodes & contracts from OmniClaude): `docs/dev/MIGRATION_PHASES_HANDOFF.md`. Hooks, Kafka, Linear-in-hooks, MCP bridge, and authoritative pattern writes are covered in `docs/OMNICURSOR_MIGRATION_PLAN.md` / other tracks.
+- **Port track** (agents, skills, ONEX nodes & contracts from OmniClaude): `docs/archive/dev/MIGRATION_PHASES_HANDOFF.md`. Hooks, Kafka, Linear-in-hooks, MCP bridge, and authoritative pattern writes are covered in `docs/archive/OMNICURSOR_MIGRATION_PLAN.md` (historical roadmap).
 
 ## Omnimarket bridge
 

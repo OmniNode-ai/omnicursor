@@ -10,9 +10,9 @@ Nothing here is referenced by code, tests, or CLAUDE.md. Safe to ignore.
 |--------|---------------|
 | `root/` | Root-level docs archived from repo root: `cursor.md` (superseded by CLAUDE.md), `hooks.md` (superseded by CLAUDE.md), `OMNICLAUDE_SKILLS.md` (porting reference, no longer needed), `OmniCursor_DoD_Rubric.md` (capstone rubric, submitted), `OmniCursor_Architecture_FINAL44.docx` (early design doc) |
 | `demo/` | Capstone demo prep: architecture Q&A answers, layer-separation walkthrough script |
-| `dev/` | Completed planning docs: execution plan, migration phases, sponsor alignment notes, student guide, team worktree convention, session handoffs |
+| `dev/` | Completed planning docs: execution plan, migration phases, sponsor alignment notes, bridge session summaries, student guide, team worktree convention, session handoffs |
 | `edit-logs/` | Session-by-session edit logs from early development |
-| `plans/` | Completed implementation plans (node structure, recap skill, execute-plan pipeline) |
+| `plans/` | Completed implementation plans (bridge B/C/D, OMN-46 slash labels, node structure, recap skill, execute-plan pipeline) |
 | `OMNICLAUDE_NODES_AND_CONTRACTS.md` | OmniClaude node reference used during porting |
 | `OMNICLAUDE_PIPELINE.md` | OmniClaude pipeline reference used during porting |
 | `OMNICURSOR_MIGRATION_PLAN.md` | Migration roadmap, superseded by current CLAUDE.md |

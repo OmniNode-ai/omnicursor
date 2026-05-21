@@ -10,11 +10,11 @@ This file serves **two roles**:
 | Layer | Location | Role |
 |--------|-----------|------|
 | **Rules** | `.cursor/rules/*.mdc` | Behavior and methodology; model reads `skills/*.md` by path. |
-| **Hooks** | `.cursor/hooks.json`, `.cursor/hooks/*.py` | Deterministic lifecycle (prompt routing hint, shell guard, edit lint signal, session outcome). Hook code is **stdlib only** and does not import `omnicursor`. |
-| **Skills** | `skills/*.md` | Methodology documents on disk. |
+| **Hooks** | `.cursor/hooks.json`, `.cursor/hooks/scripts/*.py` | Deterministic lifecycle (prompt routing hint, shell guard, edit lint signal, session outcome). Hook code is **stdlib only** and does not import `omnicursor`. |
+| **Skills** | `skills/*.md` + `.cursor/skills/onex-*/SKILL.md` | Methodology documents on disk (canonical ids: `onex-<slug>`). |
 | **Library** | `src/omnicursor/` | `agents`, `skills` loader, `compliance`, `node_contracts` — for **tests, CI, and optional scripting**; optional integration with the wider OmniNode stack via HTTP/subprocess/Kafka is described in [`dev/OMNICURSOR_SYSTEM_DESIGN.md`](./dev/OMNICURSOR_SYSTEM_DESIGN.md). |
 
-Optional integrations (e.g. Linear) use Cursor’s MCP and rules as documented in the repo. Deeper developer notes: [`dev/README.md`](./dev/README.md), [`../cursor.md`](../cursor.md).
+Optional integrations (e.g. Linear) use Cursor’s MCP and rules as documented in the repo. Deeper developer notes: [`dev/README.md`](./dev/README.md), [`../CLAUDE.md`](../CLAUDE.md).
 
 ---
 
