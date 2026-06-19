@@ -30,7 +30,7 @@ Read in this order. Stop when you have enough context for your task; come back f
 | Intelligence pipeline (A/B/C) | [`dev/INTELLIGENCE_LAYER_CURRENT_STATE_AND_OPTIONS.md`](./dev/INTELLIGENCE_LAYER_CURRENT_STATE_AND_OPTIONS.md) |
 | OmniMarket / node bridge | [`CLAUDE.md`](../CLAUDE.md) § Omnimarket bridge + MCP `omnicursor-omnimarket` |
 | Demo / presentation | [`demo/README.md`](./demo/README.md) |
-| Full doc map | [`INDEX.md`](./INDEX.md) |
+| Full doc map | [`README.md`](./README.md) |
 
 **Do not start with** [`archive/`](./archive/README.md) unless you need migration history or a dated session note.
 
@@ -309,4 +309,4 @@ docker compose up -d
 
 ## Document maintenance
 
-When major behavior changes (new hook, skill count, Option status, test count), update **`CURRENT_STATE.md`** and the relevant sections of **this file** and **`docs/INDEX.md`**.
+When major behavior changes (new hook, skill count, Option status, test count), update **`CURRENT_STATE.md`** and the relevant sections of **this file** and **`docs/README.md`**.
