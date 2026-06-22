@@ -145,5 +145,4 @@ plugin, but they shape any work in these areas.
 ---
 
 **See also:** [`ARCHITECTURE.md`](./ARCHITECTURE.md) ·
-[`QUICKSTART.md`](./QUICKSTART.md) · [`HANDOFF.md`](./HANDOFF.md) ·
-[`INDEX.md`](./INDEX.md)
+[`QUICKSTART.md`](./QUICKSTART.md) · [`INDEX.md`](./INDEX.md)

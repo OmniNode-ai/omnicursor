@@ -13,7 +13,6 @@ The map of OmniCursor's active documentation. Start here.
 | 2 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | How the surfaces + library fit together |
 | 3 | [`CURRENT_STATE.md`](./CURRENT_STATE.md) | What works today, opt-in tiers, known drift |
 | 4 | [`QUICKSTART.md`](./QUICKSTART.md) | Install as a Cursor plugin; hooks/skills behavior; Linear MCP |
-| 5 | [`HANDOFF.md`](./HANDOFF.md) | Project pickup guide for continuing work |
 
 ## Active documents
 
@@ -22,7 +21,6 @@ The map of OmniCursor's active documentation. Start here.
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Surfaces, hooks, routing, node contracts, learning loop, event pipeline, bridge, packaging |
 | [`CURRENT_STATE.md`](./CURRENT_STATE.md) | Snapshot of what is built / opt-in / drifting; tests & CI; branches |
 | [`QUICKSTART.md`](./QUICKSTART.md) | End-user setup and usage |
-| [`HANDOFF.md`](./HANDOFF.md) | Onboarding map and "where to look" for common tasks |
 
 ## By task
 
@@ -31,7 +29,6 @@ The map of OmniCursor's active documentation. Start here.
 | Understand the whole system | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
 | Know what actually works right now | [`CURRENT_STATE.md`](./CURRENT_STATE.md) |
 | Install and use the plugin | [`QUICKSTART.md`](./QUICKSTART.md) |
-| Pick up the repo / continue work | [`HANDOFF.md`](./HANDOFF.md) |
 | Change agent routing | [`ARCHITECTURE.md` §5](./ARCHITECTURE.md#5-agent-routing) → `src/omnicursor/scoring.py`, `.cursor/agents/`, `eval/` |
 | Change hook behavior | [`ARCHITECTURE.md` §4](./ARCHITECTURE.md#4-hooks) → `.cursor/hooks/scripts/`, `tests/` |
 | Add or change a skill | [`ARCHITECTURE.md` §3](./ARCHITECTURE.md#3-skills) → `skills/`, `.cursor/skills/`, `compliance.py`, tests |

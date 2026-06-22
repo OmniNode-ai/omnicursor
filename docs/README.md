@@ -8,6 +8,4 @@ Start at **[INDEX.md](./INDEX.md)** — the full documentation map.
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Surfaces, hooks, routing, node contracts, learning loop, event pipeline, bridge, packaging |
 | [CURRENT_STATE.md](./CURRENT_STATE.md) | What works today, opt-in tiers, known drift, tests & CI |
 | [QUICKSTART.md](./QUICKSTART.md) | Install the Cursor plugin, hooks, skills, Linear MCP, developer setup |
-| [HANDOFF.md](./HANDOFF.md) | Developer onboarding — read when picking up the repo |
-
 **In-repo references:** [`.cursor/rules/README.md`](../.cursor/rules/README.md) · [`.cursor/hooks/README.md`](../.cursor/hooks/README.md) · [`src/omnicursor/README.md`](../src/omnicursor/README.md)

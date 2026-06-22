@@ -189,7 +189,6 @@ CI runs the same checks on every PR to `main`.
 Key contributor docs:
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, buckets, routing, sidecar
-- [HANDOFF.md](./HANDOFF.md) — onboarding path and common tasks
 - [README.md](./README.md) — documentation map
 
 ---

@@ -395,5 +395,4 @@ When documents disagree:
 ---
 
 **See also:** [`CURRENT_STATE.md`](./CURRENT_STATE.md) ·
-[`QUICKSTART.md`](./QUICKSTART.md) · [`HANDOFF.md`](./HANDOFF.md) ·
-[`INDEX.md`](./INDEX.md)
+[`QUICKSTART.md`](./QUICKSTART.md) · [`INDEX.md`](./INDEX.md)

@@ -87,7 +87,7 @@ OmniCursor/
 │   ├── hooks.json
 │   ├── skills/                  # onex-*/SKILL.md mirrors
 │   └── agents/                  # 17 JSON routing configs
-├── docs/                        # QUICKSTART, ARCHITECTURE, HANDOFF
+├── docs/                        # QUICKSTART, ARCHITECTURE
 ├── skills/                      # Canonical skill Markdown
 ├── src/omnicursor/              # Python library + node contracts
 ├── tests/
@@ -114,7 +114,6 @@ The tracked pre-commit hook runs the same checks as CI (`ruff`, `pytest`, skill 
 |-----|---------|
 | [docs/QUICKSTART.md](./docs/QUICKSTART.md) | Install, hooks, skills, Linear MCP, privacy |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, buckets, routing, intelligence A/B/C |
-| [docs/HANDOFF.md](./docs/HANDOFF.md) | Contributor onboarding |
 | [docs/README.md](./docs/README.md) | Documentation map |
 
 Directory guides: `.cursor/`, `docs/`, `skills/`, `src/omnicursor/`, `tests/` each have a `README.md`.
