@@ -205,6 +205,6 @@ OmniCursor writes session data to files under `~/.omnicursor/`:
 - `description`: `"Auto-learned: <first 60 chars of prompt> → <agent> (score X.XX)"` — captures up to 60 characters of prompt content
 - `domain`, `weight`, `success_count`, `injection_count`, `utilization_successes`, `last_seen`
 
-**The description field captures prompt content.** If your prompts contain secrets, credentials, PII, or sensitive project names, that content may appear in `learned_patterns.json`. OmniCursor does not transmit this file anywhere by default — it is local storage unless you enable `OMNICURSOR_PATTERN_SYNC_HTTP=1` (pull-only from a local omniintelligence service) or the shared platform emit daemon is running to publish hook events to the bus.
+**The description field captures prompt content.** If your prompts contain secrets, credentials, PII, or sensitive project names, that content may appear in `learned_patterns.json`. OmniCursor does not transmit this file anywhere by default — it is local storage unless you enable `OMNICURSOR_PATTERN_SYNC_HTTP=1` (pull-only from a local omniintelligence service).
 
 If you are working with sensitive material, avoid typing it directly into prompts or clear `~/.omnicursor/learned_patterns.json` periodically.
