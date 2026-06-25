@@ -39,7 +39,10 @@ local_event_bus:
     notes: >
       Each line is a session outcome row. Must include injected_pattern_ids
       (list of pattern_id strings, possibly empty) aggregated from prompt_classified
-      events so the outbox drainer can emit utilization.scoring.requested.
+      events so a downstream consumer can emit utilization.scoring.requested.
+      The outbox is a durable local record; emission onto the bus is owned by
+      the shared platform emit daemon (node_emit_daemon), not a Cursor-specific
+      transport.
 
 capabilities:
   - name: cursor.session_outcome

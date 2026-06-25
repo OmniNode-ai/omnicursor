@@ -7,10 +7,11 @@ Compatible with the OmniClaude emit daemon wire protocol:
     Ping:     {"command": "ping"}\\n
     Pong:     {"status": "ok", ...}\\n
 
-The daemon/drainer that owns this socket is an out-of-process sidecar; the
-hook itself stays stdlib-only and never talks to Kafka. If the socket is
-missing or any step fails, ``send_event`` / ``daemon_available`` return
-False — hooks must never crash Cursor.
+The daemon that owns this socket is the shared platform emit daemon
+(omnimarket ``node_emit_daemon`` — the same one OmniClaude uses), an
+out-of-process service; the hook itself stays stdlib-only and never talks to
+Kafka. If the socket is missing or any step fails, ``send_event`` /
+``daemon_available`` return False — hooks must never crash Cursor.
 
 Environment:
   OMNICURSOR_EMIT_SOCKET    path to Unix socket (default: ~/.omnicursor/emit.sock)

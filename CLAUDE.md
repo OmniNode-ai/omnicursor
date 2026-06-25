@@ -11,7 +11,7 @@ OmniCursor is a **Cursor-native** plugin that ports OmniClaude's methodology to 
 behavior lives in **rules**, **hooks**, **skills**, and **agent configs**, backed by a
 Python library under `src/omnicursor/` used for **tests, CI, the MCP server, and the
 shared logic the hooks delegate to**. The core runs fully **offline**; intelligence and
-event-pipeline tiers are opt-in. Full architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+event-emission tiers are opt-in. Full architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 Current status & known drift: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ## Commands
@@ -22,7 +22,7 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]" ruff          # [dev] is pytest-only; ruff is a separate dep
 git config core.hooksPath .githooks   # wire the shared pre-commit gate
 
-# Tests (710 tests across 28 test modules)
+# Tests (640 tests across 24 test modules)
 pytest tests/ -v                      # full suite
 pytest tests/test_agents.py -v        # single file
 pytest tests/ -k "debug"              # by name pattern

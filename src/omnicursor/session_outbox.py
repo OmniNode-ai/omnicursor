@@ -11,7 +11,7 @@ Kafka / OmniIntelligence when ready.
 - ``injected_pattern_ids``: **list[str]**, deduped union of
   ``injected_pattern_ids`` from all ``prompt_classified`` events for the
   session (empty list when none). Required on new rows; older lines may omit
-  the key (drainer treats missing like "no IDs").
+  the key (a missing key is treated like "no IDs" by consumers).
 
 Stdlib only. Never raises — failures are silently swallowed so the stop
 hook is never blocked by outbox I/O errors.
