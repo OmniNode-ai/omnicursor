@@ -34,9 +34,9 @@ versus *what is opt-in or aspirational*, read [`CURRENT_STATE.md`](./CURRENT_STA
                                           │
                                           ▼ (optional, opt-in)
         ┌─────────────────────────────────────────────────────────────────┐
-        │  src/omnicursor/  — tests, CI, scripting, sidecar/drainer/bridge │
+        │  src/omnicursor/  — tests, CI, scripting, OmniMarket bridge       │
         │                                                                   │
-        │  Linear MCP │ OmniMarket nodes │ Kafka/Redpanda │ compose stack   │
+        │  Linear MCP │ OmniMarket nodes │ shared emit daemon │ compose     │
         └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,7 +48,7 @@ There are **four behavior surfaces** plus **one support library**:
 | **Skills** | `skills/*.md` (17) + `.cursor/skills/onex-*/SKILL.md` (17) | Methodology playbooks the model reads on demand |
 | **Agents** | `.cursor/agents/*.json` (17) | Routing personas scored against the prompt |
 | **Hooks** | `.cursor/hooks/scripts/*.py` (4) | Deterministic, stdlib-only lifecycle scripts |
-| **Library** | `src/omnicursor/` | Routing, scoring, skills, compliance, contracts, bridge, drainer, sidecar — for **pytest/CI/scripting only** |
+| **Library** | `src/omnicursor/` | Routing, scoring, skills, compliance, contracts, bridge — for **pytest/CI/scripting only** |
 
 > **Key boundary:** the hooks are **stdlib-only** and must run without a
 > virtualenv. The active scripts reach the library logic by inserting `src/` (and
@@ -272,48 +272,38 @@ active scripts, with no automated parity guard.
 > for bugs): the shell-guard soft-warn message and the file-edit `tsc` findings
 > are computed by the shared libs but **dropped** by the node output models; the
 > session-outcome contract's `durable_outbox`/`injected_pattern_ids` obligation
-> is fulfilled by the drainer/hook, not the node's Python output.
+> is fulfilled by the `stop` hook's `session_outbox` writer, not the node's Python output.
 
 ---
 
-## 8. Event pipeline & sidecar
+## 8. Event emission
 
 > **Two different files are easy to conflate:**
-> `~/.omnicursor/events.jsonl` is the hooks' raw **audit log**. The drainer
-> **never** reads it. The drainer reads `~/.omnicursor/outbox.jsonl`, the
-> **durable session-outcome feed** written by `session_outbox.write_session_outcome`
-> from the `stop` hook.
+> `~/.omnicursor/events.jsonl` is the hooks' raw **audit log** (every hook
+> appends to it). `~/.omnicursor/outbox.jsonl` is the **durable session-outcome
+> feed** written by `session_outbox.write_session_outcome` from the `stop` hook —
+> a local, append-only record kept for replay/audit.
 
-Real flow:
+Emission onto the ONEX bus is **not** a Cursor-specific transport. The hooks emit
+best-effort through a stdlib Unix-socket client (`emit_client.send_event` →
+`~/.omnicursor/emit.sock`); that socket is owned by the **shared platform emit
+daemon** (omnimarket `node_emit_daemon` — the same daemon OmniClaude uses), which
+is responsible for queueing, spooling, and publishing to Kafka. The hook stays
+stdlib-only and never talks to Kafka itself.
 
 ```
-events.jsonl ──(stop.py aggregates a session)──▶ outbox.jsonl
-                                                     │
-                              ┌──────────────────────┴──────────────────────┐
-                              ▼ (drainer/sidecar, opt-in)                    │
-            transform: rows with schema_version                             │
-            "omnicursor.session_outcome.v1" → events ──▶ Publisher          │
-                              │                                              │
-              ┌───────────────┴───────────────┐                            │
-              ▼                                ▼                            │
-        KafkaPublisher                 OmniDashFixturePublisher             │
-        (Redpanda/Kafka, Option C)     (local JSON fixtures, demo)          │
+hook ──send_event({event_type, payload})──▶ emit.sock ──▶ shared emit daemon ──▶ Kafka
+                                                            (omnimarket node_emit_daemon)
 ```
 
-- **Sidecar** (`src/omnicursor/sidecar/daemon.py`) runs three things: a Unix-socket
-  listener (`emit.sock`), the drain loop, and an optional loopback `/status` server.
-- **Delivery is at-least-once**, fan-out is not atomic — consumers must be idempotent.
-- `confluent-kafka` is **not a declared dependency**; Kafka mode requires
-  installing it manually (otherwise the drainer retries forever).
-
-> ⚠️ The **live socket → outbox bridge is effectively dead for publishing**:
-> socket-appended `{event_type, payload}` rows are written to the outbox but
-> `transform` returns `[]` for anything that isn't a `session_outcome.v1` row, so
-> they are skipped. Only the schema-versioned session-outcome rows ever publish.
-
-`config/event_registry/omnicursor.yaml` declares the event→topic map but is
-consumed by an **external** omnimarket daemon, not by this repo;
-`KafkaPublisher._TOPIC_MAP` hardcodes a mirror that can (and does) drift.
+- **Best-effort, non-blocking:** if the socket is missing or the daemon is absent,
+  `send_event` returns `False` and the hook continues — emission never blocks Cursor.
+- **No bespoke stack:** there is no Cursor-owned sidecar/drainer/publisher. The wire
+  protocol (`{"event_type", "payload"}\n` → `{"status": "queued", "event_id"}\n`) is
+  the shared OmniClaude/omnimarket daemon protocol, so OmniCursor inherits whatever
+  transport the platform lands (see OMN-13213) without any Cursor-side change.
+- **Durable outbox is separate:** the `stop` hook's `outbox.jsonl` record persists
+  locally regardless of whether the daemon is running.
 
 ---
 
@@ -337,7 +327,7 @@ omniintelligence service APIs directly.
 
 ---
 
-## 10. Intelligence options (A / B / C)
+## 10. Intelligence options (A / B)
 
 All networked tiers are **opt-in**; the plugin works fully offline.
 
@@ -345,7 +335,9 @@ All networked tiers are **opt-in**; the plugin works fully offline.
 |--------|------|------|
 | **A** | Local pattern learning at `~/.omnicursor/learned_patterns.json` | Always on, offline |
 | **B** | HTTP pull from omniintelligence (`sync/pattern_sync.py`) | `OMNICURSOR_PATTERN_SYNC_HTTP` (**default off**), `OMNIINTELLIGENCE_URL` |
-| **C** | Session events → outbox → sidecar → Kafka | `scripts/run_sidecar.sh`, Redpanda, `confluent-kafka` |
+
+> Event emission onto the bus (via the shared platform emit daemon, §8) is a
+> separate opt-in tier — active only when the daemon owns `~/.omnicursor/emit.sock`.
 
 > The prompt hook *also* fetches patterns over HTTP at prompt-time using a
 > **different** variable, `INTELLIGENCE_SERVICE_URL` (with a local-cache
@@ -363,9 +355,8 @@ All networked tiers are **opt-in**; the plugin works fully offline.
 | `sessions/<conversation_id>.json` | Per-session facts (ticket ids, `ci_passing`, routing) |
 | `sessions/current.json` | Most recent session pointer (fake SessionStart) |
 | `learned_patterns.json` | Option A pattern store |
-| `outbox.jsonl` | Option C durable session-outcome feed (`schema_version: omnicursor.session_outcome.v1`) |
-| `*.cursor` | Drainer byte-offset cursors (`outbox.cursor`, `sidecar.cursor`, `omnidash.cursor`) |
-| `emit.sock` | Sidecar live-event Unix socket |
+| `outbox.jsonl` | Durable session-outcome record (`schema_version: omnicursor.session_outcome.v1`) |
+| `emit.sock` | Unix socket for hook event emission, owned by the shared platform emit daemon (§8) |
 | `last-recap.md` | Pending recap prepended to the next prompt |
 
 ---

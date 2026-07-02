@@ -35,7 +35,7 @@ Hooks (4 lifecycle scripts) ← deterministic, stdlib-only (.cursor/hooks/script
         ↓
 ~/.omnicursor/              ← local patterns, events, sessions, outbox
         ↓
-src/omnicursor/             ← tests, sidecar, drainer, OmniMarket bridge (optional)
+src/omnicursor/             ← tests, CI, OmniMarket bridge (optional)
 ```
 
 Deep dive: **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**
@@ -70,8 +70,7 @@ Canonical Markdown in [`skills/`](./skills/), mirrored for Cursor at [`.cursor/s
 | `scoring.py` / `agents.py` | Agent routing (shared with hooks) |
 | `skills.py` | Load skill Markdown |
 | `compliance.py` | Keyword rubric checks |
-| `session_outbox.py` | Durable outbox for Option C |
-| `sidecar/` + `drainer/` | Outbox → Kafka/OmniDash publisher |
+| `session_outbox.py` | Durable local session-outcome record (`~/.omnicursor/outbox.jsonl`) |
 | `omnimarket_bridge.py` | Subprocess bridge to local OmniMarket nodes |
 
 Details: [`src/omnicursor/README.md`](./src/omnicursor/README.md)

@@ -49,7 +49,7 @@ These need only the plugin symlink — no network, no Docker, no extra deps:
 | **Linear ticketing** (Bucket 3 skills) | Linear MCP configured in `~/.cursor/mcp.json` | off |
 | **OmniMarket bridge / MCP tools** | `OMNIMARKET_ROOT` → local checkout; `pip install -e ".[mcp]"`; `gh` CLI for `run_ci_watch` | off |
 | **Option B** — HTTP pattern pull | `OMNICURSOR_PATTERN_SYNC_HTTP=1`, `OMNIINTELLIGENCE_URL`; running omniintelligence | **off** |
-| **Option C** — event pipeline | `scripts/run_sidecar.sh`, Redpanda/Kafka, **manually-installed** `confluent-kafka` | off |
+| **Event emission** — bus events via the shared platform emit daemon | omnimarket `node_emit_daemon` owning `~/.omnicursor/emit.sock` (see ARCHITECTURE §8) | off |
 | **Local OmniNode stack** | `docker compose up -d` (Postgres, Redpanda, Valkey, intelligence; `--profile memory` adds Qdrant/Memgraph/Kreuzberg) | off |
 
 > The intelligence services in `compose.yaml` build from a **remote GitHub ref**
@@ -70,7 +70,7 @@ These need only the plugin symlink — no network, no Docker, no extra deps:
 | Node contracts | ✅ Loading/validating | In-process node surface drops some fields (see drift) |
 | OmniMarket bridge | ⚠️ Needs a checkout | Subprocess-only; errors unless `OMNIMARKET_ROOT` is set or an `omnimarket-main/` dir exists |
 | MCP server | ⚠️ Needs `[mcp]` extra | 3 tools |
-| Drainer / sidecar (Option C) | ⚠️ Partial | See "Known drift" — socket→outbox bridge does not publish |
+| Event emission (shared emit daemon) | ⚠️ Opt-in | Hooks emit best-effort to `emit.sock`; the shared platform `node_emit_daemon` owns it (ARCHITECTURE §8) |
 | Option B HTTP sync | ⚠️ Opt-in / dev only | Default off |
 
 ---
@@ -88,21 +88,16 @@ plugin, but they shape any work in these areas.
 3. **5 contracts / 4 hooks.** `beforeSubmitPrompt` is described by two nodes.
 4. **In-process node fields dropped.** Shell-guard soft-warn message and file-edit
    `tsc` findings are computed but not surfaced by the node output models.
-5. **Socket→outbox bridge is dead for publishing.** Only
-   `omnicursor.session_outcome.v1` rows ever publish; `{event_type,payload}` rows
-   appended via `emit.sock` are skipped by `transform`.
-6. **Env var split.** `INTELLIGENCE_SERVICE_URL` (per-prompt fetch) vs
+5. **Env var split.** `INTELLIGENCE_SERVICE_URL` (per-prompt fetch) vs
    `OMNIINTELLIGENCE_URL` (session-end sync) — different consumers.
-7. **`.env.omninode.example` ships `OMNICURSOR_PATTERN_SYNC_HTTP=1`** even though
+6. **`.env.omninode.example` ships `OMNICURSOR_PATTERN_SYNC_HTTP=1`** even though
    the documented default is off — copying it verbatim silently enables Option B.
-8. **Kafka bootstrap mismatch.** Sidecar default `localhost:29092` vs
-   `run_bc_stack.sh` export `localhost:19092`.
-9. **Fallback name split.** `omnicursor-generalist` (library) vs
+7. **Fallback name split.** `omnicursor-generalist` (library) vs
    `polymorphic-agent` (eval/CI).
-10. **No `[tool.ruff]` config and unpinned ruff** — a ruff release can change lint
-    results with no repo change.
-11. **`hostile-reviewer.md` has malformed/nested frontmatter** (a second
-    OmniClaude YAML block embedded in the body).
+8. **No `[tool.ruff]` config and unpinned ruff** — a ruff release can change lint
+   results with no repo change.
+9. **`hostile-reviewer.md` has malformed/nested frontmatter** (a second
+   OmniClaude YAML block embedded in the body).
 
 ---
 
@@ -128,8 +123,8 @@ plugin, but they shape any work in these areas.
 
 | Branch | Notes |
 |--------|-------|
-| `main` | Default — full plugin, routing, hooks, Options A/B/C sources, sidecar, tests |
-| `intelligence/option-b`, `intelligence/option-c` | Topic/history branches — **diff against `main`** before assuming divergence |
+| `main` | Default — full plugin, routing, hooks, Options A/B sources, tests |
+| `intelligence/option-b` | Topic/history branch — **diff against `main`** before assuming divergence |
 | Feature branches (`awu42/omn-*`, `julian/*`, …) | In-flight work — check `git branch -a` |
 
 ---

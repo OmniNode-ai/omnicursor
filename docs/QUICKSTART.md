@@ -147,9 +147,9 @@ OmniCursor works fully offline with local pattern learning (`~/.omnicursor/learn
 1. Copy [`.env.omninode.example`](../.env.omninode.example) and set `OMNIMARKET_ROOT`, `INTELLIGENCE_SERVICE_URL`, etc.
 2. Start local services: `docker compose up -d` (Redpanda, omniintelligence)
 3. Enable HTTP pattern sync: `OMNICURSOR_PATTERN_SYNC_HTTP=1`
-4. For event publishing: `bash scripts/run_sidecar.sh --publisher kafka`
+4. Event emission: hook events flow best-effort to the **shared platform emit daemon** (omnimarket `node_emit_daemon`) when it owns `~/.omnicursor/emit.sock` — there is no Cursor-side publisher to run.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) § Intelligence options for the A/B/C model.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) § Intelligence options for the A/B model.
 
 ---
 
@@ -188,7 +188,7 @@ CI runs the same checks on every PR to `main`.
 
 Key contributor docs:
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, buckets, routing, sidecar
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, buckets, routing, event emission
 - [README.md](./README.md) — documentation map
 
 ---
@@ -205,6 +205,6 @@ OmniCursor writes session data to files under `~/.omnicursor/`:
 - `description`: `"Auto-learned: <first 60 chars of prompt> → <agent> (score X.XX)"` — captures up to 60 characters of prompt content
 - `domain`, `weight`, `success_count`, `injection_count`, `utilization_successes`, `last_seen`
 
-**The description field captures prompt content.** If your prompts contain secrets, credentials, PII, or sensitive project names, that content may appear in `learned_patterns.json`. OmniCursor does not transmit this file anywhere by default — it is local storage unless you enable `OMNICURSOR_PATTERN_SYNC_HTTP=1` (pull-only from a local omniintelligence service) or run the Option C sidecar with Kafka publishing.
+**The description field captures prompt content.** If your prompts contain secrets, credentials, PII, or sensitive project names, that content may appear in `learned_patterns.json`. OmniCursor does not transmit this file anywhere by default — it is local storage unless you enable `OMNICURSOR_PATTERN_SYNC_HTTP=1` (pull-only from a local omniintelligence service).
 
 If you are working with sensitive material, avoid typing it directly into prompts or clear `~/.omnicursor/learned_patterns.json` periodically.
