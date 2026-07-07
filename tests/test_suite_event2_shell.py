@@ -316,6 +316,24 @@ class TestTypedEventSchema:
         assert e.get("permission_denied") is True
         assert e.get("command_truncated") is True
 
+    def test_logged_command_is_redacted(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # events.jsonl persists on disk — secrets must never land in it (A5).
+        secret = "Bearer abcdefghijklmnopqrstuvwxyz123456"
+        e = self._run(monkeypatch, command="curl -H 'Authorization: {}'".format(secret))
+        assert secret not in e["command"]
+        assert "***REDACTED***" in e["command"]
+
+    def test_deny_logged_command_is_redacted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        e = self._run(
+            monkeypatch,
+            command="git commit --no-verify -m 'password=supersecret123'",
+        )
+        assert e["decision"] == "deny"
+        assert "supersecret123" not in e["command"]
+        assert "***REDACTED***" in e["command"]
+
     def test_deny_decision_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert self._run(monkeypatch, command="rm -rf /")["decision"] == "deny"
 

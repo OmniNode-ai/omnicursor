@@ -440,18 +440,25 @@ _COMPLEX_PROMPT = (
 _SECRET = "sk-abcdef1234567890ABCDEF1234"  # matches the sk- redaction pattern
 
 
+def _emitted_events(
+    monkeypatch: pytest.MonkeyPatch, prompt: str, conv_id: str = "d-1"
+) -> List[Tuple[str, Dict]]:
+    """Run main() capturing every send_event call as (topic, payload) tuples."""
+    events: List[Tuple[str, Dict]] = []
+    monkeypatch.setattr(
+        _mod,
+        "send_event",
+        lambda topic, payload: events.append((topic, payload)) or True,
+    )
+    _run_main(monkeypatch, {"prompt": prompt, "conversation_id": conv_id})
+    return events
+
+
 class TestCanonicalEmit:
     def _emitted(
         self, monkeypatch: pytest.MonkeyPatch, prompt: str
     ) -> List[Tuple[str, Dict]]:
-        events: List[Tuple[str, Dict]] = []
-        monkeypatch.setattr(
-            _mod,
-            "send_event",
-            lambda topic, payload: events.append((topic, payload)) or True,
-        )
-        _run_main(monkeypatch, {"prompt": prompt, "conversation_id": "d-1"})
-        return events
+        return _emitted_events(monkeypatch, prompt)
 
     def test_emits_semantic_keys_never_topic_literals(
         self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
@@ -499,14 +506,7 @@ class TestPrivacySplit:
     def _emitted(
         self, monkeypatch: pytest.MonkeyPatch, prompt: str
     ) -> Dict[str, Dict]:
-        events: List[Tuple[str, Dict]] = []
-        monkeypatch.setattr(
-            _mod,
-            "send_event",
-            lambda topic, payload: events.append((topic, payload)) or True,
-        )
-        _run_main(monkeypatch, {"prompt": prompt, "conversation_id": "p-1"})
-        return dict(events)
+        return dict(_emitted_events(monkeypatch, prompt, conv_id="p-1"))
 
     def test_cmd_payload_carries_full_redacted_prompt(
         self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
