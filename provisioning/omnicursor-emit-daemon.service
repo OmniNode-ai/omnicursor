@@ -17,16 +17,20 @@ Type=exec
 # --kafka-bootstrap-servers is mandatory: without it the daemon runs
 # spool-only (ACKs events, forwards nothing to Kafka).
 Environment=KAFKA_BOOTSTRAP_SERVERS=localhost:19092
+# Skip the start (without marking the unit failed) when another daemon —
+# e.g. one spawned by the hooks — already owns the pid file; prevents a
+# Restart=on-failure retry loop against a healthy hook-owned daemon.
+ExecCondition=/bin/sh -c 'if kill -0 "$(cat "%h/.omnicursor/emit.pid" 2>/dev/null)" 2>/dev/null; then exit 1; fi'
 ExecStartPre=/bin/sh -c 'mkdir -p "%h/.omnicursor/logs" "%h/.omnicursor/event-spool"'
-ExecStart=__DAEMON_PYTHON__ -m omnimarket.nodes.node_emit_daemon start \
-    --socket-path %h/.omnicursor/emit.sock \
-    --pid-path %h/.omnicursor/emit.pid \
+# Path-like arguments are quoted so installs under space-containing paths
+# survive systemd's word splitting (quotes are stripped by systemd).
+ExecStart="__DAEMON_PYTHON__" -m omnimarket.nodes.node_emit_daemon start \
+    --socket-path "%h/.omnicursor/emit.sock" \
+    --pid-path "%h/.omnicursor/emit.pid" \
     --kafka-bootstrap-servers ${KAFKA_BOOTSTRAP_SERVERS} \
-    --spool-dir %h/.omnicursor/event-spool \
-    --event-registry __OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml \
-    --log-path %h/.omnicursor/logs/emit-daemon.log
-# The daemon exits immediately when another instance owns the pid file
-# (hook-spawned daemons win the race); back off between relaunch attempts.
+    --spool-dir "%h/.omnicursor/event-spool" \
+    --event-registry "__OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml" \
+    --log-path "%h/.omnicursor/logs/emit-daemon.log"
 Restart=on-failure
 RestartSec=30
 

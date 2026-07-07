@@ -101,14 +101,20 @@ def _clean_env() -> dict:
 
 
 def _ensure_daemon_dirs() -> None:
-    """Pre-create the dirs the daemon writes to.
+    """Pre-create the dirs the daemon writes to, owner-only.
 
     The daemon's rotating log handler opens ``--log-path`` eagerly and does
     not create parent directories; without ``logs/`` it would die before
     logging anything. The socket's parent dir is created by the daemon itself.
+    Spooled payloads can contain raw prompt text, so the state dirs are
+    tightened to 0o700 (best-effort).
     """
     for d in (OMNICURSOR_DIR, OMNICURSOR_DIR / "logs", OMNICURSOR_DIR / "event-spool"):
         d.mkdir(parents=True, exist_ok=True)
+        try:
+            d.chmod(0o700)
+        except OSError:
+            pass
 
 
 def _spawn_detached(py: str) -> None:
@@ -117,13 +123,19 @@ def _spawn_detached(py: str) -> None:
     The omnimarket import check takes seconds under a cold interpreter, so it
     runs inside the detached child, not in the hook process: a misconfigured
     interpreter degrades to "nothing starts" without ever blocking the hook.
+    Failures stay diagnosable: both the import check's stderr and the daemon's
+    early-startup stderr (before its own ``--log-path`` handler takes over)
+    append to ``logs/spawn.log`` instead of vanishing into /dev/null.
     """
-    import_check = "{} -c {} >/dev/null 2>&1".format(
-        shlex.quote(py), shlex.quote("import omnimarket.nodes.node_emit_daemon")
+    spawn_log = shlex.quote(str(OMNICURSOR_DIR / "logs" / "spawn.log"))
+    import_check = "{} -c {} >/dev/null 2>>{}".format(
+        shlex.quote(py),
+        shlex.quote("import omnimarket.nodes.node_emit_daemon"),
+        spawn_log,
     )
     daemon_cmd = " ".join(shlex.quote(a) for a in _daemon_command(py))
     subprocess.Popen(
-        ["/bin/sh", "-c", f"{import_check} && exec {daemon_cmd}"],
+        ["/bin/sh", "-c", f"{import_check} && exec {daemon_cmd} 2>>{spawn_log}"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

@@ -106,6 +106,17 @@ class TestSpawn:
         assert "exec" in exec_part
         assert "-m omnimarket.nodes.node_emit_daemon start" in exec_part
 
+    def test_wrapper_stderr_appends_to_spawn_log(
+        self, hermetic: Dict[str, List[Any]]
+    ) -> None:
+        # Import-check and early daemon failures must stay diagnosable: both
+        # halves of the wrapper redirect stderr into logs/spawn.log.
+        _mod.ensure_daemon()
+        wrapper = _wrapper(hermetic["popen"])
+        check_part, _, exec_part = wrapper.partition("&&")
+        assert check_part.count("2>>") == 1 and "spawn.log" in check_part
+        assert exec_part.count("2>>") == 1 and "spawn.log" in exec_part
+
     def test_kafka_bootstrap_always_passed_with_default(
         self, hermetic: Dict[str, List[Any]]
     ) -> None:
@@ -166,6 +177,14 @@ class TestSpawn:
         _mod.ensure_daemon()
         assert (tmp_path / ".omnicursor" / "logs").is_dir()
         assert (tmp_path / ".omnicursor" / "event-spool").is_dir()
+
+    def test_state_dirs_are_owner_only(
+        self, hermetic: Dict[str, List[Any]], tmp_path: Path
+    ) -> None:
+        # Spooled payloads can contain raw prompt text — 0o700, no group/other.
+        _mod.ensure_daemon()
+        for d in (".omnicursor", ".omnicursor/logs", ".omnicursor/event-spool"):
+            assert ((tmp_path / d).stat().st_mode & 0o777) == 0o700
 
 
 class TestDegrade:

@@ -19,9 +19,11 @@ ships optional OS templates for durable ownership.
    systemd user unit (Linux) that owns the daemon independently of Cursor
    sessions. Install only if you want the daemon up at login.
 
-All three run the same canonical command and coexist safely: the daemon exits
-immediately when another instance already owns `~/.omnicursor/emit.pid`, and
-the hook ensure never spawns while a live daemon answers the socket ping.
+All three run the same canonical command and coexist safely: the hook ensure
+never spawns while a live daemon answers the socket ping, and both OS templates
+guard on `~/.omnicursor/emit.pid` before starting — when a hook-spawned daemon
+already owns it, they stand down cleanly (no retry loop) and only respawn a
+daemon that actually failed.
 
 ## The pinned contract (do not vary these)
 
@@ -40,7 +42,7 @@ An interpreter with omnimarket installed, exported for the hooks:
 ```bash
 # e.g. a dedicated venv
 python3.12 -m venv ~/.omnicursor/daemon-venv
-~/.omnicursor/daemon-venv/bin/pip install <omnimarket>   # per platform install docs
+~/.omnicursor/daemon-venv/bin/pip install /path/to/omnimarket   # or follow the platform's omnimarket install docs
 export OMNICURSOR_DAEMON_PYTHON="$HOME/.omnicursor/daemon-venv/bin/python"
 ```
 

@@ -21,17 +21,22 @@
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>mkdir -p "$HOME/.omnicursor/logs" "$HOME/.omnicursor/event-spool" &amp;&amp; exec __DAEMON_PYTHON__ -m omnimarket.nodes.node_emit_daemon start --socket-path "$HOME/.omnicursor/emit.sock" --pid-path "$HOME/.omnicursor/emit.pid" --kafka-bootstrap-servers "${KAFKA_BOOTSTRAP_SERVERS:-localhost:19092}" --spool-dir "$HOME/.omnicursor/event-spool" --event-registry "__OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml" --log-path "$HOME/.omnicursor/logs/emit-daemon.log"</string>
+        <string>if kill -0 "$(cat "$HOME/.omnicursor/emit.pid" 2>/dev/null)" 2>/dev/null; then exit 0; fi; mkdir -p "$HOME/.omnicursor/logs" "$HOME/.omnicursor/event-spool" &amp;&amp; exec "__DAEMON_PYTHON__" -m omnimarket.nodes.node_emit_daemon start --socket-path "$HOME/.omnicursor/emit.sock" --pid-path "$HOME/.omnicursor/emit.pid" --kafka-bootstrap-servers "${KAFKA_BOOTSTRAP_SERVERS:-localhost:19092}" --spool-dir "$HOME/.omnicursor/event-spool" --event-registry "__OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml" --log-path "$HOME/.omnicursor/logs/emit-daemon.log"</string>
     </array>
 
     <key>RunAtLoad</key>
     <true/>
 
+    <!-- Respawn only on failure: when another (hook-spawned) daemon already
+         owns the pid file, the guard above exits 0 and launchd leaves the job
+         alone instead of retrying forever. A crashed daemon (non-zero exit)
+         is still respawned, throttled below. -->
     <key>KeepAlive</key>
-    <true/>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
 
-    <!-- The daemon exits immediately when another instance owns the pid file
-         (hook-spawned daemons win the race); throttle relaunch attempts. -->
     <key>ThrottleInterval</key>
     <integer>30</integer>
 
