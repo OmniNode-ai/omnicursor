@@ -15,8 +15,9 @@ import importlib.util as _ilu
 import io
 import json
 import sys
+import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -288,10 +289,11 @@ class TestDaemonEnsureFallback:
 
 
 class TestCorrelationId:
-    def test_generates_12_char_hex(self) -> None:
+    def test_generates_full_uuid(self) -> None:
+        # Canonical correlation_id is UUID | None — the old uuid4().hex[:12]
+        # short id fails backend pydantic validation.
         cid = _mod._generate_correlation_id()
-        assert len(cid) == 12
-        assert all(c in "0123456789abcdef" for c in cid)
+        assert str(uuid.UUID(cid)) == cid
 
     def test_each_call_is_unique(self) -> None:
         ids = {_mod._generate_correlation_id() for _ in range(100)}
@@ -304,7 +306,7 @@ class TestCorrelationId:
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
         _run_main(monkeypatch, {"prompt": "fix bug", "conversation_id": "corr-001"})
         assert len(events) == 1
-        assert len(events[0]["correlation_id"]) == 12
+        assert str(uuid.UUID(events[0]["correlation_id"]))
 
 
 class TestSessionCorrelationUpdate:
@@ -329,7 +331,7 @@ class TestSessionCorrelationUpdate:
     ) -> None:
         _run_main(monkeypatch, {"prompt": "fix bug", "conversation_id": "cw-001"})
         data = json.loads((fake_sessions / "current.json").read_text())
-        assert len(data["latest_correlation_id"]) == 12
+        assert str(uuid.UUID(data["latest_correlation_id"]))
 
 
 # ---------------------------------------------------------------------------
@@ -427,39 +429,142 @@ class TestContinueOutput:
 
 
 # ---------------------------------------------------------------------------
-# Delegation request emission (backend learning, not injection)
+# Canonical emit — semantic keys, two-key privacy split, delegation in payload
+# ---------------------------------------------------------------------------
+
+_COMPLEX_PROMPT = (
+    "Refactor the auth module and then migrate the database schema and "
+    "integrate the new payment service across the whole codebase now"
+)
+
+_SECRET = "sk-abcdef1234567890ABCDEF1234"  # matches the sk- redaction pattern
+
+
+class TestCanonicalEmit:
+    def _emitted(
+        self, monkeypatch: pytest.MonkeyPatch, prompt: str
+    ) -> List[Tuple[str, Dict]]:
+        events: List[Tuple[str, Dict]] = []
+        monkeypatch.setattr(
+            _mod,
+            "send_event",
+            lambda topic, payload: events.append((topic, payload)) or True,
+        )
+        _run_main(monkeypatch, {"prompt": prompt, "conversation_id": "d-1"})
+        return events
+
+    def test_emits_semantic_keys_never_topic_literals(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        topics = [t for t, _ in self._emitted(monkeypatch, "fix typo")]
+        assert topics == ["cursor.hook.prompt", "prompt.submitted"]
+        assert all(not t.startswith("onex.") for t in topics)
+
+    def test_canonical_event_has_exactly_six_top_level_keys(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        events = dict(self._emitted(monkeypatch, "fix typo"))
+        event = events["cursor.hook.prompt"]
+        assert set(event) == {
+            "event_type",
+            "session_id",
+            "correlation_id",
+            "timestamp_utc",
+            "agent_source",
+            "payload",
+        }
+        assert event["event_type"] == "UserPromptSubmit"
+        assert event["session_id"] == "d-1"
+        assert event["agent_source"] == "cursor"
+        assert str(uuid.UUID(event["correlation_id"]))
+
+    def test_delegation_folds_into_payload(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Orphan #2 (node-delegation-request) is gone; the flag rides inside
+        # the canonical payload instead.
+        events = self._emitted(monkeypatch, _COMPLEX_PROMPT)
+        topics = [t for t, _ in events]
+        assert "onex.cmd.omnicursor.node-delegation-request.v1" not in topics
+        assert dict(events)["cursor.hook.prompt"]["payload"]["delegation_required"] is True
+
+    def test_simple_prompt_delegation_false_in_payload(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        events = dict(self._emitted(monkeypatch, "fix typo"))
+        assert events["cursor.hook.prompt"]["payload"]["delegation_required"] is False
+
+
+class TestPrivacySplit:
+    def _emitted(
+        self, monkeypatch: pytest.MonkeyPatch, prompt: str
+    ) -> Dict[str, Dict]:
+        events: List[Tuple[str, Dict]] = []
+        monkeypatch.setattr(
+            _mod,
+            "send_event",
+            lambda topic, payload: events.append((topic, payload)) or True,
+        )
+        _run_main(monkeypatch, {"prompt": prompt, "conversation_id": "p-1"})
+        return dict(events)
+
+    def test_cmd_payload_carries_full_redacted_prompt(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        prompt = "Set the key to {} and then deploy".format(_SECRET)
+        emitted = self._emitted(monkeypatch, prompt)["cursor.hook.prompt"]
+        assert _SECRET not in json.dumps(emitted)
+        assert "***REDACTED***" in emitted["payload"]["prompt"]
+        # Full (redacted) prompt, not a preview.
+        assert emitted["payload"]["prompt"].endswith("and then deploy")
+
+    def test_evt_payload_is_preview_only(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        prompt = "Use {} please. ".format(_SECRET) + "x" * 400
+        emitted = self._emitted(monkeypatch, prompt)["prompt.submitted"]
+        assert _SECRET not in json.dumps(emitted)
+        assert len(emitted["prompt_preview"]) <= 100
+        assert emitted["prompt_length"] == len(prompt)
+        assert "prompt" not in emitted  # never the full prompt on the evt leg
+
+    def test_local_log_snippet_is_redacted(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        events: List[Dict] = []
+        monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
+        _run_main(
+            monkeypatch,
+            {"prompt": "token={}".format(_SECRET), "conversation_id": "p-2"},
+        )
+        assert _SECRET not in events[0]["prompt_snippet"]
+        assert "***REDACTED***" in events[0]["prompt_snippet"]
+
+
+# ---------------------------------------------------------------------------
+# fetch_patterns receives the classified domain + prompt words (B8)
 # ---------------------------------------------------------------------------
 
 
-class TestDelegationEmit:
-    def _emitted(
-        self, monkeypatch: pytest.MonkeyPatch, prompt: str
-    ) -> List[str]:
-        topics: List[str] = []
-        monkeypatch.setattr(
-            _mod, "send_event", lambda topic, payload: topics.append(topic) or True
-        )
-        _run_main(monkeypatch, {"prompt": prompt, "conversation_id": "d-1"})
-        return topics
-
-    def test_complex_prompt_emits_delegation_request(
+class TestFetchPatternsArgs:
+    def test_fetch_patterns_gets_domain_and_prompt_words(
         self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        topics = self._emitted(
+        calls: List[Tuple[str, set]] = []
+
+        def _recorder(domain: str, *, prompt_words=None) -> List[Dict]:
+            calls.append((domain, prompt_words))
+            return []
+
+        monkeypatch.setattr(_mod, "fetch_patterns", _recorder)
+        _run_main(
             monkeypatch,
-            "Refactor the auth module and then migrate the database schema and "
-            "integrate the new payment service across the whole codebase now",
+            {
+                "prompt": "I need to debug this error in the auth module",
+                "conversation_id": "fp-1",
+            },
         )
-        assert "onex.cmd.omnicursor.node-delegation-request.v1" in topics
-
-    def test_simple_prompt_does_not_emit_delegation(
-        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        topics = self._emitted(monkeypatch, "fix typo")
-        assert "onex.cmd.omnicursor.node-delegation-request.v1" not in topics
-
-    def test_always_emits_cursor_hook_event(
-        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        topics = self._emitted(monkeypatch, "fix typo")
-        assert "onex.cmd.omnicursor.cursor-hook-event.v1" in topics
+        assert len(calls) == 1
+        domain, prompt_words = calls[0]
+        assert domain == _mod.agent_domain("debug-intelligence")
+        assert prompt_words and "debug" in prompt_words

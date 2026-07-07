@@ -2,7 +2,7 @@
 
 The sessionStart hook initializes session state, best-effort daemon-ensures +
 syncs patterns (local only), injects session-level context via additional_context,
-and emits onex.evt.omnicursor.session-started.v1.
+and emits the ``session.started`` registry key.
 """
 
 from __future__ import annotations
@@ -112,8 +112,19 @@ class TestMainInjection:
         self, hermetic: List[Tuple[str, Dict]], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _run(monkeypatch, {"conversation_id": "c1", "session_id": "s1"})
-        topics = [t for t, _ in hermetic]
-        assert "onex.evt.omnicursor.session-started.v1" in topics
+        # Semantic registry key (stop.py pattern) — never a topic literal.
+        events = {t: p for t, p in hermetic}
+        assert "session.started" in events
+        payload = events["session.started"]
+        assert payload["session_id"] == "c1"
+        assert payload["cursor_session_id"] == "s1"
+        assert payload["agent_source"] == "cursor"
+
+    def test_no_topic_literal_emitted(
+        self, hermetic: List[Tuple[str, Dict]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _run(monkeypatch, {"conversation_id": "c1", "session_id": "s1"})
+        assert all(not t.startswith("onex.") for t, _ in hermetic)
 
     def test_empty_stdin_still_outputs_json(
         self, hermetic: list, monkeypatch: pytest.MonkeyPatch

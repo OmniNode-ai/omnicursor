@@ -37,6 +37,7 @@ from prompt_pattern_selection import (
     MAX_PATTERNS,
     filter_patterns_by_relevance,
 )
+from redaction import sanitize_pattern_text
 
 # --- Single source of truth for the intelligence service URL (drift cleanup) ---
 INTELLIGENCE_SERVICE_URL: str = os.environ.get(
@@ -179,8 +180,13 @@ def _patterns_block(patterns: List[Dict[str, Any]], heading: str) -> List[str]:
         return []
     lines = [heading]
     for p in patterns[:MAX_PATTERNS]:
+        # Fetched pattern text is untrusted (API/local JSON) and flows into
+        # the model's additional_context — sanitize before injection (A5).
         lines.append(
-            "- **[{}]** {}".format(p.get("pattern_id", "?"), p.get("description", ""))
+            "- **[{}]** {}".format(
+                sanitize_pattern_text(str(p.get("pattern_id", "?")), max_length=80),
+                sanitize_pattern_text(str(p.get("description", ""))),
+            )
         )
     return lines
 

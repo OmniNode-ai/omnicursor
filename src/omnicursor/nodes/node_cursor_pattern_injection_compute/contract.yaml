@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2025 OmniNode.ai Inc.
 # SPDX-License-Identifier: MIT
-# Read-side pattern selection for prompt injection (local ``learned_patterns.json`` only).
+# Read-side pattern selection for session-level context injection (API first, local fallback).
 
 name: node_cursor_pattern_injection_compute
 contract_name: node_cursor_pattern_injection_compute
@@ -45,7 +45,11 @@ local_event_bus:
 
 capabilities:
   - name: cursor.pattern_injection_read
-    description: Load and rank patterns from learned_patterns.json for a prompt
+    description: >
+      Fetch learned patterns (intelligence API first, local JSON fallback) and
+      build the session-level sessionStart.additional_context block (baseline
+      patterns + delegation rule + prior-session continuity); pattern text is
+      sanitized before injection
     version: 1.0.0
 
 metadata:

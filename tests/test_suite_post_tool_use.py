@@ -1,7 +1,7 @@
 """Tests for .cursor/hooks/scripts/post-tool-use.py — mid-session refresh.
 
 postToolUse infers a domain from the tool's file path, refreshes learned patterns
-via additional_context, and emits onex.evt.omnicursor.tool-executed.v1.
+via additional_context, and emits the ``tool.executed`` registry key.
 """
 
 from __future__ import annotations
@@ -103,8 +103,14 @@ class TestRefresh:
             {"conversation_id": "c1", "tool_name": "edit_file",
              "tool_input": {"file_path": "x.py"}},
         )
-        topics = [t for t, _ in emitted]
-        assert "onex.evt.omnicursor.tool-executed.v1" in topics
+        # Semantic registry key (stop.py pattern) — never a topic literal.
+        events = {t: p for t, p in emitted}
+        assert "tool.executed" in events
+        payload = events["tool.executed"]
+        assert payload["session_id"] == "c1"
+        assert payload["tool_name"] == "edit_file"
+        assert payload["agent_source"] == "cursor"
+        assert all(not t.startswith("onex.") for t in events)
 
     def test_empty_stdin_does_not_crash(
         self, emitted: list, monkeypatch: pytest.MonkeyPatch

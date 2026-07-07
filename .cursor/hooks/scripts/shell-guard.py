@@ -28,6 +28,7 @@ from _common import (  # noqa: E402
     write_stdout,
 )
 from emit_client import send_event  # noqa: E402
+from redaction import sanitize_preview  # noqa: E402
 from omnicursor.shell_guard import guard_command as _guard_command_impl  # noqa: E402
 
 _DOD_CONFIG_PATH: Path = _hooks / "config" / "dod_enforcement.json"
@@ -109,17 +110,25 @@ def main() -> None:
             payload["command_truncated"] = True
         log_event(payload)
 
-        send_event(
-            "onex.evt.omnicursor.tool-executed.v1",
-            {
-                "conversation_id": conversation_id,
-                "correlation_id": correlation_id,
-                "tool_name": "shell",
-                "decision": decision,
-            },
-        )
-
+        # The decision goes to Cursor FIRST. Telemetry is emitted afterwards,
+        # isolated in its own try/except, so an emit failure can never reach
+        # the outer fallback and downgrade a computed deny/ask to allow.
         write_stdout(cursor_response)
+
+        try:
+            send_event(
+                "tool.executed",
+                {
+                    "session_id": conversation_id,
+                    "correlation_id": correlation_id,
+                    "tool_name": "shell",
+                    "decision": decision,
+                    "command_preview": sanitize_preview(command),
+                    "agent_source": "cursor",
+                },
+            )
+        except Exception:
+            pass
     except Exception:
         write_stdout({"permission": "allow"})
 

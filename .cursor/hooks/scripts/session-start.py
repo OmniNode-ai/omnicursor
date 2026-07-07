@@ -9,8 +9,9 @@ do). Responsibilities:
      stop-time aggregation have a coherent per-conversation record.
   2. Best-effort daemon-ensure: fast-ping the shared emit daemon and, when it
      is not up, kick off a detached spawn (``lib/daemon_ensure.py`` — never
-     waited on, no-op without an omnimarket interpreter); then emit
-     ``onex.evt.omnicursor.session-started.v1`` (non-blocking; no-op if absent).
+     waited on, no-op without an omnimarket interpreter); then emit the
+     ``session.started`` registry key (non-blocking; no-op if absent — the
+     registry YAML owns the topic string).
   3. Inject session-level context via ``additional_context`` — baseline learned
      patterns, the standing delegation rule, a one-time handoff tip, and
      prior-session continuity.
@@ -126,13 +127,14 @@ def main() -> None:
         )
 
         send_event(
-            "onex.evt.omnicursor.session-started.v1",
+            "session.started",
             {
-                "conversation_id": conversation_id,
-                "session_id": session_id,
+                "session_id": conversation_id,
+                "cursor_session_id": session_id,
                 "is_background_agent": is_background_agent,
                 "composer_mode": composer_mode,
                 "started_at": now,
+                "agent_source": "cursor",
             },
         )
     except Exception:

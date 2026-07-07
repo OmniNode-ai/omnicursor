@@ -2,10 +2,12 @@
 
 Fires when Cursor closes a composer conversation (distinct from ``stop``, which
 marks the end of an agent loop). Fire-and-forget: Cursor logs but does not consume
-the response, so this only emits ``onex.evt.omnicursor.session-ended.v1`` and logs
-locally. Complements ``stop`` (loop-end) with a real conversation-close signal.
+the response, so this only emits the ``session.ended`` registry key (the registry
+YAML owns the topic string) and logs locally. Complements ``stop`` (loop-end)
+with a real conversation-close signal.
 
-Node contract: ``node_cursor_session_outcome_orchestrator`` (session lifecycle).
+Node contract: ``node_cursor_session_end_effect``
+(``src/omnicursor/nodes/node_cursor_session_end_effect/contract.yaml``).
 Stdlib only; always exits 0; never blocks Cursor.
 """
 
@@ -57,15 +59,16 @@ def main() -> None:
         )
 
         send_event(
-            "onex.evt.omnicursor.session-ended.v1",
+            "session.ended",
             {
-                "conversation_id": conversation_id,
-                "session_id": session_id,
+                "session_id": conversation_id,
+                "cursor_session_id": session_id,
                 "correlation_id": correlation_id,
                 "reason": reason,
                 "final_status": final_status,
                 "duration_ms": duration_ms,
                 "error_message": error_message or None,
+                "agent_source": "cursor",
             },
         )
     except Exception:

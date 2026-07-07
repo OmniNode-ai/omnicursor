@@ -485,3 +485,34 @@ class TestRobustness:
     def test_none_file_path_does_not_crash(self) -> None:
         result = _mod.handle_edit({"file_path": None, "edits": []})
         assert result["event"] == "file_edited"
+
+
+# ---------------------------------------------------------------------------
+# Emission — semantic registry key (stop.py pattern), never a topic literal
+# ---------------------------------------------------------------------------
+
+
+class TestToolExecutedEmit:
+    def test_emits_tool_executed_semantic_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        events: List[tuple] = []
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(
+            _mod, "send_event", lambda t, p: events.append((t, p)) or True
+        )
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"file_path": "x.md", "edits": [], "conversation_id": "e-1"},
+        )
+        monkeypatch.setattr(sys, "stdout", io.StringIO())
+        _mod.main()
+        assert len(events) == 1
+        topic, payload = events[0]
+        assert topic == "tool.executed"
+        assert payload["session_id"] == "e-1"
+        assert payload["tool_name"] == "edit_file"
+        assert payload["agent_source"] == "cursor"
+        assert not topic.startswith("onex.")

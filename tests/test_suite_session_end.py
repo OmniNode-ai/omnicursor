@@ -1,6 +1,7 @@
 """Tests for .cursor/hooks/scripts/session-end.py — true session-close event.
 
-Fire-and-forget: outputs {} and emits onex.evt.omnicursor.session-ended.v1.
+Fire-and-forget: outputs {} and emits the ``session.ended`` registry key
+(the registry YAML owns the topic string).
 """
 
 from __future__ import annotations
@@ -73,7 +74,11 @@ class TestSessionEnd:
         )
         assert len(emitted) == 1
         topic, payload = emitted[0]
-        assert topic == "onex.evt.omnicursor.session-ended.v1"
+        # Semantic registry key (stop.py pattern) — never a topic literal.
+        assert topic == "session.ended"
+        assert payload["session_id"] == "c1"
+        assert payload["cursor_session_id"] == "s1"
+        assert payload["agent_source"] == "cursor"
         assert payload["reason"] == "completed"
         assert payload["final_status"] == "completed"
         assert payload["duration_ms"] == 4200

@@ -116,6 +116,17 @@ def test_extract_multiple_events():
     assert "brainstorming" in domains
 
 
+def test_extract_redacts_secrets_in_description():
+    # A5: a snippet carrying a secret must never land in learned_patterns.json
+    # unredacted (defense-in-depth — the log-time snippet is also sanitized).
+    secret = "sk-abcdef1234567890ABCDEF1234"
+    events = [_prompt_event("debugging", 0.8, "debug {}".format(secret))]
+    result = extract_patterns_from_events(events, files_edited=1)
+    assert len(result) == 1
+    assert secret not in result[0]["description"]
+    assert "***REDACTED***" in result[0]["description"]
+
+
 # ---------------------------------------------------------------------------
 # _upsert_pattern
 # ---------------------------------------------------------------------------

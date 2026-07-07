@@ -18,6 +18,22 @@ events:
   # =========================================================================
   # Session Events
   # =========================================================================
+  session.started:
+    fan_out:
+      - topic: "onex.evt.omnicursor.session-started.v1"
+        tier: telemetry
+        description: "Session start event for observability"
+    partition_key_field: session_id
+    required_fields: [session_id]
+
+  session.ended:
+    fan_out:
+      - topic: "onex.evt.omnicursor.session-ended.v1"
+        tier: telemetry
+        description: "Session end event for observability"
+    partition_key_field: session_id
+    required_fields: [session_id]
+
   session.outcome:
     fan_out:
       - topic: "onex.cmd.omniintelligence.session-outcome.v1"
@@ -41,8 +57,22 @@ events:
     required_fields: [session_id, injected_pattern_ids]
 
   # =========================================================================
-  # Prompt Events
+  # Prompt Events (two-key privacy split, ratified 2026-07-05)
   # =========================================================================
+  # The restricted cmd topic carries the full canonical ModelCursorHookEvent
+  # (extra="forbid": the hook nests the redacted prompt inside payload), while
+  # the broadcast evt topic only ever receives a hook-side redacted preview.
+  # strip_prompt cannot descend into the canonical nested payload, so the
+  # split is enforced at the hook — one single-purpose key per topic.
+  cursor.hook.prompt:
+    fan_out:
+      - topic: "onex.cmd.omniintelligence.cursor-hook-event.v1"
+        tier: telemetry
+        transform: passthrough
+        description: "Canonical ModelCursorHookEvent for intent classification"
+    partition_key_field: session_id
+    required_fields: [event_type, session_id]
+
   prompt.submitted:
     fan_out:
       - topic: "onex.evt.omnicursor.prompt-submitted.v1"

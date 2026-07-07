@@ -31,6 +31,23 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+# Secret redaction (A5): prompt-derived snippets must never land in
+# learned_patterns.json unredacted. The canonical stdlib port lives in the
+# hooks lib (on sys.path when invoked from the stop hook); fall back to
+# loading it by path for package contexts (tests, CI) in the repo checkout.
+try:
+    from redaction import redact_secrets
+except ImportError:  # pragma: no cover - exercised via the package import path
+    import importlib.util as _ilu
+
+    _redaction_path = (
+        Path(__file__).resolve().parents[2] / ".cursor" / "hooks" / "lib" / "redaction.py"
+    )
+    _spec = _ilu.spec_from_file_location("redaction", _redaction_path)
+    _redaction = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_redaction)  # type: ignore[union-attr]
+    redact_secrets = _redaction.redact_secrets
+
 # v0 calibration — chosen to match routing HARD_FLOOR; patterns from low-confidence
 # classifications are too noisy to learn from. Tune with scoring eval harness.
 HARD_FLOOR: float = 0.55
@@ -251,7 +268,7 @@ def extract_patterns_from_events(
 
         domain = _agent_to_domain(agent)
         description = "Auto-learned: {} → {} (score {:.2f})".format(
-            snippet[:60], agent, score
+            redact_secrets(snippet)[:60], agent, score
         )
         candidates.append({
             "domain": domain,

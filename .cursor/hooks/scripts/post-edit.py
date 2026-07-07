@@ -44,13 +44,14 @@ def main() -> None:
         })
 
         send_event(
-            "onex.evt.omnicursor.tool-executed.v1",
+            "tool.executed",
             {
-                "conversation_id": conversation_id,
+                "session_id": conversation_id,
                 "correlation_id": correlation_id,
                 "tool_name": "edit_file",
                 "file_path": result.get("file_path", ""),
                 "language": result.get("language", ""),
+                "agent_source": "cursor",
             },
         )
     except Exception:

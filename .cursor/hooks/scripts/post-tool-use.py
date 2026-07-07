@@ -6,9 +6,11 @@ patterns relevant to the tool activity just observed (domain inferred from the
 tool input's file path), keeping guidance current across a long session without
 per-prompt injection (which Cursor does not support).
 
-Also emits ``onex.evt.omnicursor.tool-executed.v1`` for backend learning.
+Also emits the ``tool.executed`` registry key for backend learning (the
+registry YAML owns the topic string).
 
-Node contract: ``node_cursor_pattern_injection_compute`` (refresh path). Stdlib
+Node contract: ``node_cursor_tool_use_compute``
+(``src/omnicursor/nodes/node_cursor_tool_use_compute/contract.yaml``). Stdlib
 only; always exits 0; never blocks Cursor.
 """
 
@@ -76,12 +78,13 @@ def main() -> None:
         )
 
         send_event(
-            "onex.evt.omnicursor.tool-executed.v1",
+            "tool.executed",
             {
-                "conversation_id": conversation_id,
+                "session_id": conversation_id,
                 "correlation_id": correlation_id,
                 "tool_name": tool_name,
                 "domain": domain,
+                "agent_source": "cursor",
             },
         )
     except Exception:

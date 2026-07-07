@@ -29,12 +29,21 @@ _OMNIMARKET_SRC = _ROOT.parent / "omnimarket" / "src"
 _VALID_TIERS = {"duty_critical", "telemetry"}
 
 # Canonical-mirrored expectations, one row per fan-out rule.
+# cursor.hook.prompt -> cmd is telemetry, mirroring the canonical claude_code
+# prompt.submitted -> onex.cmd.omniintelligence.claude-hook-event.v1 leg
+# (index §4 addendum 12 — NOT the old cmd=duty_critical rule of thumb).
 _EXPECTED_TIERS: Dict[Tuple[str, str], str] = {
+    ("session.started", "onex.evt.omnicursor.session-started.v1"): "telemetry",
+    ("session.ended", "onex.evt.omnicursor.session-ended.v1"): "telemetry",
     ("session.outcome", "onex.cmd.omniintelligence.session-outcome.v1"): "duty_critical",
     ("session.outcome", "onex.evt.omnicursor.session-outcome.v1"): "duty_critical",
     (
         "utilization.scoring.requested",
         "onex.cmd.omniintelligence.utilization-scoring.v1",
+    ): "telemetry",
+    (
+        "cursor.hook.prompt",
+        "onex.cmd.omniintelligence.cursor-hook-event.v1",
     ): "telemetry",
     ("prompt.submitted", "onex.evt.omnicursor.prompt-submitted.v1"): "telemetry",
     ("tool.executed", "onex.evt.omnicursor.tool-executed.v1"): "telemetry",
@@ -78,10 +87,46 @@ class TestRegistryStructure:
             assert actual.get(key) == expected_tier, key
 
     def test_known_event_keys_present(self) -> None:
-        # PR-1 scope guard: tier-only change, no key added or removed.
-        # The A3/A4 fan-out work (next PR) will extend this set deliberately.
+        # Scope guard: the A3/A4 (PR-2) key set — extended deliberately from
+        # the PR-1 tier-only baseline with cursor.hook.prompt (two-key privacy
+        # split) and the session lifecycle keys. Grow this set consciously.
         expected = {event_type for event_type, _ in _EXPECTED_TIERS}
-        assert expected.issubset(set(_registry_doc()["events"]))
+        assert set(_registry_doc()["events"]) == expected
+
+
+class TestPromptFanOut:
+    """A3/A4 — the two-key privacy split as declared in the registry."""
+
+    def test_cursor_hook_prompt_targets_the_merged_consumer(self) -> None:
+        rule = _registry_doc()["events"]["cursor.hook.prompt"]["fan_out"][0]
+        assert rule["topic"] == "onex.cmd.omniintelligence.cursor-hook-event.v1"
+        assert rule["transform"] == "passthrough"
+
+    def test_cursor_hook_prompt_fans_only_to_cmd(self) -> None:
+        fan_out = _registry_doc()["events"]["cursor.hook.prompt"]["fan_out"]
+        assert [r["topic"] for r in fan_out] == [
+            "onex.cmd.omniintelligence.cursor-hook-event.v1"
+        ]
+
+    def test_prompt_submitted_fans_only_to_evt_with_strip_prompt(self) -> None:
+        fan_out = _registry_doc()["events"]["prompt.submitted"]["fan_out"]
+        assert [r["topic"] for r in fan_out] == [
+            "onex.evt.omnicursor.prompt-submitted.v1"
+        ]
+        assert fan_out[0]["transform"] == "strip_prompt"
+
+    def test_required_fields_match_the_emitted_payloads(self) -> None:
+        events = _registry_doc()["events"]
+        assert events["cursor.hook.prompt"]["required_fields"] == [
+            "event_type",
+            "session_id",
+        ]
+        assert events["prompt.submitted"]["required_fields"] == [
+            "prompt_preview",
+            "session_id",
+        ]
+        assert events["session.started"]["required_fields"] == ["session_id"]
+        assert events["session.ended"]["required_fields"] == ["session_id"]
 
 
 # ---------------------------------------------------------------------------

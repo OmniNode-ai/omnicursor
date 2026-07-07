@@ -408,3 +408,81 @@ class TestDoDAndDispatch:
             sessions_root=sessions,
         )
         assert r2["permission"] == "allow"
+
+
+# ---------------------------------------------------------------------------
+# Emit must never affect the decision (regression for the PR-#4 fail-open bug:
+# a telemetry-emit failure downgraded a computed deny/ask to allow — CodeRabbit
+# CRITICAL, shell-guard.py:112-124 at merge)
+# ---------------------------------------------------------------------------
+
+
+class TestEmitNeverAffectsDecision:
+    def _run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        command: str,
+        send_event: Any,
+    ) -> Dict:
+        out = io.StringIO()
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda e: None)
+        monkeypatch.setattr(_mod, "send_event", send_event)
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"command": command, "conversation_id": "c-1"}
+        )
+        monkeypatch.setattr(sys, "stdout", out)
+        _mod.main()
+        return json.loads(out.getvalue())
+
+    @staticmethod
+    def _boom(*a: Any, **k: Any) -> bool:
+        raise RuntimeError("emit exploded")
+
+    def test_emit_failure_does_not_downgrade_deny(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        resp = self._run(monkeypatch, "rm -rf /", self._boom)
+        assert resp["permission"] == "deny"
+
+    def test_emit_failure_does_not_change_allow(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        resp = self._run(monkeypatch, "git status", self._boom)
+        assert resp["permission"] == "allow"
+
+    def test_decision_is_written_before_the_emit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order: List[str] = []
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda e: None)
+        monkeypatch.setattr(_mod, "write_stdout", lambda r: order.append("stdout"))
+        monkeypatch.setattr(
+            _mod, "send_event", lambda t, p: order.append("emit") or True
+        )
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"command": "ls", "conversation_id": "c-1"}
+        )
+        _mod.main()
+        assert order == ["stdout", "emit"]
+
+    def test_emits_semantic_key_with_redacted_preview(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        secret = "Bearer abcdefghijklmnopqrstuvwxyz123456"
+        events: List[tuple] = []
+        self._run(
+            monkeypatch,
+            "curl -H 'Authorization: {}' https://example.com".format(secret),
+            lambda t, p: events.append((t, p)) or True,
+        )
+        assert len(events) == 1
+        topic, payload = events[0]
+        # Semantic registry key (stop.py pattern) — never a topic literal.
+        assert topic == "tool.executed"
+        assert payload["session_id"] == "c-1"
+        assert payload["tool_name"] == "shell"
+        assert payload["agent_source"] == "cursor"
+        assert "***REDACTED***" in payload["command_preview"]
+        assert secret not in payload["command_preview"]

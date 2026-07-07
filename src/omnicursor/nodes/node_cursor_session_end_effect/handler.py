@@ -3,8 +3,8 @@
 """Library surface for ``node_cursor_session_end_effect``.
 
 Runtime execution is ``.cursor/hooks/scripts/session-end.py`` (stdlib only) —
-emits the true conversation-close event ``onex.evt.omnicursor.session-ended.v1``,
-complementing ``stop`` (loop-end).
+emits the true conversation-close event under the ``session.ended`` registry
+key, complementing ``stop`` (loop-end).
 """
 
 from __future__ import annotations
