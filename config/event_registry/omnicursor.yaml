@@ -5,6 +5,11 @@
 #   - passthrough: no modification
 #   - strip_prompt: remove full prompt, keep preview + length
 #   - strip_body: remove body, keep preview + length
+#
+# Every fan-out rule MUST declare a durability tier (duty_critical | telemetry)
+# or the daemon refuses to load this file (event_registry.py raises ValueError).
+# Tiers mirror the canonical claude_code registry
+# (omnimarket .../node_emit_daemon/registries/topics.yaml) for the shared keys.
 platform: omnicursor
 version: "1.0.0"
 description: "Event registry for OmniCursor Cursor IDE hooks"
@@ -16,8 +21,10 @@ events:
   session.outcome:
     fan_out:
       - topic: "onex.cmd.omniintelligence.session-outcome.v1"
+        tier: duty_critical
         description: "Session outcome for intelligence feedback loop"
       - topic: "onex.evt.omnicursor.session-outcome.v1"
+        tier: duty_critical
         description: "Session outcome for dashboards and monitoring"
     partition_key_field: session_id
     required_fields: [session_id, outcome]
@@ -28,6 +35,7 @@ events:
   utilization.scoring.requested:
     fan_out:
       - topic: "onex.cmd.omniintelligence.utilization-scoring.v1"
+        tier: telemetry
         description: "Utilization scoring command to omniintelligence"
     partition_key_field: session_id
     required_fields: [session_id, injected_pattern_ids]
@@ -38,6 +46,7 @@ events:
   prompt.submitted:
     fan_out:
       - topic: "onex.evt.omnicursor.prompt-submitted.v1"
+        tier: telemetry
         transform: strip_prompt
         description: "Sanitized prompt preview for observability"
     partition_key_field: session_id
@@ -49,6 +58,7 @@ events:
   tool.executed:
     fan_out:
       - topic: "onex.evt.omnicursor.tool-executed.v1"
+        tier: telemetry
         description: "Tool execution event for observability"
     partition_key_field: session_id
     required_fields: [tool_name, session_id]
@@ -59,6 +69,7 @@ events:
   injection.recorded:
     fan_out:
       - topic: "onex.evt.omnicursor.injection-recorded.v1"
+        tier: telemetry
         description: "Injection tracking for A/B analysis"
     partition_key_field: session_id
     required_fields: [injection_id, session_id, cohort]

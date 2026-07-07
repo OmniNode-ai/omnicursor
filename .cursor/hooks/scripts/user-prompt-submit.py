@@ -11,7 +11,9 @@ the hook event, and returns ``{"continue": true}``.
 Session identity: the real ``sessionStart`` hook owns session initialization. This
 hook keeps a lightweight ``_init_session`` fallback for Cursor versions predating
 ``sessionStart`` (idempotent), plus per-prompt correlation + timestamp bookkeeping
-that stop-time aggregation reads.
+that stop-time aggregation reads. The same first-prompt gate doubles as the
+portable daemon-ensure fallback (``lib/daemon_ensure.py``) for surfaces where
+``sessionStart`` never fires.
 
 Node contract: ``node_cursor_prompt_orchestrator``. Stdlib only; always exits 0;
 never blocks Cursor.
@@ -40,6 +42,7 @@ from _common import (  # noqa: E402
 )
 from agent_scoring import HARD_FLOOR, score_agent  # noqa: E402
 from context_injection import agent_domain, fetch_patterns  # noqa: E402
+from daemon_ensure import ensure_daemon  # noqa: E402
 from emit_client import send_event  # noqa: E402
 from prompt_pattern_selection import MAX_PATTERNS, prompt_keyword_set  # noqa: E402
 
@@ -139,14 +142,19 @@ def _update_session_correlation(conversation_id: str, correlation_id: str) -> No
         pass
 
 
-def _init_session_fallback(conversation_id: str) -> None:
-    """Idempotent session-init fallback for Cursor versions predating sessionStart."""
+def _init_session_fallback(conversation_id: str) -> bool:
+    """Idempotent session-init fallback for Cursor versions predating sessionStart.
+
+    Returns True only when this call performed the one-time initialization
+    (i.e. this is the conversation's first prompt) — callers use it to gate
+    other once-per-conversation fallbacks, like the daemon-ensure.
+    """
     d = _session_dir(conversation_id)
     if not d:
-        return
+        return False
     flag = d / "session_initialized"
     if flag.exists():
-        return
+        return False
     try:
         flag.touch()
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -162,7 +170,8 @@ def _init_session_fallback(conversation_id: str) -> None:
             sessions_root=SESSIONS_DIR,
         )
     except OSError:
-        pass
+        return False
+    return True
 
 
 def _bump_session_prompt_timestamp(conversation_id: str) -> None:
@@ -192,9 +201,16 @@ def main() -> None:
         domain = agent_domain(agent_name)
 
         # Session bookkeeping (init fallback + correlation + timestamp).
-        _init_session_fallback(conversation_id)
+        first_prompt = _init_session_fallback(conversation_id)
         _bump_session_prompt_timestamp(conversation_id)
         _update_session_correlation(conversation_id, correlation_id)
+
+        # Portable daemon-ensure fallback for surfaces where sessionStart never
+        # fires (older Cursor builds, CLI): once per conversation, on the first
+        # prompt. Mirrors sessionStart's background-agent guard (§1a.4);
+        # ensure_daemon never blocks and degrades to a no-op.
+        if first_prompt and not data.get("is_background_agent", False):
+            ensure_daemon()
 
         # Relevant patterns are recorded for backend utilization scoring — NOT
         # injected here (Cursor cannot inject at beforeSubmitPrompt; that happens

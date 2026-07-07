@@ -7,7 +7,9 @@ do). Responsibilities:
 
   1. Initialize session state (~/.omnicursor/sessions/) so downstream hooks and
      stop-time aggregation have a coherent per-conversation record.
-  2. Best-effort daemon-ensure: ping the shared emit daemon and emit
+  2. Best-effort daemon-ensure: fast-ping the shared emit daemon and, when it
+     is not up, kick off a detached spawn (``lib/daemon_ensure.py`` — never
+     waited on, no-op without an omnimarket interpreter); then emit
      ``onex.evt.omnicursor.session-started.v1`` (non-blocking; no-op if absent).
   3. Inject session-level context via ``additional_context`` — baseline learned
      patterns, the standing delegation rule, a one-time handoff tip, and
@@ -46,7 +48,8 @@ from context_injection import (  # noqa: E402
     fetch_patterns,
     load_prior_session_summary,
 )
-from emit_client import daemon_available, send_event  # noqa: E402
+from daemon_ensure import ensure_daemon  # noqa: E402
+from emit_client import send_event  # noqa: E402
 from pattern_sync import sync_learned_patterns  # noqa: E402
 
 
@@ -88,10 +91,12 @@ def main() -> None:
         _init_session(conversation_id, now)
 
         # Best-effort daemon-ensure + pattern sync — local sessions only (§1a.4).
+        # ensure_daemon() fast-pings and, when the daemon is down, spawns it
+        # detached (never waited on); True means it answered the ping.
         daemon_up = False
         if not is_background_agent:
             try:
-                daemon_up = daemon_available()
+                daemon_up = ensure_daemon()
             except Exception:
                 daemon_up = False
             try:

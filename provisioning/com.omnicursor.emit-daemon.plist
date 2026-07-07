@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.dtd">
+<!--
+  OmniCursor shared emit daemon — launchd user agent (macOS).
+
+  OPTIONAL durability hardening: the hooks already self-provision the daemon
+  (sessionStart ensure, first-prompt fallback). Install this only if you want
+  the daemon up independently of Cursor sessions. See provisioning/README.md.
+
+  Before installing, replace the two placeholders:
+    __DAEMON_PYTHON__    absolute path to a python with omnimarket installed
+                         (same value you export as OMNICURSOR_DAEMON_PYTHON)
+    __OMNICURSOR_REPO__  absolute path to this repo checkout (for the registry)
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.omnicursor.emit-daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>mkdir -p "$HOME/.omnicursor/logs" "$HOME/.omnicursor/event-spool" &amp;&amp; exec __DAEMON_PYTHON__ -m omnimarket.nodes.node_emit_daemon start --socket-path "$HOME/.omnicursor/emit.sock" --pid-path "$HOME/.omnicursor/emit.pid" --kafka-bootstrap-servers "${KAFKA_BOOTSTRAP_SERVERS:-localhost:19092}" --spool-dir "$HOME/.omnicursor/event-spool" --event-registry "__OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml" --log-path "$HOME/.omnicursor/logs/emit-daemon.log"</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- The daemon exits immediately when another instance owns the pid file
+         (hook-spawned daemons win the race); throttle relaunch attempts. -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/com.omnicursor.emit-daemon.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/com.omnicursor.emit-daemon.stderr.log</string>
+</dict>
+</plist>

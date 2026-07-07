@@ -1,0 +1,34 @@
+# OmniCursor shared emit daemon — systemd user unit (Linux).
+#
+# OPTIONAL durability hardening: the hooks already self-provision the daemon
+# (sessionStart ensure, first-prompt fallback). Install this only if you want
+# the daemon up independently of Cursor sessions. See provisioning/README.md.
+#
+# Before installing, replace the two placeholders:
+#   __DAEMON_PYTHON__    absolute path to a python with omnimarket installed
+#                        (same value you export as OMNICURSOR_DAEMON_PYTHON)
+#   __OMNICURSOR_REPO__  absolute path to this repo checkout (for the registry)
+
+[Unit]
+Description=OmniCursor shared emit daemon (omnimarket node_emit_daemon)
+
+[Service]
+Type=exec
+# --kafka-bootstrap-servers is mandatory: without it the daemon runs
+# spool-only (ACKs events, forwards nothing to Kafka).
+Environment=KAFKA_BOOTSTRAP_SERVERS=localhost:19092
+ExecStartPre=/bin/sh -c 'mkdir -p "%h/.omnicursor/logs" "%h/.omnicursor/event-spool"'
+ExecStart=__DAEMON_PYTHON__ -m omnimarket.nodes.node_emit_daemon start \
+    --socket-path %h/.omnicursor/emit.sock \
+    --pid-path %h/.omnicursor/emit.pid \
+    --kafka-bootstrap-servers ${KAFKA_BOOTSTRAP_SERVERS} \
+    --spool-dir %h/.omnicursor/event-spool \
+    --event-registry __OMNICURSOR_REPO__/config/event_registry/omnicursor.yaml \
+    --log-path %h/.omnicursor/logs/emit-daemon.log
+# The daemon exits immediately when another instance owns the pid file
+# (hook-spawned daemons win the race); back off between relaunch attempts.
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

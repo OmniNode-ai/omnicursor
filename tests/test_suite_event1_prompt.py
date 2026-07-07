@@ -56,6 +56,7 @@ def fake_sessions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
     monkeypatch.setattr(_mod, "log_event", lambda _: None)
     monkeypatch.setattr(_mod, "send_event", lambda *a, **k: False)
+    monkeypatch.setattr(_mod, "ensure_daemon", lambda *a, **k: False)
     monkeypatch.setattr(_mod, "fetch_patterns", lambda *a, **k: [])
     return sessions
 
@@ -223,6 +224,62 @@ class TestSessionIdentity:
     ) -> None:
         _run_main(monkeypatch, {"prompt": "fix bug", "conversation_id": "init-001"})
         assert (fake_sessions / "init-001" / "session_initialized").exists()
+
+
+class TestDaemonEnsureFallback:
+    """Portable daemon-ensure fallback: once per conversation, first prompt only."""
+
+    def _run_with_tracking(
+        self, monkeypatch: pytest.MonkeyPatch, payload: Dict[str, Any]
+    ) -> List[bool]:
+        calls: List[bool] = []
+        monkeypatch.setattr(
+            _mod, "ensure_daemon", lambda *a, **k: calls.append(True) or False
+        )
+        _run_main(monkeypatch, payload)
+        return calls
+
+    def test_first_prompt_triggers_ensure(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = self._run_with_tracking(
+            monkeypatch, {"prompt": "fix bug", "conversation_id": "dae-001"}
+        )
+        assert len(calls) == 1
+
+    def test_second_prompt_skips_ensure(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _run_main(monkeypatch, {"prompt": "fix bug", "conversation_id": "dae-002"})
+        calls = self._run_with_tracking(
+            monkeypatch, {"prompt": "and now refactor", "conversation_id": "dae-002"}
+        )
+        assert calls == []
+
+    def test_background_agent_skips_ensure(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = self._run_with_tracking(
+            monkeypatch,
+            {
+                "prompt": "fix bug",
+                "conversation_id": "dae-003",
+                "is_background_agent": True,
+            },
+        )
+        assert calls == []
+
+    def test_ensure_failure_never_blocks_prompt(
+        self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _boom(*a: Any, **k: Any) -> bool:
+            raise RuntimeError("ensure exploded")
+
+        monkeypatch.setattr(_mod, "ensure_daemon", _boom)
+        out = _run_main(
+            monkeypatch, {"prompt": "fix bug", "conversation_id": "dae-004"}
+        )
+        assert json.loads(out) == {"continue": True}
 
 
 # ---------------------------------------------------------------------------

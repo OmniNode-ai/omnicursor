@@ -44,7 +44,7 @@ def hermetic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str,
     monkeypatch.setattr(_mod, "SESSIONS_DIR", sessions)
     monkeypatch.setattr(_mod, "ensure_dirs", lambda: None)
     monkeypatch.setattr(_mod, "log_event", lambda _: None)
-    monkeypatch.setattr(_mod, "daemon_available", lambda: True)
+    monkeypatch.setattr(_mod, "ensure_daemon", lambda *a, **k: True)
     monkeypatch.setattr(_mod, "sync_learned_patterns", lambda *a, **k: True)
     monkeypatch.setattr(_mod, "fetch_patterns", lambda *a, **k: [])
     monkeypatch.setattr(_mod, "load_prior_session_summary", lambda *a, **k: None)
@@ -140,7 +140,9 @@ class TestBackgroundAgentDegrade:
         monkeypatch.setattr(_mod, "send_event", lambda *a, **k: True)
 
         calls: List[str] = []
-        monkeypatch.setattr(_mod, "daemon_available", lambda: calls.append("daemon") or True)
+        monkeypatch.setattr(
+            _mod, "ensure_daemon", lambda *a, **k: calls.append("daemon") or True
+        )
         monkeypatch.setattr(
             _mod, "sync_learned_patterns", lambda *a, **k: calls.append("sync") or True
         )
@@ -148,3 +150,40 @@ class TestBackgroundAgentDegrade:
         out = _run(monkeypatch, {"conversation_id": "c1", "is_background_agent": True})
         assert calls == []  # neither daemon-ensure nor sync ran
         assert "additional_context" in out  # but injection still attempted
+
+
+class TestDaemonEnsureTrigger:
+    """sessionStart is the primary daemon-ensure trigger (Phase 1 A2)."""
+
+    def test_local_session_calls_ensure_daemon(
+        self, hermetic: list, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: List[str] = []
+        monkeypatch.setattr(
+            _mod, "ensure_daemon", lambda *a, **k: calls.append("ensure") or True
+        )
+        _run(monkeypatch, {"conversation_id": "c1", "session_id": "s1"})
+        assert calls == ["ensure"]
+
+    def test_ensure_result_logged_as_daemon_available(
+        self, hermetic: list, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        logged: List[Dict] = []
+        monkeypatch.setattr(_mod, "log_event", lambda e: logged.append(e))
+        monkeypatch.setattr(_mod, "ensure_daemon", lambda *a, **k: True)
+        _run(monkeypatch, {"conversation_id": "c1"})
+        assert logged and logged[0]["daemon_available"] is True
+
+    def test_ensure_exception_degrades_to_unavailable(
+        self, hermetic: list, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        logged: List[Dict] = []
+        monkeypatch.setattr(_mod, "log_event", lambda e: logged.append(e))
+
+        def _boom(*a: object, **k: object) -> bool:
+            raise RuntimeError("ensure exploded")
+
+        monkeypatch.setattr(_mod, "ensure_daemon", _boom)
+        out = _run(monkeypatch, {"conversation_id": "c1"})
+        assert logged and logged[0]["daemon_available"] is False
+        assert "additional_context" in out  # hook still completes + injects
