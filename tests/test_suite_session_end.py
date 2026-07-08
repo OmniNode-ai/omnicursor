@@ -91,3 +91,29 @@ class TestSessionEnd:
         monkeypatch.setattr(sys, "stdout", out)
         _mod.main()
         assert json.loads(out.getvalue()) == {}
+
+    def test_error_message_is_redacted_before_emit(
+        self, emitted: List[Tuple[str, Dict]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # error_message comes straight from hook input and often carries
+        # tokens/creds — it must pass through redact_secrets before emission
+        # (A5; CodeRabbit Major on PR #6).
+        _run(
+            monkeypatch,
+            {
+                "conversation_id": "c1",
+                "reason": "error",
+                "final_status": "failed",
+                "error_message": "login failed: password=supersecret123 retry later",
+            },
+        )
+        _, payload = emitted[0]
+        assert "supersecret123" not in payload["error_message"]
+        assert "***REDACTED***" in payload["error_message"]
+
+    def test_absent_error_message_emits_none(
+        self, emitted: List[Tuple[str, Dict]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _run(monkeypatch, {"conversation_id": "c1", "reason": "user_close"})
+        _, payload = emitted[0]
+        assert payload["error_message"] is None

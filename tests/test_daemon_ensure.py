@@ -237,6 +237,51 @@ class TestDegrade:
         assert _mod.ensure_daemon() is False
 
 
+class TestSpawnDedupe:
+    """The O_EXCL spawn stamp throttles detached launches (CodeRabbit, PR #6):
+    back-to-back hook invocations must not each spawn a wrapper while the
+    daemon is still coming up."""
+
+    def test_second_ensure_within_ttl_does_not_respawn(
+        self, hermetic: Dict[str, List[Any]]
+    ) -> None:
+        assert _mod.ensure_daemon() is False
+        assert _mod.ensure_daemon() is False
+        assert len(hermetic["popen"]) == 1  # fresh stamp deduped the 2nd spawn
+
+    def test_stale_stamp_allows_respawn(
+        self, hermetic: Dict[str, List[Any]], tmp_path: Path
+    ) -> None:
+        _mod.ensure_daemon()
+        stamp = tmp_path / ".omnicursor" / "emit-daemon.spawn.stamp"
+        assert stamp.exists()
+        old = time.time() - (_mod._SPAWN_STAMP_TTL_S + 5)
+        import os as _os
+
+        _os.utime(stamp, (old, old))
+        _mod.ensure_daemon()
+        assert len(hermetic["popen"]) == 2  # crashed/failed spawn can retry
+
+    def test_stamp_is_owner_only(
+        self, hermetic: Dict[str, List[Any]], tmp_path: Path
+    ) -> None:
+        _mod.ensure_daemon()
+        stamp = tmp_path / ".omnicursor" / "emit-daemon.spawn.stamp"
+        assert (stamp.stat().st_mode & 0o777) == 0o600
+
+    def test_unexpected_fs_error_fails_open(self, tmp_path: Path) -> None:
+        # A stamp path whose parent doesn't exist raises FileNotFoundError —
+        # the claim fails OPEN (spawn allowed): dedupe is an optimization,
+        # never an availability gate.
+        missing = tmp_path / "no-such-dir" / "stamp"
+        assert _mod._claim_spawn_stamp(missing) is True
+
+    def test_fresh_stamp_claim_returns_false(self, tmp_path: Path) -> None:
+        stamp = tmp_path / "stamp"
+        assert _mod._claim_spawn_stamp(stamp) is True  # first claim wins
+        assert _mod._claim_spawn_stamp(stamp) is False  # fresh stamp backs off
+
+
 class TestNonBlocking:
     def test_returns_fast_on_spawn_path(
         self, hermetic: Dict[str, List[Any]]

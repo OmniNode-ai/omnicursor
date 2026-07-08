@@ -29,6 +29,7 @@ from _common import (  # noqa: E402
     write_stdout,
 )
 from emit_client import send_event  # noqa: E402
+from redaction import redact_secrets  # noqa: E402
 
 
 def main() -> None:
@@ -74,7 +75,9 @@ def main() -> None:
                 "reason": reason,
                 "final_status": final_status,
                 "duration_ms": duration_ms,
-                "error_message": error_message or None,
+                # Error text often carries tokens/URL creds/stack detail —
+                # redact before it leaves the machine (A5).
+                "error_message": redact_secrets(error_message) if error_message else None,
                 "agent_source": "cursor",
             },
         )

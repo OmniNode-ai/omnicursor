@@ -40,6 +40,7 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -49,6 +50,10 @@ from emit_client import daemon_available, default_socket_path
 _PING_TIMEOUT_S = 0.1
 _DEFAULT_KAFKA_BOOTSTRAP = "localhost:19092"
 _REGISTRY_PATH: Path = REPO_ROOT / "config" / "event_registry" / "omnicursor.yaml"
+# Back-to-back hook invocations (sessionStart + first-prompt fallback) all see
+# the ping fail while a just-spawned daemon is still coming up; the spawn stamp
+# dedupes those launches. Kept short so a failed spawn retries quickly.
+_SPAWN_STAMP_TTL_S = 30.0
 
 
 def _daemon_python() -> Optional[str]:
@@ -117,6 +122,43 @@ def _ensure_daemon_dirs() -> None:
             pass
 
 
+def _claim_spawn_stamp(stamp: Optional[Path] = None) -> bool:
+    """Atomically claim the one-shot right to spawn (O_EXCL stamp, short TTL).
+
+    Near-simultaneous hook invocations would otherwise each launch a detached
+    wrapper before the socket comes up (the pid-file guard only lives in the
+    launchd/systemd templates). The first caller creates the stamp exclusively
+    and spawns; the rest back off while the stamp is fresh. A stale stamp
+    (> ``_SPAWN_STAMP_TTL_S``) is reclaimed so a crashed/failed spawn can be
+    retried. Best-effort: on unexpected FS errors the claim fails OPEN (spawn
+    allowed) — dedupe is an optimization, never an availability gate.
+    """
+    stamp = stamp if stamp is not None else OMNICURSOR_DIR / "emit-daemon.spawn.stamp"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    try:
+        os.close(os.open(stamp, flags, 0o600))
+        return True
+    except FileExistsError:
+        try:
+            if time.time() - stamp.stat().st_mtime <= _SPAWN_STAMP_TTL_S:
+                return False
+        except OSError:
+            return False  # lost a race with a concurrent reclaimer
+        # Stale stamp: reclaim via unlink + O_EXCL re-create — when two
+        # callers race here, exactly one create succeeds.
+        try:
+            stamp.unlink()
+        except OSError:
+            pass
+        try:
+            os.close(os.open(stamp, flags, 0o600))
+            return True
+        except OSError:
+            return False
+    except OSError:
+        return True
+
+
 def _spawn_detached(py: str) -> None:
     """Spawn ``import-check && exec daemon`` fully detached; never waited on.
 
@@ -160,6 +202,8 @@ def ensure_daemon(*, ping_timeout_s: float = _PING_TIMEOUT_S) -> bool:
         if not py or not _REGISTRY_PATH.exists():
             return False
         _ensure_daemon_dirs()
+        if not _claim_spawn_stamp():
+            return False  # a fresh stamp says another invocation just spawned
         _spawn_detached(py)
     except Exception:
         pass
