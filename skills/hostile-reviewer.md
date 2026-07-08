@@ -1,7 +1,6 @@
 ---
 name: "onex-hostile-reviewer"
-description: >-
-  ---
+description: "Adversarial multi-model code review with weighted-union finding aggregation; cannot rubber-stamp."
 disable-model-invocation: true
 ---
 

@@ -54,7 +54,7 @@ These need only the plugin symlink — no network, no Docker, no extra deps:
 |------------|---------------|---------|
 | **Linear ticketing** (Bucket 3 skills) | Linear MCP configured in `~/.cursor/mcp.json` | off |
 | **OmniMarket bridge / MCP tools** | `OMNIMARKET_ROOT` → local checkout; `pip install -e ".[mcp]"`; `gh` CLI for `run_ci_watch` | off |
-| **Option B** — HTTP pattern pull | `OMNICURSOR_PATTERN_SYNC_HTTP=1`, `OMNIINTELLIGENCE_URL`; running omniintelligence | **off** |
+| **Option B** — HTTP pattern pull | `OMNICURSOR_PATTERN_SYNC_HTTP=1`, `INTELLIGENCE_SERVICE_URL` (`OMNIINTELLIGENCE_URL` = deprecated fallback); running omniintelligence | **off** |
 | **Event emission** — bus events via the shared platform emit daemon | omnimarket `node_emit_daemon` owning `~/.omnicursor/emit.sock` (see ARCHITECTURE §8) | off |
 | **Local OmniNode stack** | `docker compose up -d` (Postgres, Redpanda, Valkey, intelligence; `--profile memory` adds Qdrant/Memgraph/Kreuzberg) | off |
 
@@ -95,8 +95,9 @@ plugin, but they shape any work in these areas.
    beforeSubmitPrompt, beforeShellExecution, afterFileEdit, postToolUse, stop, sessionEnd).
 4. **In-process node fields dropped.** Shell-guard soft-warn message and file-edit
    `tsc` findings are computed but not surfaced by the node output models.
-5. **Env var split.** `INTELLIGENCE_SERVICE_URL` (per-prompt fetch) vs
-   `OMNIINTELLIGENCE_URL` (session-end sync) — different consumers.
+5. **Env var split — resolved.** Both the per-prompt fetch and the session-end
+   sync now read `INTELLIGENCE_SERVICE_URL`; `OMNIINTELLIGENCE_URL` survives
+   only as a deprecated fallback in the sync path (one release).
 6. **`.env.omninode.example` ships `OMNICURSOR_PATTERN_SYNC_HTTP=1`** even though
    the documented default is off — copying it verbatim silently enables Option B.
 7. **Fallback name split.** `omnicursor-generalist` (library) vs

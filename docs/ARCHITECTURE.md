@@ -157,6 +157,16 @@ Seven Cursor lifecycle events are wired in `.cursor/hooks.json` to
   events via the shared daemon.
 - All hooks **fail open**: any exception degrades to allow / no-op so a hook can
   never crash Cursor.
+- **Kill-switch (A6):** `OMNICURSOR_HOOKS_DISABLE=1` **or** the file marker
+  `~/.omnicursor/hooks-disabled` short-circuits all 7 hooks first thing in
+  `main()` — before stdin, daemon-ensure, pattern fetch/sync, local logging,
+  emission, and injection writes. Disabled outputs are benign (`shell-guard` →
+  `{"permission": "allow"}` — a disabled guard never blocks; `user-prompt-submit`
+  → `{"continue": true}`; injection hooks → `{}`). `OMNICURSOR_HOOKS_MASK`
+  (comma-separated allowlist of hook short names, e.g. `"prompt,shell"`)
+  enables only the named hooks; unset = all on. Gate logic:
+  `lib/_common.py::hooks_disabled()/hook_enabled()` (mirrors omniclaude's
+  `_hooks_disabled`).
 
 ### Hook script layout
 
@@ -339,16 +349,17 @@ All networked tiers are **opt-in**; the plugin works fully offline.
 | Option | What | Gate |
 |--------|------|------|
 | **A** | Local pattern learning at `~/.omnicursor/learned_patterns.json` | Always on, offline |
-| **B** | HTTP pull from omniintelligence (`sync/pattern_sync.py`) | `OMNICURSOR_PATTERN_SYNC_HTTP` (**default off**), `OMNIINTELLIGENCE_URL` |
+| **B** | HTTP pull from omniintelligence (`sync/pattern_sync.py`) | `OMNICURSOR_PATTERN_SYNC_HTTP` (**default off**), `INTELLIGENCE_SERVICE_URL` |
 
 > Event emission onto the bus (via the shared platform emit daemon, §8) is a
 > separate opt-in tier — active only when the daemon owns `~/.omnicursor/emit.sock`.
 
-> The prompt hook *also* fetches patterns over HTTP at prompt-time using a
-> **different** variable, `INTELLIGENCE_SERVICE_URL` (with a local-cache
-> fallback). `INTELLIGENCE_SERVICE_URL` (per-prompt fetch) and
-> `OMNIINTELLIGENCE_URL` (session-end sync) are read by different code paths —
-> don't confuse them.
+> Both HTTP paths — the per-prompt fetch (`lib/context_injection.py`) and the
+> session-end sync (`sync/pattern_sync.py`) — are single-sourced on
+> `INTELLIGENCE_SERVICE_URL` (default `http://localhost:18091`). The old
+> `OMNIINTELLIGENCE_URL` name is still honored by the sync path as a
+> **deprecated fallback for one release** — migrate to
+> `INTELLIGENCE_SERVICE_URL`.
 
 ---
 

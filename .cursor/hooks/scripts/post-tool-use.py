@@ -25,6 +25,7 @@ sys.path.insert(0, str(_hooks / "lib"))
 sys.path.insert(0, str(_hooks.parent.parent / "src"))
 
 from _common import (  # noqa: E402
+    hook_enabled,
     log_event,
     read_session_context,
     read_stdin,
@@ -49,6 +50,12 @@ def _tool_file_path(tool_input: object) -> str:
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # pattern fetch, local log, emit, injection write).
+    if not hook_enabled("tool"):
+        write_additional_context("")
+        return
+
     _start = time.monotonic()
     context_block = ""
     try:

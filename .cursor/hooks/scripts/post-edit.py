@@ -17,6 +17,7 @@ sys.path.insert(0, str(_hooks / "lib"))
 sys.path.insert(0, str(_hooks.parent.parent / "src"))
 
 from _common import (  # noqa: E402
+    hook_enabled,
     log_event,
     read_session_context,
     read_stdin,
@@ -27,6 +28,12 @@ from omnicursor.file_edit import detect_language, handle_edit, run_ruff_check, r
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # diagnostics, local log, emit).
+    if not hook_enabled("edit"):
+        write_stdout({})
+        return
+
     _start = time.monotonic()
     try:
         data = read_stdin()

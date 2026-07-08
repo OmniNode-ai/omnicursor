@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -41,6 +42,91 @@ EVENTS_LOG: Path = OMNICURSOR_DIR / "events.jsonl"
 SESSIONS_DIR: Path = OMNICURSOR_DIR / "sessions"
 LEARNED_PATTERNS_FILE: Path = OMNICURSOR_DIR / "learned_patterns.json"
 SEED_PATTERNS_FILE: Path = HOOKS_DIR / "data" / "seed_patterns.json"
+
+
+# ---------------------------------------------------------------------------
+# Kill-switch + per-hook mask (A6)
+# ---------------------------------------------------------------------------
+
+# Canonical short names for the 7 hook scripts, as accepted by
+# OMNICURSOR_HOOKS_MASK. Aliases cover the script filename and Cursor's native
+# event name so operators don't have to remember which spelling wins.
+# (Vocabulary shipped as a default — ratify in PR review.)
+_HOOK_ALIASES: Dict[str, str] = {
+    # session-start.py (sessionStart)
+    "session-start": "session-start",
+    "sessionstart": "session-start",
+    "start": "session-start",
+    # user-prompt-submit.py (beforeSubmitPrompt)
+    "prompt": "prompt",
+    "user-prompt-submit": "prompt",
+    "beforesubmitprompt": "prompt",
+    # shell-guard.py (beforeShellExecution)
+    "shell": "shell",
+    "shell-guard": "shell",
+    "beforeshellexecution": "shell",
+    # post-edit.py (afterFileEdit)
+    "edit": "edit",
+    "post-edit": "edit",
+    "afterfileedit": "edit",
+    # post-tool-use.py (postToolUse)
+    "tool": "tool",
+    "post-tool-use": "tool",
+    "posttooluse": "tool",
+    # stop.py (stop)
+    "stop": "stop",
+    # session-end.py (sessionEnd)
+    "session-end": "session-end",
+    "sessionend": "session-end",
+    "end": "session-end",
+}
+
+
+def _normalize_hook_name(name: str) -> str:
+    token = name.strip().lower().replace("_", "-")
+    return _HOOK_ALIASES.get(token, token)
+
+
+def hooks_disabled() -> bool:
+    """Global kill-switch for every hook side effect (A6).
+
+    Returns True if either:
+    - env var OMNICURSOR_HOOKS_DISABLE=1, or
+    - file ~/.omnicursor/hooks-disabled exists.
+
+    Mirrors omniclaude's ``_hooks_disabled()`` (``hook_runtime/server.py``).
+    Kept a plain module function so all 7 hook scripts apply identical
+    semantics and the check stays cheap. ``Path.home()`` is resolved at call
+    time (not import time) so a sandboxed ``HOME`` (tests, smoke runs) is
+    honored.
+    """
+    if os.environ.get("OMNICURSOR_HOOKS_DISABLE") == "1":
+        return True
+    if (Path.home() / ".omnicursor" / "hooks-disabled").exists():
+        return True
+    return False
+
+
+def hook_enabled(hook_name: str) -> bool:
+    """Combined per-hook gate: global kill-switch + OMNICURSOR_HOOKS_MASK.
+
+    ``OMNICURSOR_HOOKS_MASK`` is a comma-separated allowlist of hook short
+    names (e.g. ``"prompt,shell"`` — see ``_HOOK_ALIASES`` for the accepted
+    spellings). Unset or blank means every hook is enabled; when set, only the
+    named hooks run and every other hook short-circuits to its benign output.
+    A deliberately simple env toggle — NOT coupled to ``EnumHookBit`` ordinals.
+
+    Each script calls this first thing in ``main()``, before reading stdin or
+    performing any side effect (daemon-ensure, pattern fetch, emit, injection
+    write, local log).
+    """
+    if hooks_disabled():
+        return False
+    mask = os.environ.get("OMNICURSOR_HOOKS_MASK")
+    if mask is None or not mask.strip():
+        return True
+    enabled = {_normalize_hook_name(t) for t in mask.split(",") if t.strip()}
+    return _normalize_hook_name(hook_name) in enabled
 
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,7 @@ from _common import (  # noqa: E402
     LEARNED_PATTERNS_FILE,
     SESSIONS_DIR,
     ensure_dirs,
+    hook_enabled,
     log_event,
     merge_session_json,
     read_stdin,
@@ -79,6 +80,14 @@ def _init_session(conversation_id: str, started_at: str) -> None:
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # session-state writes, daemon-ensure, pattern sync/fetch, local log, emit,
+    # injection). Distinct from the is_background_agent guard below, which only
+    # scopes daemon-ensure/pattern-sync to local sessions.
+    if not hook_enabled("session-start"):
+        write_additional_context("")
+        return
+
     _start = time.monotonic()
     context_block = ""
     try:

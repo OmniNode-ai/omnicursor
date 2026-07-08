@@ -36,7 +36,9 @@ def test_run_uses_default_base_url_port_18091(tmp_path: Path) -> None:
     ):
         assert run(target, timeout_s=1.0) is True
 
-    assert captured["url"] == "http://127.0.0.1:18091/api/v1/patterns"
+    # Default host spelling is single-sourced with the hooks' per-prompt fetch
+    # (lib/context_injection.py) — localhost, not 127.0.0.1.
+    assert captured["url"] == "http://localhost:18091/api/v1/patterns"
 
 
 def test_run_writes_list_response(tmp_path: Path) -> None:
@@ -237,9 +239,10 @@ class TestPatternSyncDefensive:
             assert run(target, base_url="http://x", timeout_s=1.0) is False
         assert json.loads(target.read_text()) == original
 
-    def test_env_omniintelligence_url_takes_precedence(
+    def test_env_intelligence_service_url_takes_precedence(
         self, tmp_path: Path, monkeypatch: mock.MagicMock
     ) -> None:
+        """INTELLIGENCE_SERVICE_URL (the hooks' var) wins over the deprecated name."""
         target = tmp_path / "out.json"
         captured: list[str] = []
 
@@ -247,6 +250,24 @@ class TestPatternSyncDefensive:
             captured.append(req.full_url)
             return _Resp(b"[]")
 
+        monkeypatch.setenv("INTELLIGENCE_SERVICE_URL", "http://primary-host:1111")
+        monkeypatch.setenv("OMNIINTELLIGENCE_URL", "http://legacy-host:9999")
+        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+            run(target, timeout_s=1.0)
+        assert all("primary-host:1111" in u for u in captured)
+
+    def test_env_omniintelligence_url_deprecated_fallback(
+        self, tmp_path: Path, monkeypatch: mock.MagicMock
+    ) -> None:
+        """The old OMNIINTELLIGENCE_URL still works (deprecated, one release)."""
+        target = tmp_path / "out.json"
+        captured: list[str] = []
+
+        def _capture(req: urllib.request.Request, **_kw: object) -> "_Resp":
+            captured.append(req.full_url)
+            return _Resp(b"[]")
+
+        monkeypatch.delenv("INTELLIGENCE_SERVICE_URL", raising=False)
         monkeypatch.setenv("OMNIINTELLIGENCE_URL", "http://custom-host:9999")
         with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
             run(target, timeout_s=1.0)
@@ -262,6 +283,7 @@ class TestPatternSyncDefensive:
             captured.append(req.full_url)
             return _Resp(b"[]")
 
+        monkeypatch.delenv("INTELLIGENCE_SERVICE_URL", raising=False)
         monkeypatch.delenv("OMNIINTELLIGENCE_URL", raising=False)
         with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
             run(target, timeout_s=1.0)

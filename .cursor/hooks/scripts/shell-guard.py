@@ -22,6 +22,7 @@ sys.path.insert(0, str(_hooks.parent.parent / "src"))
 
 from _common import (  # noqa: E402
     SESSIONS_DIR,
+    hook_enabled,
     log_event,
     read_session_context,
     read_stdin,
@@ -45,6 +46,14 @@ def guard_command(command: str, *, conversation_id: str = "", sessions_root=None
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # guard evaluation, local log, emit). A disabled guard fails OPEN (allow),
+    # matching the except fallback below: the kill-switch turns off side
+    # effects, it must never block the user.
+    if not hook_enabled("shell"):
+        write_stdout({"permission": "allow"})
+        return
+
     _start = time.monotonic()
     try:
         data = read_stdin()

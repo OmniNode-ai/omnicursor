@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from _common import (  # noqa: E402
     SESSIONS_DIR,
     ensure_dirs,
+    hook_enabled,
     load_agent_configs,
     log_event,
     merge_session_json,
@@ -194,6 +195,13 @@ def _bump_session_prompt_timestamp(conversation_id: str) -> None:
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # session bookkeeping, daemon-ensure fallback, pattern fetch, local log,
+    # emits). Never blocks the user: the prompt proceeds untouched.
+    if not hook_enabled("prompt"):
+        write_stdout({"continue": True})
+        return
+
     _start = time.monotonic()
     correlation_id = _generate_correlation_id()
 

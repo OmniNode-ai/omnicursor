@@ -134,7 +134,14 @@ def test_all_skills_cursor_frontmatter_onex_namespace() -> None:
         assert fm is not None and isinstance(fm, dict), path
         name = fm.get("name")
         assert name == f"onex-{path.stem}", f"name mismatch in {path}: {name!r}"
-        assert fm.get("description"), f"missing description in {path}"
+        description = fm.get("description")
+        assert description, f"missing description in {path}"
+        # A truthy-but-degenerate value like "---" (a folded scalar swallowing
+        # the frontmatter terminator — the historical hostile-reviewer bug)
+        # must not pass as a real description.
+        assert isinstance(description, str) and len(description.strip("- \n")) >= 10, (
+            f"degenerate description in {path}: {description!r}"
+        )
         assert fm.get("disable-model-invocation") is True, path
 
 

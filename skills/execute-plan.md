@@ -2,6 +2,8 @@
 name: "onex-execute-plan"
 description: >-
   Autonomous implementation pipeline. Reads a plan file, reviews it adversarially,
+  creates Linear tickets, then runs the full ticket pipeline (implement, PR, CI,
+  merge) for each ticket via the Omnimarket bridge.
 disable-model-invocation: true
 ---
 

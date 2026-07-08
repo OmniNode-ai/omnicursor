@@ -24,6 +24,7 @@ from _common import (
     LEARNED_PATTERNS_FILE,
     SESSIONS_DIR,
     ensure_dirs,
+    hook_enabled,
     log_event,
     read_session_context,
     read_session_json,
@@ -185,6 +186,13 @@ def _write_session_summary(conversation_id: str, summary: Dict[str, Any]) -> Non
 
 
 def main() -> None:
+    # A6 kill-switch/mask — short-circuit before ANY side effect (stdin read,
+    # aggregation, summary/recap/outbox/learned_patterns writes, local log,
+    # emits).
+    if not hook_enabled("stop"):
+        write_stdout({})
+        return
+
     _start = time.monotonic()
     try:
         data = read_stdin()

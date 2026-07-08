@@ -17,10 +17,14 @@ from typing import Any, Optional
 
 
 def _base_url(override: Optional[str]) -> str:
+    # Single-sourced on INTELLIGENCE_SERVICE_URL — the same env var the hooks
+    # read (lib/context_injection.py). OMNIINTELLIGENCE_URL is a deprecated
+    # fallback kept for one release.
     return (
         override
+        or os.environ.get("INTELLIGENCE_SERVICE_URL")
         or os.environ.get("OMNIINTELLIGENCE_URL")
-        or "http://127.0.0.1:18091"
+        or "http://localhost:18091"
     ).rstrip("/")
 
 

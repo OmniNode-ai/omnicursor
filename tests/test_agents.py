@@ -160,3 +160,23 @@ def test_get_agent_context_handoff_recommends_handoff_skill() -> None:
     ctx = get_agent_context("handoff")
     assert ctx.agent_name == "handoff-guide"
     assert ctx.recommended_skill == "onex-handoff"
+
+
+def test_pr_review_and_address_pr_comments_categories_disambiguated() -> None:
+    """A9 residual: both configs shipped `"category": "review"` — pinned apart.
+
+    Deliberately NOT a global category-uniqueness guard (whether categories
+    must be unique across .cursor/agents/ is a review-time decision; a CI
+    uniqueness gate is Phase-2 A10.7 scope).
+    """
+    import json
+    from pathlib import Path
+
+    agents_dir = Path(__file__).resolve().parents[1] / ".cursor" / "agents"
+    pr_review = json.loads((agents_dir / "pr-review.json").read_text(encoding="utf-8"))
+    address = json.loads(
+        (agents_dir / "address-pr-comments.json").read_text(encoding="utf-8")
+    )
+    assert pr_review["category"] == "review"
+    assert address["category"] == "review-response"
+    assert pr_review["category"] != address["category"]
