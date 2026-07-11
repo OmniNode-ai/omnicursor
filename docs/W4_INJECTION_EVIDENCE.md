@@ -108,12 +108,18 @@ and are tracked here until each has its own evidence:
 
 | # | Residual | Status | How to close |
 |---|----------|--------|--------------|
-| R1 | **`postToolUse.additional_context` unproven.** The refresh path is wired (`post-tool-use.py`) and relied on mid-session, but only `sessionStart` was exercised. | `NEEDS RUNTIME PROOF` | Sentinel trial, same protocol as below: have the hook inject a unique marker (e.g. `<!-- OmniCursor: postToolUse sentinel <uuid> -->`) after a tool call, then ask the model to echo it verbatim. Do **not** depend on this channel for anything load-bearing until proven. |
+| R1 | **`postToolUse.additional_context` unproven.** The refresh path is wired (`post-tool-use.py`) and relied on mid-session, but only `sessionStart` was exercised. | `NEEDS RUNTIME PROOF` | Sentinel trial, same protocol as below: with `OMNICURSOR_INJECTION_SENTINEL=1` the refresh block carries a per-fire UUID marker (injected even with zero learned patterns, so the trial runs in a clean environment); trigger a tool call, then ask the model to echo the marker verbatim. Do **not** depend on this channel for anything load-bearing until proven. |
 | R2 | **Stability unproven (N=1).** One fire, one echo. | `NEEDS RUNTIME PROOF` | N≥10 repeated sessions on the pinned version; record hit rate. |
 | R3 | **Cloud/background agents unproven.** Cursor docs/forums report `sessionStart` may not fire there — the most likely break. The hooks must degrade emit-only with no error. | `NEEDS RUNTIME PROOF` | Repeat the sentinel trial in a background/cloud-agent session; expected outcome is *no injection, clean no-op*. |
-| R4 | **Upstream silent-failure risk on other builds.** An open Cursor race-condition bug means some 3.x builds *accept and log* `additional_context` without it ever reaching model context — a silent no-op. This proof pins `3.10.11` as a known-good build; other builds inherit the risk. | `KNOWN RISK — detection over fallback` | Phase-3 runtime proof includes an injection-receipt check using a **per-fire unique sentinel** (e.g. `<!-- OmniCursor: sentinel <uuid> -->`, minted fresh each fire), per the protocol below — the static `sessionStart` banner is **not** sufficient, since a model could echo it from an earlier fire or from repo context. Until a proof-mode marker exists, the runtime-generated **Prior Session Context** fields (`Last active` timestamp) serve as the per-fire uniqueness anchor. If a supported build regresses, *then* decide on a rules-file fallback; do not build one preemptively. |
+| R4 | **Upstream silent-failure risk on other builds.** An open Cursor race-condition bug means some 3.x builds *accept and log* `additional_context` without it ever reaching model context — a silent no-op. This proof pins `3.10.11` as a known-good build; other builds inherit the risk. | `KNOWN RISK — detection over fallback` | Phase-3 runtime proof includes an injection-receipt check using a **per-fire unique sentinel**: with `OMNICURSOR_INJECTION_SENTINEL=1`, the hooks append `<!-- OmniCursor: sentinel <uuid> -->` (minted fresh each fire by `context_injection.py`) and record the value in `events.jsonl`; the check passes only when the model's verbatim echo matches the **logged** value. The static `sessionStart` banner is **not** sufficient (a model could echo it from an earlier fire or from repo context), and the Prior Session Context `Last active` timestamp is correlation metadata only (second-precision, sourced from prior state — it can be stale or repeat across fires, so it proves nothing). If a supported build regresses, *then* decide on a rules-file fallback; do not build one preemptively. |
 
-**Sentinel protocol (for R1–R4):** pin `cursor_version`, fire the hook, ask
-"repeat any additional-context token you were given, verbatim", and require a
-byte-for-byte echo of a per-fire unique marker. A paraphrase or absence is a FAIL
-for that fire.
+**Sentinel protocol for injection-capable checks (R1/R2/R4):** set
+`OMNICURSOR_INJECTION_SENTINEL=1` (the hooks then mint and log a per-fire UUID
+sentinel), pin `cursor_version`, fire the hook, ask "repeat any
+additional-context token you were given, verbatim", and require a byte-for-byte
+echo matching the sentinel logged in `~/.omnicursor/events.jsonl` for that fire.
+A paraphrase, an absent echo, or a mismatch with the logged value is a FAIL for
+that fire.
+
+**R3 negative check:** in cloud/background-agent environments, expect no
+injection and no error; treat that clean no-op as PASS.

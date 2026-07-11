@@ -231,3 +231,56 @@ class TestPatternTextSanitization:
             patterns=[{"pattern_id": 42, "description": ["not", "a", "string"]}]
         )
         assert "Learned Patterns" in out
+
+
+class TestProofSentinel:
+    """OMNICURSOR_INJECTION_SENTINEL=1 mints a per-fire UUID receipt token
+    (W4_INJECTION_EVIDENCE.md R1/R2/R4); off by default."""
+
+    def test_off_by_default_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OMNICURSOR_INJECTION_SENTINEL", raising=False)
+        out = _ci.build_session_context(patterns=[])
+        assert "OmniCursor: sentinel" not in out
+
+    def test_off_by_default_refresh_stays_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OMNICURSOR_INJECTION_SENTINEL", raising=False)
+        assert _ci.build_refresh_context(patterns=[], domain="python") == ""
+
+    def test_session_sentinel_minted_and_logged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import uuid as _uuid
+
+        logged: List[Dict[str, Any]] = []
+        monkeypatch.setenv("OMNICURSOR_INJECTION_SENTINEL", "1")
+        monkeypatch.setattr(_ci, "log_event", lambda e: logged.append(e))
+        out = _ci.build_session_context(patterns=[])
+        line = next(li for li in out.splitlines() if "OmniCursor: sentinel" in li)
+        token = line.split("sentinel ", 1)[1].split(" ")[0]
+        _uuid.UUID(token)  # must be a full, parseable UUID
+        assert logged and logged[0]["hook_event"] == "injection_sentinel_minted"
+        assert logged[0]["channel"] == "sessionStart"
+        # The receipt check compares the echo against the LOGGED value.
+        assert logged[0]["sentinel"] == token
+
+    def test_refresh_sentinel_even_with_no_patterns(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        logged: List[Dict[str, Any]] = []
+        monkeypatch.setenv("OMNICURSOR_INJECTION_SENTINEL", "1")
+        monkeypatch.setattr(_ci, "log_event", lambda e: logged.append(e))
+        out = _ci.build_refresh_context(patterns=[], domain="python")
+        assert "OmniCursor: sentinel" in out
+        assert logged[0]["channel"] == "postToolUse"
+
+    def test_unique_per_fire(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OMNICURSOR_INJECTION_SENTINEL", "1")
+        monkeypatch.setattr(_ci, "log_event", lambda e: None)
+        a = _ci.build_session_context(patterns=[])
+        b = _ci.build_session_context(patterns=[])
+        tok = lambda s: next(  # noqa: E731
+            li for li in s.splitlines() if "OmniCursor: sentinel" in li
+        )
+        assert tok(a) != tok(b)
