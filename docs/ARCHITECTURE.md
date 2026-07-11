@@ -311,8 +311,9 @@ hook ──send_event({event_type, payload})──▶ emit.sock ──▶ shared
                                                             (omnimarket node_emit_daemon)
 ```
 
-- **Best-effort, non-blocking:** if the socket is missing or the daemon is absent,
-  `send_event` returns `False` and the hook continues — emission never blocks Cursor.
+- **Best-effort, timeout-bound:** if the socket is missing or the daemon is absent,
+  `send_event` returns `False` and the hook continues — emission is soft-fail only,
+  waiting at most `OMNICURSOR_EMIT_TIMEOUT` (default 0.5s) on a live socket.
 - **No bespoke stack:** there is no Cursor-owned sidecar/drainer/publisher. The wire
   protocol (`{"event_type", "payload"}\n` → `{"status": "queued", "event_id"}\n`) is
   the shared OmniClaude/omnimarket daemon protocol, so OmniCursor inherits whatever
