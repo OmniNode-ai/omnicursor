@@ -15,7 +15,7 @@ versus *what is opt-in or aspirational*, read [`CURRENT_STATE.md`](./CURRENT_STA
 
 ## 1. The big picture
 
-```
+```text
                         Cursor IDE (user prompt, shell, file edits, stop)
                                           │
         ┌─────────────────────────────────┴─────────────────────────────────┐
@@ -223,7 +223,7 @@ flat "max of all four":
 
 OmniCursor closes a feedback loop between routing and session outcomes:
 
-```
+```text
 sessionStart / postToolUse             prompt hook               stop hook
 ──────────────────────────             ───────────               ─────────
 inject relevance-ranked patterns       classify prompt →         derive outcome (4-gate)
@@ -306,7 +306,7 @@ daemon** (omnimarket `node_emit_daemon` — the same daemon OmniClaude uses), wh
 is responsible for queueing, spooling, and publishing to Kafka. The hook stays
 stdlib-only and never talks to Kafka itself.
 
-```
+```text
 hook ──send_event({event_type, payload})──▶ emit.sock ──▶ shared emit daemon ──▶ Kafka
                                                             (omnimarket node_emit_daemon)
 ```

@@ -48,7 +48,7 @@ point at these paths:
 
 **Recommended (not yet referenced anywhere)** — proposed to close documentation gaps:
 
-- `dev/EVENT_PIPELINE.md` — `events.jsonl` vs `outbox.jsonl` vs `emit.sock`, shared platform emit daemon
+- `dev/EVENT_EMISSION.md` — `events.jsonl` vs `outbox.jsonl` vs `emit.sock`, shared platform emit daemon
 - `dev/PATTERN_LEARNING_LOOP.md` — the end-to-end learning loop
 - `dev/ENVIRONMENT_VARIABLES.md` — single env-var reference matrix
 - `dev/STATE_FILES.md` — the `~/.omnicursor/` on-disk contract
