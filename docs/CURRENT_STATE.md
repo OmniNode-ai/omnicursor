@@ -116,12 +116,22 @@ plugin, but they shape any work in these areas.
   and exercise each lifecycle event; (c) the routing eval gate
   (`test_routing_eval.py`) + manual human-graded prompts/rubrics under
   `tests/prompts/` and `tests/rubrics/`.
-- **CI** (`.github/workflows/ci.yml`): runs **only on pull requests to `main`**
-  (no push trigger). Steps: `ruff check src/ tests/ .cursor/hooks/`,
-  `pytest tests/ -v`, and an inline skill-coverage **substring** check.
+- **CI** (`.github/workflows/ci.yml`): runs on **pull requests to `main` and
+  pushes to `main`** (A10.7). Jobs — all secret-free/fork-safe: `lint-and-test`
+  (ruff check + `ruff format --check` + pytest + skill-coverage substring
+  check), `typecheck` (mypy over `src/`), `plugin-gates` (`scripts/ci/`:
+  manifest/MCP wiring, skill/agent frontmatter + dual-location parity +
+  category uniqueness, hardcoded-topic-literal guard over `.cursor/hooks/`,
+  hook stdlib-only imports, shellcheck), `security` (bandit; detect-secrets
+  vs the audited `.secrets.baseline`), `links` (offline lychee over
+  README/CHANGELOG/docs), `sibling-drift` (checks out public
+  `omnimarket`/`omnibase_core` so the registry/canonical-event drift tests
+  run instead of skipping), and the `ci-summary` aggregate for branch
+  protection.
 - **Pre-commit** (`.githooks/pre-commit`, enable with
-  `git config core.hooksPath .githooks`): mirrors the same three checks locally.
-  Bypass only with `git commit --no-verify`.
+  `git config core.hooksPath .githooks`): mirrors the fast local subset —
+  ruff check + format, pytest, skill coverage, and the four `scripts/ci/`
+  plugin gates. Bypass only with `git commit --no-verify`.
 - The **strict** skill-coverage gate is `tests/test_compliance.py` /
   `tests/test_skills.py` (exact 17-key sets), not the looser CI substring snippet.
 

@@ -60,12 +60,16 @@ class TestWriteSessionOutcome:
     def test_each_line_independently_parseable(self, tmp_path: Path) -> None:
         outbox = tmp_path / "outbox.jsonl"
         for i in range(5):
-            write_session_outcome(_payload(conversation_id=f"conv-{i}"), outbox_path=outbox)
+            write_session_outcome(
+                _payload(conversation_id=f"conv-{i}"), outbox_path=outbox
+            )
         for line in outbox.read_text().splitlines():
             data = json.loads(line)
             assert "conversation_id" in data
 
-    def test_env_override_respected(self, tmp_path: Path, monkeypatch: mock.MagicMock) -> None:
+    def test_env_override_respected(
+        self, tmp_path: Path, monkeypatch: mock.MagicMock
+    ) -> None:
         outbox = tmp_path / "custom_outbox.jsonl"
         monkeypatch.setenv("OMNICURSOR_OUTBOX_FILE", str(outbox))
         write_session_outcome(_payload())
@@ -105,7 +109,12 @@ class TestWriteSessionOutcome:
     def test_all_outcome_types_written(self, tmp_path: Path) -> None:
         for outcome in ("success", "failed", "abandoned", "unknown"):
             outbox = tmp_path / f"{outcome}.jsonl"
-            assert write_session_outcome(_payload(session_outcome=outcome), outbox_path=outbox) is True
+            assert (
+                write_session_outcome(
+                    _payload(session_outcome=outcome), outbox_path=outbox
+                )
+                is True
+            )
             data = json.loads(outbox.read_text().strip())
             assert data["session_outcome"] == outcome
 

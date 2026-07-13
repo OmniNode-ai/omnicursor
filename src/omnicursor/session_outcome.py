@@ -35,7 +35,7 @@ def _has_error_markers(text: str) -> bool:
             return True
     for match in _FAILED_EOL_RE.finditer(text):
         line_start = text.rfind("\n", 0, match.start()) + 1
-        line = text[line_start:match.end()]
+        line = text[line_start : match.end()]
         if not _ZERO_COUNT_PREFIX_RE.search(line):
             return True
     return False
@@ -100,8 +100,7 @@ def derive_session_outcome(
     duration = _compute_duration(events)
 
     work_done = sum(
-        1 for e in events
-        if e.get("event") in {"file_edited", "prompt_classified"}
+        1 for e in events if e.get("event") in {"file_edited", "prompt_classified"}
     )
 
     if exit_failed or has_errors:
@@ -116,7 +115,8 @@ def derive_session_outcome(
         return (
             "success",
             "Session completed with {} work event{} and completion markers".format(
-                work_done, "s" if work_done != 1 else "",
+                work_done,
+                "s" if work_done != 1 else "",
             ),
         )
 

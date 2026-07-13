@@ -44,8 +44,12 @@ Runs the same checks as CI, in order:
    an entry in `src/omnicursor/compliance.py`.
 
 Emergency bypass only: `git commit --no-verify`. CI (`.github/workflows/ci.yml`) runs the
-identical checks on Python 3.12 and triggers **only on pull requests to `main`** (no push
-trigger) — rely on the local gate before opening a PR.
+same checks on Python 3.12 — plus mypy, bandit, detect-secrets (baseline compare), offline
+link check, the A10.7 plugin gates (`scripts/ci/`: manifest/MCP, frontmatter+category,
+topic-literal, hook stdlib-only), shellcheck, and a sibling-drift job that checks out the
+public `omnimarket`/`omnibase_core` repos so the registry/canonical-event tests actually
+run — on **pull requests to `main` and pushes to `main`**. Branch protection should
+require the aggregate `ci-summary` job.
 
 ## Architecture (overview — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for depth)
 

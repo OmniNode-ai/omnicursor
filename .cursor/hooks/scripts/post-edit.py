@@ -24,7 +24,12 @@ from _common import (  # noqa: E402
     write_stdout,
 )
 from emit_client import send_event  # noqa: E402
-from omnicursor.file_edit import detect_language, handle_edit, run_ruff_check, run_tsc_check  # noqa: E402, F401
+from omnicursor.file_edit import (  # noqa: E402
+    detect_language,  # noqa: F401
+    handle_edit,
+    run_ruff_check,  # noqa: F401
+    run_tsc_check,  # noqa: F401
+)
 
 
 def main() -> None:
@@ -44,11 +49,13 @@ def main() -> None:
         result = handle_edit(data)
         hook_ms = int((time.monotonic() - _start) * 1000)
 
-        log_event({
-            **result,
-            "correlation_id": correlation_id,
-            "hook_duration_ms": hook_ms,
-        })
+        log_event(
+            {
+                **result,
+                "correlation_id": correlation_id,
+                "hook_duration_ms": hook_ms,
+            }
+        )
 
         send_event(
             "tool.executed",

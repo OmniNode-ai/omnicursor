@@ -55,11 +55,26 @@ from prompt_pattern_selection import MAX_PATTERNS, prompt_keyword_set  # noqa: E
 from redaction import redact_secrets, sanitize_preview  # noqa: E402
 
 # Verbs that suggest multi-deliverable, multi-step work.
-_COMPLEX_VERBS = frozenset({
-    "refactor", "migrate", "implement", "build", "create", "rewrite",
-    "redesign", "architect", "integrate", "upgrade", "convert", "extract",
-    "restructure", "overhaul", "deploy", "automate",
-})
+_COMPLEX_VERBS = frozenset(
+    {
+        "refactor",
+        "migrate",
+        "implement",
+        "build",
+        "create",
+        "rewrite",
+        "redesign",
+        "architect",
+        "integrate",
+        "upgrade",
+        "convert",
+        "extract",
+        "restructure",
+        "overhaul",
+        "deploy",
+        "automate",
+    }
+)
 
 # Connective words that signal multiple sequential steps.
 _MULTI_STEP_RE = re.compile(
@@ -186,7 +201,9 @@ def _bump_session_prompt_timestamp(conversation_id: str) -> None:
     if not conversation_id:
         return
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    merge_session_json(conversation_id, {"last_prompt_at": now}, sessions_root=SESSIONS_DIR)
+    merge_session_json(
+        conversation_id, {"last_prompt_at": now}, sessions_root=SESSIONS_DIR
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -241,20 +258,22 @@ def main() -> None:
         delegation_required = _estimate_complexity(prompt)
         hook_ms = int((time.monotonic() - _start) * 1000)
 
-        log_event({
-            "event": "prompt_classified",
-            "conversation_id": conversation_id,
-            "correlation_id": correlation_id,
-            "generation_id": generation_id,
-            "matched_agent": agent_name,
-            "score": round(score, 4),
-            "reason": reason,
-            "patterns_injected": len(relevant_pattern_ids),
-            "injected_pattern_ids": relevant_pattern_ids,
-            "delegation_required": delegation_required,
-            "prompt_snippet": sanitize_preview(prompt),
-            "hook_duration_ms": hook_ms,
-        })
+        log_event(
+            {
+                "event": "prompt_classified",
+                "conversation_id": conversation_id,
+                "correlation_id": correlation_id,
+                "generation_id": generation_id,
+                "matched_agent": agent_name,
+                "score": round(score, 4),
+                "reason": reason,
+                "patterns_injected": len(relevant_pattern_ids),
+                "injected_pattern_ids": relevant_pattern_ids,
+                "delegation_required": delegation_required,
+                "prompt_snippet": sanitize_preview(prompt),
+                "hook_duration_ms": hook_ms,
+            }
+        )
 
         # Full canonical event (redacted prompt inside payload) -> restricted
         # cmd topic. delegation_required rides inside payload — there is no

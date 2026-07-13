@@ -172,7 +172,10 @@ def _write_session_summary(conversation_id: str, summary: Dict[str, Any]) -> Non
     try:
         ensure_dirs()
         path = SESSIONS_DIR / f"{conversation_id}.json"
-        merged = {**read_session_json(conversation_id, sessions_root=SESSIONS_DIR), **summary}
+        merged = {
+            **read_session_json(conversation_id, sessions_root=SESSIONS_DIR),
+            **summary,
+        }
         with path.open("w", encoding="utf-8") as f:
             json.dump(merged, f, indent=2, ensure_ascii=False)
             f.write("\n")
@@ -219,17 +222,19 @@ def main() -> None:
             else []
         )
 
-        log_event({
-            "event": "session_stopped",
-            "conversation_id": conversation_id,
-            "correlation_id": correlation_id,
-            "session_status": status,
-            "session_outcome": summary["session_outcome"],
-            "session_outcome_reason": summary["session_outcome_reason"],
-            "hook_duration_ms": hook_ms,
-            "injected_pattern_ids": injected_for_log,
-            "summary": summary,
-        })
+        log_event(
+            {
+                "event": "session_stopped",
+                "conversation_id": conversation_id,
+                "correlation_id": correlation_id,
+                "session_status": status,
+                "session_outcome": summary["session_outcome"],
+                "session_outcome_reason": summary["session_outcome_reason"],
+                "hook_duration_ms": hook_ms,
+                "injected_pattern_ids": injected_for_log,
+                "summary": summary,
+            }
+        )
 
         if conversation_id:
             _write_session_summary(conversation_id, summary)

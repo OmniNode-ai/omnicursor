@@ -77,7 +77,9 @@ def main() -> None:
                 "duration_ms": duration_ms,
                 # Error text often carries tokens/URL creds/stack detail —
                 # redact before it leaves the machine (A5).
-                "error_message": redact_secrets(error_message) if error_message else None,
+                "error_message": redact_secrets(error_message)
+                if error_message
+                else None,
                 "agent_source": "cursor",
             },
         )

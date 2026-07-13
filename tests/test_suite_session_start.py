@@ -50,7 +50,9 @@ def hermetic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str,
     monkeypatch.setattr(_mod, "load_prior_session_summary", lambda *a, **k: None)
     emitted: List[Tuple[str, Dict]] = []
     monkeypatch.setattr(
-        _mod, "send_event", lambda topic, payload: emitted.append((topic, payload)) or True
+        _mod,
+        "send_event",
+        lambda topic, payload: emitted.append((topic, payload)) or True,
     )
     return emitted
 
@@ -64,7 +66,9 @@ def _run(monkeypatch: pytest.MonkeyPatch, payload: Dict[str, Any]) -> Dict[str, 
 
 
 class TestInitSession:
-    def test_writes_current_json(self, hermetic: list, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_writes_current_json(
+        self, hermetic: list, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         _mod._init_session("conv-1", "2026-07-01T00:00:00+00:00")
         current = _mod.SESSIONS_DIR / "current.json"
         data = json.loads(current.read_text())
@@ -93,7 +97,9 @@ class TestMainInjection:
         self, hermetic: list, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
-            _mod, "fetch_patterns", lambda *a, **k: [{"pattern_id": "p1", "description": "DI"}]
+            _mod,
+            "fetch_patterns",
+            lambda *a, **k: [{"pattern_id": "p1", "description": "DI"}],
         )
         out = _run(monkeypatch, {"conversation_id": "c1"})
         assert "p1" in out["additional_context"]
@@ -102,7 +108,8 @@ class TestMainInjection:
         self, hermetic: list, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
-            _mod, "load_prior_session_summary",
+            _mod,
+            "load_prior_session_summary",
             lambda *a, **k: {"session_outcome": "success", "files_edited": 3},
         )
         out = _run(monkeypatch, {"conversation_id": "c1"})

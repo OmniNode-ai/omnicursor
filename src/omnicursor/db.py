@@ -17,4 +17,3 @@ class InMemoryDatabase:
 
     def healthcheck(self) -> DatabaseStatus:
         return DatabaseStatus(backend="memory", status="ok")
-

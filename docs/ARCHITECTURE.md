@@ -383,10 +383,16 @@ All networked tiers are **opt-in**; the plugin works fully offline.
   extras `[dev]` (pytest) and `[mcp]`. Version `0.1.0`. Only
   `nodes/*/contract.yaml` is bundled as package data — the `.cursor/` surfaces
   ship via the plugin symlink, **not** via pip.
-- **Cursor plugin:** `scripts/install-plugin.sh` symlinks the repo into
-  `~/.cursor/plugins/local/omnicursor`. Two manifests exist
-  (`.cursor-plugin/plugin.json` is the official one; root `cursor-plugin.json` is
-  a companion) and their versions must be kept in sync (`tests/test_plugin_manifest.py`).
+- **Cursor plugin:** `scripts/install-plugin.sh` stages a curated runtime
+  payload (`.cursor/`, `.cursor-plugin/`, `src/omnicursor/`, `config/`,
+  pyproject + README/LICENSE/CHANGELOG — no `tests/`, `docker/`, `eval/`,
+  `compose.yaml`, `.git`) into `build/plugin/` and symlinks it to
+  `~/.cursor/plugins/local/omnicursor`; `--uninstall` removes it and
+  `--uninstall --purge` additionally clears `~/.omnicursor/` local data.
+  `.cursor-plugin/plugin.json` is the single canonical manifest (the former
+  root `cursor-plugin.json` companion was removed in A10.2; version-floor
+  facts live in README — Cursor `>=0.40.0` — and `pyproject.toml` — Python
+  `>=3.10`). Structure is guarded by `tests/test_plugin_manifest.py`.
 
 ---
 

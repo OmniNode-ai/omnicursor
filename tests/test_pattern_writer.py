@@ -55,7 +55,10 @@ def _prompt_event(agent: str, score: float, snippet: str) -> dict:
 
 
 def _prompt_event_with_injection(
-    agent: str, score: float, snippet: str, patterns_injected: int,
+    agent: str,
+    score: float,
+    snippet: str,
+    patterns_injected: int,
 ) -> dict:
     event = _prompt_event(agent, score, snippet)
     event["patterns_injected"] = patterns_injected
@@ -63,7 +66,10 @@ def _prompt_event_with_injection(
 
 
 def _prompt_event_with_pattern_ids(
-    agent: str, score: float, snippet: str, pattern_ids: list,
+    agent: str,
+    score: float,
+    snippet: str,
+    pattern_ids: list,
 ) -> dict:
     event = _prompt_event(agent, score, snippet)
     event["patterns_injected"] = len(pattern_ids)
@@ -192,16 +198,18 @@ def test_upsert_injected_success_gains_weight_faster():
 
 def test_upsert_caps_weight_at_max():
     now = time.time()
-    patterns = [{
-        "pattern": "line typeerror",
-        "domain": "debugging",
-        "weight": WEIGHT_CAP,
-        "success_count": 10,
-        "injection_count": 0,
-        "utilization_successes": 0,
-        "last_seen": now,
-        "description": "desc",
-    }]
+    patterns = [
+        {
+            "pattern": "line typeerror",
+            "domain": "debugging",
+            "weight": WEIGHT_CAP,
+            "success_count": 10,
+            "injection_count": 0,
+            "utilization_successes": 0,
+            "last_seen": now,
+            "description": "desc",
+        }
+    ]
     result = _upsert_pattern(patterns, "debugging", ["typeerror", "line"], "desc", now)
     assert result[0]["weight"] == WEIGHT_CAP
 
@@ -276,7 +284,9 @@ def test_evict_low_utilization_removes_pattern():
 def test_write_skips_when_no_files_edited(tmp_path):
     events = [_prompt_event("debugging", 0.8, "debug TypeError")]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=0, session_outcome="success")
+    written = write_session_patterns(
+        pf, events, files_edited=0, session_outcome="success"
+    )
     assert written == 0
     assert not pf.exists()
 
@@ -284,14 +294,18 @@ def test_write_skips_when_no_files_edited(tmp_path):
 def test_write_skips_when_no_decisive_events(tmp_path):
     events = [_prompt_event("polymorphic-agent", 0.9, "debug this")]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=2, session_outcome="success")
+    written = write_session_patterns(
+        pf, events, files_edited=2, session_outcome="success"
+    )
     assert written == 0
 
 
 def test_write_creates_file_with_patterns(tmp_path):
     events = [_prompt_event("debugging", 0.85, "TypeError in parser line 42")]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=1, session_outcome="success")
+    written = write_session_patterns(
+        pf, events, files_edited=1, session_outcome="success"
+    )
     assert written == 1
     assert pf.exists()
     data = json.loads(pf.read_text())
@@ -320,9 +334,11 @@ def test_write_increments_utilization_successes_when_pattern_injected(tmp_path):
     pattern_id = json.loads(pf.read_text())["patterns"][0]["pattern_id"]
 
     # Second write: provide injected_pattern_ids to trigger metric update
-    inject_events = [_prompt_event_with_pattern_ids(
-        "debugging", 0.85, "TypeError in parser line 42", [pattern_id]
-    )]
+    inject_events = [
+        _prompt_event_with_pattern_ids(
+            "debugging", 0.85, "TypeError in parser line 42", [pattern_id]
+        )
+    ]
     write_session_patterns(pf, inject_events, files_edited=1, session_outcome="success")
     data = json.loads(pf.read_text())
     assert data["patterns"][0]["injection_count"] == 1
@@ -335,16 +351,26 @@ def test_write_injected_success_patterns_gain_weight_faster(tmp_path):
     baseline_file = tmp_path / "baseline.json"
 
     # Baseline: two writes without injected_pattern_ids
-    write_session_patterns(baseline_file, base_events, files_edited=1, session_outcome="success")
-    write_session_patterns(baseline_file, base_events, files_edited=1, session_outcome="success")
+    write_session_patterns(
+        baseline_file, base_events, files_edited=1, session_outcome="success"
+    )
+    write_session_patterns(
+        baseline_file, base_events, files_edited=1, session_outcome="success"
+    )
     baseline_weight = json.loads(baseline_file.read_text())["patterns"][0]["weight"]
 
     # Injected: learn first, then inject the pattern_id on second write
     injected_file = tmp_path / "injected.json"
-    write_session_patterns(injected_file, base_events, files_edited=1, session_outcome="success")
+    write_session_patterns(
+        injected_file, base_events, files_edited=1, session_outcome="success"
+    )
     pattern_id = json.loads(injected_file.read_text())["patterns"][0]["pattern_id"]
-    inject_events = [_prompt_event_with_pattern_ids("debugging", 0.85, snippet, [pattern_id])]
-    write_session_patterns(injected_file, inject_events, files_edited=1, session_outcome="success")
+    inject_events = [
+        _prompt_event_with_pattern_ids("debugging", 0.85, snippet, [pattern_id])
+    ]
+    write_session_patterns(
+        injected_file, inject_events, files_edited=1, session_outcome="success"
+    )
     injected_weight = json.loads(injected_file.read_text())["patterns"][0]["weight"]
 
     assert injected_weight > baseline_weight
@@ -356,7 +382,9 @@ def test_write_multiple_domains(tmp_path):
         _prompt_event("brainstorming", 0.78, "brainstorm design options"),
     ]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=2, session_outcome="success")
+    written = write_session_patterns(
+        pf, events, files_edited=2, session_outcome="success"
+    )
     assert written == 2
     data = json.loads(pf.read_text())
     domains = {p["domain"] for p in data["patterns"]}
@@ -387,16 +415,24 @@ def test_same_domain_and_pattern_key_get_same_id():
 
 def test_legacy_record_without_id_gets_backfilled(tmp_path):
     pf = tmp_path / "learned_patterns.json"
-    pf.write_text(json.dumps({"patterns": [{
-        "pattern": "line typeerror",
-        "domain": "debugging",
-        "weight": 0.7,
-        "success_count": 2,
-        "injection_count": 0,
-        "utilization_successes": 0,
-        "last_seen": time.time(),
-        "description": "legacy",
-    }]}))
+    pf.write_text(
+        json.dumps(
+            {
+                "patterns": [
+                    {
+                        "pattern": "line typeerror",
+                        "domain": "debugging",
+                        "weight": 0.7,
+                        "success_count": 2,
+                        "injection_count": 0,
+                        "utilization_successes": 0,
+                        "last_seen": time.time(),
+                        "description": "legacy",
+                    }
+                ]
+            }
+        )
+    )
     # Any write causes _load_patterns to backfill
     write_session_patterns(pf, [], files_edited=0, session_outcome="success")
     data = json.loads(pf.read_text())
@@ -406,17 +442,25 @@ def test_legacy_record_without_id_gets_backfilled(tmp_path):
 
 def test_existing_seed_pattern_id_is_preserved(tmp_path):
     pf = tmp_path / "learned_patterns.json"
-    pf.write_text(json.dumps({"patterns": [{
-        "pattern_id": "seed-s1-fixed",
-        "pattern": "git bisect",
-        "domain": "general",
-        "weight": 0.75,
-        "success_count": 1,
-        "injection_count": 0,
-        "utilization_successes": 0,
-        "last_seen": time.time(),
-        "description": "seed",
-    }]}))
+    pf.write_text(
+        json.dumps(
+            {
+                "patterns": [
+                    {
+                        "pattern_id": "seed-s1-fixed",
+                        "pattern": "git bisect",
+                        "domain": "general",
+                        "weight": 0.75,
+                        "success_count": 1,
+                        "injection_count": 0,
+                        "utilization_successes": 0,
+                        "last_seen": time.time(),
+                        "description": "seed",
+                    }
+                ]
+            }
+        )
+    )
     # Load triggers backfill — but existing ID must not be overwritten
     write_session_patterns(pf, [], files_edited=0, session_outcome="success")
     data = json.loads(pf.read_text())
@@ -428,20 +472,33 @@ def test_existing_seed_pattern_id_is_preserved(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def _make_pf_with_known_id(tmp_path, pattern_id: str, injection_count: int = 0,
-                            utilization_successes: int = 0, weight: float = 0.7):
+def _make_pf_with_known_id(
+    tmp_path,
+    pattern_id: str,
+    injection_count: int = 0,
+    utilization_successes: int = 0,
+    weight: float = 0.7,
+):
     pf = tmp_path / "learned_patterns.json"
-    pf.write_text(json.dumps({"patterns": [{
-        "pattern_id": pattern_id,
-        "pattern": "some pattern",
-        "domain": "debugging",
-        "weight": weight,
-        "success_count": 2,
-        "injection_count": injection_count,
-        "utilization_successes": utilization_successes,
-        "last_seen": time.time(),
-        "description": "test pattern",
-    }]}))
+    pf.write_text(
+        json.dumps(
+            {
+                "patterns": [
+                    {
+                        "pattern_id": pattern_id,
+                        "pattern": "some pattern",
+                        "domain": "debugging",
+                        "weight": weight,
+                        "success_count": 2,
+                        "injection_count": injection_count,
+                        "utilization_successes": utilization_successes,
+                        "last_seen": time.time(),
+                        "description": "test pattern",
+                    }
+                ]
+            }
+        )
+    )
     return pf
 
 
@@ -478,7 +535,9 @@ def test_unknown_outcome_increments_injection_count_only(tmp_path):
     assert data["weight"] == 0.7
 
 
-def test_success_outcome_with_injected_id_increments_injection_and_utilization(tmp_path):
+def test_success_outcome_with_injected_id_increments_injection_and_utilization(
+    tmp_path,
+):
     pid = "auto-aabbcc112233"
     pf = _make_pf_with_known_id(tmp_path, pid, weight=0.7)
     events = [_prompt_event_with_pattern_ids("debugging", 0.85, "TypeError", [pid])]
@@ -492,7 +551,9 @@ def test_success_outcome_with_injected_id_increments_injection_and_utilization(t
 def test_failed_outcome_does_not_create_new_patterns_from_snippet(tmp_path):
     events = [_prompt_event("debugging", 0.85, "TypeError in parser line 42")]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=2, session_outcome="failed")
+    written = write_session_patterns(
+        pf, events, files_edited=2, session_outcome="failed"
+    )
     assert written == 0
     assert not pf.exists()
 
@@ -511,8 +572,14 @@ def test_success_with_zero_files_edited_updates_metrics_but_does_not_learn(tmp_p
 
 def test_unknown_injected_id_is_skipped_silently(tmp_path):
     pf = tmp_path / "learned_patterns.json"
-    events = [_prompt_event_with_pattern_ids("debugging", 0.85, "TypeError", ["auto-nonexistent0"])]
-    written = write_session_patterns(pf, events, files_edited=0, session_outcome="failed")
+    events = [
+        _prompt_event_with_pattern_ids(
+            "debugging", 0.85, "TypeError", ["auto-nonexistent0"]
+        )
+    ]
+    written = write_session_patterns(
+        pf, events, files_edited=0, session_outcome="failed"
+    )
     assert written == 0
     assert not pf.exists()
 
@@ -520,14 +587,18 @@ def test_unknown_injected_id_is_skipped_silently(tmp_path):
 def test_missing_injected_pattern_ids_field_does_not_crash(tmp_path):
     events = [_prompt_event("debugging", 0.85, "TypeError")]
     pf = tmp_path / "learned_patterns.json"
-    written = write_session_patterns(pf, events, files_edited=1, session_outcome="success")
+    written = write_session_patterns(
+        pf, events, files_edited=1, session_outcome="success"
+    )
     assert written >= 0  # no crash
 
 
 def test_duplicate_ids_within_event_counted_once(tmp_path):
     pid = "auto-aabbcc112233"
     pf = _make_pf_with_known_id(tmp_path, pid)
-    events = [_prompt_event_with_pattern_ids("debugging", 0.85, "TypeError", [pid, pid])]
+    events = [
+        _prompt_event_with_pattern_ids("debugging", 0.85, "TypeError", [pid, pid])
+    ]
     write_session_patterns(pf, events, files_edited=0, session_outcome="failed")
     data = json.loads(pf.read_text())["patterns"][0]
     assert data["injection_count"] == 1  # deduplicated within event
@@ -559,6 +630,7 @@ def test_atomic_write_uses_replace(tmp_path, monkeypatch):
         return real_replace(src, dst)
 
     import omnicursor.pattern_writer as _pw
+
     monkeypatch.setattr(_pw.os, "replace", mock_replace)
     events = [_prompt_event("debugging", 0.85, "TypeError in parser")]
     pf = tmp_path / "learned_patterns.json"
@@ -593,7 +665,8 @@ def test_low_utilization_pattern_is_evicted_after_failed_injections(tmp_path):
     pid = "auto-evict00112233"
     # Pattern already at eviction threshold: injection_count=EVICT_MIN, 0 successes
     pf = _make_pf_with_known_id(
-        tmp_path, pid,
+        tmp_path,
+        pid,
         injection_count=UTILIZATION_EVICT_MIN_INJECTIONS,
         utilization_successes=0,
         weight=0.7,

@@ -172,15 +172,11 @@ def test_send_event_returns_false_on_error_ack(
 def test_send_event_returns_false_when_socket_missing(
     emit_mod, monkeypatch, tmp_path
 ) -> None:
-    monkeypatch.setattr(
-        emit_mod, "default_socket_path", lambda: tmp_path / "nope.sock"
-    )
+    monkeypatch.setattr(emit_mod, "default_socket_path", lambda: tmp_path / "nope.sock")
     assert emit_mod.send_event("session.ended", {"a": 1}) is False
 
 
-def test_send_event_returns_false_on_timeout(
-    emit_mod, monkeypatch, short_tmp
-) -> None:
+def test_send_event_returns_false_on_timeout(emit_mod, monkeypatch, short_tmp) -> None:
     sock_path = short_tmp / "emit.sock"
     monkeypatch.setattr(emit_mod, "default_socket_path", lambda: sock_path)
     with _FakeDaemon(sock_path, hang=True):
@@ -196,9 +192,7 @@ def test_send_event_returns_false_when_daemon_closes_silent(
         assert emit_mod.send_event("session.ended", {}) is False
 
 
-def test_send_event_handles_non_ascii_payload(
-    emit_mod, monkeypatch, short_tmp
-) -> None:
+def test_send_event_handles_non_ascii_payload(emit_mod, monkeypatch, short_tmp) -> None:
     sock_path = short_tmp / "emit.sock"
     monkeypatch.setattr(emit_mod, "default_socket_path", lambda: sock_path)
     with _FakeDaemon(
@@ -241,14 +235,10 @@ def test_send_event_returns_false_on_invalid_json_reply(
 # ---------------------------------------------------------------------------
 
 
-def test_daemon_available_true_on_ping_ok(
-    emit_mod, monkeypatch, short_tmp
-) -> None:
+def test_daemon_available_true_on_ping_ok(emit_mod, monkeypatch, short_tmp) -> None:
     sock_path = short_tmp / "emit.sock"
     monkeypatch.setattr(emit_mod, "default_socket_path", lambda: sock_path)
-    with _FakeDaemon(
-        sock_path, response=b'{"status":"ok","queue_size":0}\n'
-    ) as daemon:
+    with _FakeDaemon(sock_path, response=b'{"status":"ok","queue_size":0}\n') as daemon:
         assert emit_mod.daemon_available() is True
     sent = json.loads(daemon.received[0].split(b"\n", 1)[0].decode("utf-8"))
     assert sent.get("command") == "ping"
@@ -270,9 +260,7 @@ def test_daemon_available_false_when_socket_missing(
     assert emit_mod.daemon_available() is False
 
 
-def test_daemon_available_false_on_timeout(
-    emit_mod, monkeypatch, short_tmp
-) -> None:
+def test_daemon_available_false_on_timeout(emit_mod, monkeypatch, short_tmp) -> None:
     sock_path = short_tmp / "emit.sock"
     monkeypatch.setattr(emit_mod, "default_socket_path", lambda: sock_path)
     with _FakeDaemon(sock_path, hang=True):
@@ -284,9 +272,7 @@ def test_daemon_available_false_on_timeout(
 # ---------------------------------------------------------------------------
 
 
-def test_socket_path_respects_env_override(
-    emit_mod, monkeypatch, tmp_path
-) -> None:
+def test_socket_path_respects_env_override(emit_mod, monkeypatch, tmp_path) -> None:
     custom = tmp_path / "custom.sock"
     monkeypatch.setenv("OMNICURSOR_EMIT_SOCKET", str(custom))
     assert emit_mod.default_socket_path() == custom
@@ -297,30 +283,22 @@ def test_timeout_respects_env_override(emit_mod, monkeypatch) -> None:
     assert emit_mod._default_timeout_s() == 1.25
 
 
-def test_timeout_falls_back_to_default_on_garbage_env(
-    emit_mod, monkeypatch
-) -> None:
+def test_timeout_falls_back_to_default_on_garbage_env(emit_mod, monkeypatch) -> None:
     monkeypatch.setenv("OMNICURSOR_EMIT_TIMEOUT", "not-a-float")
     assert emit_mod._default_timeout_s() == 0.5
 
 
-def test_timeout_falls_back_to_default_on_negative_env(
-    emit_mod, monkeypatch
-) -> None:
+def test_timeout_falls_back_to_default_on_negative_env(emit_mod, monkeypatch) -> None:
     monkeypatch.setenv("OMNICURSOR_EMIT_TIMEOUT", "-1")
     assert emit_mod._default_timeout_s() == 0.5
 
 
-def test_timeout_falls_back_to_default_on_zero_env(
-    emit_mod, monkeypatch
-) -> None:
+def test_timeout_falls_back_to_default_on_zero_env(emit_mod, monkeypatch) -> None:
     monkeypatch.setenv("OMNICURSOR_EMIT_TIMEOUT", "0")
     assert emit_mod._default_timeout_s() == 0.5
 
 
-def test_timeout_falls_back_to_default_on_nan_env(
-    emit_mod, monkeypatch
-) -> None:
+def test_timeout_falls_back_to_default_on_nan_env(emit_mod, monkeypatch) -> None:
     monkeypatch.setenv("OMNICURSOR_EMIT_TIMEOUT", "nan")
     assert emit_mod._default_timeout_s() == 0.5
 
@@ -331,9 +309,7 @@ def test_send_event_does_not_raise_on_bad_timeout_env(
     sock_path = short_tmp / "emit.sock"
     monkeypatch.setattr(emit_mod, "default_socket_path", lambda: sock_path)
     monkeypatch.setenv("OMNICURSOR_EMIT_TIMEOUT", "-1")
-    with _FakeDaemon(
-        sock_path, response=b'{"status":"queued","event_id":"e1"}\n'
-    ):
+    with _FakeDaemon(sock_path, response=b'{"status":"queued","event_id":"e1"}\n'):
         # Bad env must not propagate as ValueError from sock.settimeout(...).
         result = emit_mod.send_event("session.ended", {"k": "v"})
     assert result is True

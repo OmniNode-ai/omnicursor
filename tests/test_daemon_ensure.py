@@ -40,9 +40,7 @@ class _FakeProc:
 
 
 @pytest.fixture
-def hermetic(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Dict[str, List[Any]]:
+def hermetic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Dict[str, List[Any]]:
     """Daemon down, state dirs in tmp, interpreter configured, Popen captured."""
     pings: List[Any] = []
     popen_calls: List[Tuple[Any, Dict[str, Any]]] = []
@@ -283,9 +281,7 @@ class TestSpawnDedupe:
 
 
 class TestNonBlocking:
-    def test_returns_fast_on_spawn_path(
-        self, hermetic: Dict[str, List[Any]]
-    ) -> None:
+    def test_returns_fast_on_spawn_path(self, hermetic: Dict[str, List[Any]]) -> None:
         start = time.monotonic()
         _mod.ensure_daemon()
         elapsed = time.monotonic() - start
@@ -309,8 +305,6 @@ class TestNonBlocking:
                 waited.append("communicate")
                 return (b"", b"")
 
-        monkeypatch.setattr(
-            _mod.subprocess, "Popen", lambda *a, **k: _Proc()
-        )
+        monkeypatch.setattr(_mod.subprocess, "Popen", lambda *a, **k: _Proc())
         _mod.ensure_daemon()
         assert waited == []

@@ -5,8 +5,12 @@ from __future__ import annotations
 import pytest
 
 from omnicursor.nodes.node_cursor_shell_guard_effect.models.input import ShellGuardInput
-from omnicursor.nodes.node_cursor_shell_guard_effect.models.output import ShellGuardOutput
-from omnicursor.nodes.node_cursor_shell_guard_effect.handlers.handle_shell_command import handle_shell_command
+from omnicursor.nodes.node_cursor_shell_guard_effect.models.output import (
+    ShellGuardOutput,
+)
+from omnicursor.nodes.node_cursor_shell_guard_effect.handlers.handle_shell_command import (
+    handle_shell_command,
+)
 from omnicursor.nodes.node_cursor_shell_guard_effect.node import run
 
 

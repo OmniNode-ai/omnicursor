@@ -28,7 +28,9 @@ class CursorNativeSpec(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    hook_event: str = Field(..., description="Cursor hook name, e.g. beforeSubmitPrompt")
+    hook_event: str = Field(
+        ..., description="Cursor hook name, e.g. beforeSubmitPrompt"
+    )
     hooks_json_command: str = Field(
         ...,
         description="Command string as registered in hooks.json",
@@ -90,7 +92,9 @@ def load_all_contracts(root: Path | None = None) -> tuple[OmniCursorNodeContract
     return tuple(load_contract(p) for p in paths)
 
 
-def hooks_registration_ok(contracts: tuple[OmniCursorNodeContract, ...] | None = None) -> bool:
+def hooks_registration_ok(
+    contracts: tuple[OmniCursorNodeContract, ...] | None = None,
+) -> bool:
     """Best-effort check that declared hook commands match hooks.json entries.
 
     Does not execute hooks — only compares ``hooks_json_command`` strings to the
@@ -106,8 +110,8 @@ def hooks_registration_ok(contracts: tuple[OmniCursorNodeContract, ...] | None =
     if not hooks_path.is_file():
         return False
 
-    registered: dict[str, list[str]] = json.loads(hooks_path.read_text(encoding="utf-8"))
-    hook_map = registered.get("hooks", {})
+    registered: dict[str, Any] = json.loads(hooks_path.read_text(encoding="utf-8"))
+    hook_map: dict[str, list[dict[str, str]]] = registered.get("hooks", {})
     for c in contracts:
         event = c.cursor_native.hook_event
         cmd = c.cursor_native.hooks_json_command

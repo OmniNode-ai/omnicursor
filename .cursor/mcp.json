@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "omnicursor-omnimarket": {
+      "command": "python3",
+      "args": ["-m", "omnicursor.mcp"],
+      "env": {
+        "OMNIMARKET_ROOT": "${env:OMNIMARKET_ROOT}",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    }
+  }
+}

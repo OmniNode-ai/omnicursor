@@ -1,12 +1,27 @@
 name: CI
 
+# Hardened CI (Phase-2 A10.7). Every PR-blocking job below is secret-free by
+# design: contributors work via forks, where org secrets are unavailable, so a
+# gate that needs one can never be required. Gates that would need org secrets
+# (CodeRabbit thread gate, Linear automations, auto-merge) are proposed in the
+# PR-4 body instead of implemented here.
+
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # Pre-existing job: ruff + pytest + skill-compliance coverage
+  # (+ ruff format, ported from omniclaude).
   lint-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +36,10 @@ jobs:
           pip install -e ".[dev]" ruff
 
       - name: Lint
-        run: ruff check src/ tests/ .cursor/hooks/
+        run: ruff check src/ tests/ .cursor/hooks/ scripts/ci/
+
+      - name: Format check
+        run: ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/
 
       - name: Test
         run: pytest tests/ -v
@@ -38,3 +56,206 @@ jobs:
               sys.exit(1)
           print(f"All {len(skills)} skills have compliance entries.")
           EOF
+
+  # Type check, ported from omniclaude (mypy config in pyproject.toml).
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" mypy
+
+      - name: MyPy
+        run: mypy src/
+
+  # Structural plugin gates (A10.7): manifest/MCP wiring, skill+agent
+  # frontmatter & dual-location parity, hardcoded-topic-literal guard
+  # (OMN-13944 analog — Jonah's PR-#4 follow-up), stdlib-only hook imports,
+  # shell hygiene.
+  plugin-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install pyyaml
+
+      - name: Manifest + MCP wiring gate
+        run: python scripts/ci/check_manifest.py
+
+      - name: Skill/agent frontmatter + category gate
+        run: python scripts/ci/check_frontmatter.py
+
+      - name: Hardcoded topic-literal gate (.cursor/hooks/)
+        run: python scripts/ci/check_topic_literals.py
+
+      - name: Hook stdlib-only import gate
+        run: python scripts/ci/check_hook_stdlib_only.py
+
+      - name: Shellcheck
+        run: shellcheck scripts/*.sh .githooks/pre-commit
+
+  # Security scans, ported from omniclaude's fork-safe zone (bandit +
+  # detect-secrets with a content-addressed baseline compare).
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: python -m pip install bandit detect-secrets
+
+      - name: Bandit security scan
+        run: |
+          bandit -r src/ \
+            --exclude .venv/,__pycache__/ \
+            --confidence-level medium --severity-level medium \
+            -f txt
+
+      - name: Detect-secrets baseline compare
+        run: |
+          cp .secrets.baseline .secrets.baseline.bak
+          detect-secrets scan \
+            --baseline .secrets.baseline \
+            --exclude-files '\.venv/' \
+            --exclude-files '^build/' \
+            --exclude-files 'egg-info/' \
+            --exclude-files '^\.git/' \
+            --exclude-files '\.env\.omninode\.example$' \
+            --exclude-files '^tests/'
+          # Content-addressed compare (file, hashed_secret): new findings fail;
+          # line-number shifts of audited baseline entries do not.
+          python3 - <<'EOF'
+          import json, sys
+          old = json.load(open(".secrets.baseline.bak"))
+          new = json.load(open(".secrets.baseline"))
+          old_set = {(f, s["hashed_secret"])
+                     for f, secrets in old.get("results", {}).items()
+                     for s in secrets}
+          new_set = {(f, s["hashed_secret"])
+                     for f, secrets in new.get("results", {}).items()
+                     for s in secrets}
+          fresh = new_set - old_set
+          if fresh:
+              print("New potential secrets (audit them, then refresh .secrets.baseline):")
+              for f, h in sorted(fresh):
+                  print(f"  {f} ({h[:12]}…)")
+              sys.exit(1)
+          print("No new secrets vs baseline.")
+          EOF
+
+  # Local (offline) markdown link check over the installer-facing docs.
+  # Offline keeps the gate deterministic on fork PRs; external-link checking
+  # can be enabled later if the team wants it (omniclaude runs hosted lychee
+  # with an exclude list).
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check markdown links (offline)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          fail: true
+          args: >
+            --offline
+            --no-progress
+            README.md
+            CHANGELOG.md
+            docs/
+
+  # Drift-catchers vs the platform (Jonah's stated intent for mirroring
+  # omniclaude CI: "reduce manual work and catch drift"). Checks out the
+  # public sibling repos so the canonical-event round-trip and the real
+  # EventRegistry load — tests that silently skip when siblings are absent —
+  # actually run. Tokenless (both repos are public), so fork-safe.
+  sibling-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: omnicursor
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OmniNode-ai/omnimarket
+          ref: dev
+          path: omnimarket
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OmniNode-ai/omnibase_core
+          ref: dev
+          path: omnibase_core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install omnicursor
+        working-directory: omnicursor
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Registry + canonical-event drift tests (siblings present)
+        working-directory: omnicursor
+        run: |
+          pytest tests/test_event_registry_tier.py tests/test_canonical_event.py -v -rs | tee drift-output.txt
+          # The sibling-dependent tests skip when checkouts are missing; with
+          # both siblings checked out, a skip means the wiring broke.
+          if grep -q "SKIPPED" drift-output.txt; then
+            echo "::error::sibling-dependent drift tests were skipped despite the checkouts"
+            exit 1
+          fi
+
+  # Single API-stable aggregate for branch protection (omniclaude pattern):
+  # require "ci-summary" instead of enumerating jobs.
+  ci-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint-and-test, typecheck, plugin-gates, security, links, sibling-drift]
+    if: always()
+
+    steps:
+      - name: Verify all gates passed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS_JSON"
+          failed=$(echo "$NEEDS_JSON" | python3 -c "
+          import json, sys
+          needs = json.load(sys.stdin)
+          bad = [k for k, v in needs.items() if v.get('result') != 'success']
+          print(' '.join(bad))
+          ")
+          if [ -n "$failed" ]; then
+            echo "::error::failed gates: $failed"
+            exit 1
+          fi
+          echo "All gates green."

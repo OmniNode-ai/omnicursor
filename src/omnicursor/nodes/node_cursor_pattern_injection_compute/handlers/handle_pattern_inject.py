@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from omnicursor.prompt_pattern_read import select_patterns_for_prompt
-from omnicursor.nodes.node_cursor_pattern_injection_compute.models.input import PatternInjectionInput
-from omnicursor.nodes.node_cursor_pattern_injection_compute.models.output import PatternInjectionOutput
+from omnicursor.nodes.node_cursor_pattern_injection_compute.models.input import (
+    PatternInjectionInput,
+)
+from omnicursor.nodes.node_cursor_pattern_injection_compute.models.output import (
+    PatternInjectionOutput,
+)
 
 
 def handle_pattern_inject(input: PatternInjectionInput) -> PatternInjectionOutput:

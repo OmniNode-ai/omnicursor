@@ -5,12 +5,17 @@
 Exercises the full handler path via the node.run() API. No Cursor
 environment required — handler loads agent_scoring.py via importlib.
 """
+
 from __future__ import annotations
 
 import pytest
 
-from omnicursor.nodes.node_cursor_prompt_orchestrator.models.input import PromptOrchestratorInput
-from omnicursor.nodes.node_cursor_prompt_orchestrator.models.output import PromptOrchestratorOutput
+from omnicursor.nodes.node_cursor_prompt_orchestrator.models.input import (
+    PromptOrchestratorInput,
+)
+from omnicursor.nodes.node_cursor_prompt_orchestrator.models.output import (
+    PromptOrchestratorOutput,
+)
 from omnicursor.nodes.node_cursor_prompt_orchestrator.handlers.handle_prompt_submitted import (
     handle_prompt_submitted,
 )
@@ -39,22 +44,30 @@ class TestPromptOrchestratorModels:
 
 class TestHandlerRouting:
     def test_debug_prompt_routes_to_debug_agent(self):
-        result = handle_prompt_submitted(PromptOrchestratorInput(prompt="I have a bug in my code"))
+        result = handle_prompt_submitted(
+            PromptOrchestratorInput(prompt="I have a bug in my code")
+        )
         assert "debug" in result.agent_name
         assert result.confidence >= 0.55
 
     def test_brainstorm_prompt_routes_to_brainstorm_agent(self):
-        result = handle_prompt_submitted(PromptOrchestratorInput(prompt="let's brainstorm a new feature"))
+        result = handle_prompt_submitted(
+            PromptOrchestratorInput(prompt="let's brainstorm a new feature")
+        )
         assert "brainstorm" in result.agent_name
         assert result.confidence >= 0.55
 
     def test_unknown_prompt_returns_polymorphic_fallback(self):
-        result = handle_prompt_submitted(PromptOrchestratorInput(prompt="xyzzy nonsense gibberish"))
+        result = handle_prompt_submitted(
+            PromptOrchestratorInput(prompt="xyzzy nonsense gibberish")
+        )
         assert result.agent_name == "polymorphic-agent"
         assert result.confidence == 0.0
 
     def test_output_is_typed(self):
-        result = handle_prompt_submitted(PromptOrchestratorInput(prompt="debug this error"))
+        result = handle_prompt_submitted(
+            PromptOrchestratorInput(prompt="debug this error")
+        )
         assert isinstance(result, PromptOrchestratorOutput)
 
     def test_system_message_format(self):

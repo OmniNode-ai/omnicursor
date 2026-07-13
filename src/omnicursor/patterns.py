@@ -28,4 +28,3 @@ def list_preserved_patterns() -> List[PatternRecord]:
             source=str(RULES_DIR / "12-plan-ticket.mdc"),
         ),
     ]
-

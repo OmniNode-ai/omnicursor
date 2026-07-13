@@ -28,6 +28,7 @@ def _load(name: str, path: Path) -> Any:
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
+
 _lib_common = _load("_common", _LIB / "_common.py")
 _mod = _load("shell_guard", _SCRIPTS / "shell-guard.py")
 
@@ -140,11 +141,17 @@ class TestSafeAndMisc:
         result = _mod.guard_command("")
         assert result["permission"] == "allow"
 
-    def test_event_logged_to_events_jsonl(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_event_logged_to_events_jsonl(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         events: list = []
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"command": "ls -la", "conversation_id": "test-123"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"command": "ls -la", "conversation_id": "test-123"},
+        )
         out = io.StringIO()
         monkeypatch.setattr(sys, "stdout", out)
         _mod.main()
@@ -170,7 +177,9 @@ class TestCorrelationThreading:
         events: List[Dict] = []
         monkeypatch.setattr(_mod, "read_session_context", lambda: session)
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"command": command, "conversation_id": conv})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"command": command, "conversation_id": conv}
+        )
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         return events[0]
@@ -247,9 +256,15 @@ class TestTypedEventSchema:
         conv: str = "s-001",
     ) -> Dict:
         events: List[Dict] = []
-        monkeypatch.setattr(_mod, "read_session_context", lambda: {"latest_correlation_id": "test000abc12"})
+        monkeypatch.setattr(
+            _mod,
+            "read_session_context",
+            lambda: {"latest_correlation_id": "test000abc12"},
+        )
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"command": command, "conversation_id": conv})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"command": command, "conversation_id": conv}
+        )
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
         return events[0]
@@ -282,10 +297,14 @@ class TestTypedEventSchema:
     ) -> None:
         long_cmd = "git commit --no-verify -m '" + "y" * 550 + "'"
         events: List[Dict] = []
-        monkeypatch.setattr(_mod, "read_session_context", lambda: {"latest_correlation_id": ""})
+        monkeypatch.setattr(
+            _mod, "read_session_context", lambda: {"latest_correlation_id": ""}
+        )
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
         monkeypatch.setattr(
-            _mod, "read_stdin", lambda: {"command": long_cmd, "conversation_id": "deny-full"}
+            _mod,
+            "read_stdin",
+            lambda: {"command": long_cmd, "conversation_id": "deny-full"},
         )
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
@@ -302,10 +321,14 @@ class TestTypedEventSchema:
         long_cmd = "git commit --no-verify -m '" + ("y" * 66_000) + "'"
         assert len(long_cmd) > 65536
         events: List[Dict] = []
-        monkeypatch.setattr(_mod, "read_session_context", lambda: {"latest_correlation_id": ""})
+        monkeypatch.setattr(
+            _mod, "read_session_context", lambda: {"latest_correlation_id": ""}
+        )
         monkeypatch.setattr(_mod, "log_event", lambda e: events.append(e))
         monkeypatch.setattr(
-            _mod, "read_stdin", lambda: {"command": long_cmd, "conversation_id": "deny-cap"}
+            _mod,
+            "read_stdin",
+            lambda: {"command": long_cmd, "conversation_id": "deny-cap"},
         )
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
@@ -338,7 +361,10 @@ class TestTypedEventSchema:
         assert self._run(monkeypatch, command="rm -rf /")["decision"] == "deny"
 
     def test_warn_decision_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        assert self._run(monkeypatch, command="git push --force origin main")["decision"] == "warn"
+        assert (
+            self._run(monkeypatch, command="git push --force origin main")["decision"]
+            == "warn"
+        )
 
     def test_allow_decision_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert self._run(monkeypatch, command="git status")["decision"] == "allow"
@@ -384,7 +410,9 @@ class TestDoDAndDispatch:
         )
         assert r["permission"] == "allow"
 
-    def test_dod_bypass_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_dod_bypass_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         sessions = tmp_path / "sessions"
         sessions.mkdir()
         (sessions / "conv-c.json").write_text(json.dumps({"ci_passing": False}))

@@ -17,7 +17,6 @@ omnidash-main/
 
 # IDE / editor
 .vscode/
-.cursor/mcp.json
 .claude/settings.local.json
 
 # Python

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from omnicursor.nodes.node_cursor_shell_guard_effect.models.input import ShellGuardInput
-from omnicursor.nodes.node_cursor_shell_guard_effect.models.output import ShellGuardOutput
+from omnicursor.nodes.node_cursor_shell_guard_effect.models.output import (
+    ShellGuardOutput,
+)
 from omnicursor.shell_guard import guard_command
 
 

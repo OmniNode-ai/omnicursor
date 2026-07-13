@@ -71,4 +71,3 @@ class SkillRepository:
             path=str(path.relative_to(REPO_ROOT)),
             content=path.read_text(encoding="utf-8"),
         )
-

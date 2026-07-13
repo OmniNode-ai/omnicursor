@@ -6,7 +6,9 @@ import pytest
 
 from omnicursor.nodes.node_cursor_file_edit_effect.models.input import FileEditInput
 from omnicursor.nodes.node_cursor_file_edit_effect.models.output import FileEditOutput
-from omnicursor.nodes.node_cursor_file_edit_effect.handlers.handle_file_edited import handle_file_edited
+from omnicursor.nodes.node_cursor_file_edit_effect.handlers.handle_file_edited import (
+    handle_file_edited,
+)
 from omnicursor.nodes.node_cursor_file_edit_effect.node import run
 
 
@@ -20,7 +22,13 @@ class TestFileEditModels:
         assert i.edits == []
 
     def test_output_has_required_fields(self):
-        o = FileEditOutput(event="file_edited", file_path="foo.py", language="python", edit_count=1, ruff_findings=0)
+        o = FileEditOutput(
+            event="file_edited",
+            file_path="foo.py",
+            language="python",
+            edit_count=1,
+            ruff_findings=0,
+        )
         assert o.language == "python"
 
 

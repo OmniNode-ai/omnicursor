@@ -31,9 +31,9 @@ from typing import Any, Dict, List, Optional
 #   .cursor/   (.parent)
 #   REPO_ROOT  (.parent)
 LIB_DIR: Path = Path(__file__).resolve().parent
-HOOKS_DIR: Path = LIB_DIR.parent           # .cursor/hooks/
-CURSOR_DIR: Path = HOOKS_DIR.parent        # .cursor/
-REPO_ROOT: Path = CURSOR_DIR.parent        # project root
+HOOKS_DIR: Path = LIB_DIR.parent  # .cursor/hooks/
+CURSOR_DIR: Path = HOOKS_DIR.parent  # .cursor/
+REPO_ROOT: Path = CURSOR_DIR.parent  # project root
 
 AGENTS_DIR: Path = CURSOR_DIR / "agents"
 
@@ -176,7 +176,9 @@ def merge_session_json(
         path = session_json_path(conversation_id, sessions_root=sessions_root)
         data = read_session_json(conversation_id, sessions_root=sessions_root)
         data.update(updates)
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
     except OSError:
         pass
 

@@ -14,7 +14,9 @@ from pathlib import Path
 import pytest
 
 # Make lib/ importable without installing
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".cursor" / "hooks" / "lib"))
+sys.path.insert(
+    0, str(Path(__file__).resolve().parents[1] / ".cursor" / "hooks" / "lib")
+)
 
 from agent_scoring import (  # noqa: E402
     HARD_FLOOR,

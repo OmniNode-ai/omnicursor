@@ -108,9 +108,7 @@ class TestFetchPatterns:
         out = _ci.fetch_patterns("python")
         assert out == api
 
-    def test_empty_when_cache_also_empty(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_empty_when_cache_also_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(_ci, "_fetch_patterns_from_api", lambda d: None)
         monkeypatch.setattr(_ci, "get_pattern_cache", lambda: _FakeCache({}))
         assert _ci.fetch_patterns("python") == []

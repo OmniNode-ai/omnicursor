@@ -52,7 +52,12 @@ def _make_event(
     timestamp: str = "2026-04-14T10:00:00+00:00",
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    return {"event": event_type, "conversation_id": conversation_id, "timestamp": timestamp, **kwargs}
+    return {
+        "event": event_type,
+        "conversation_id": conversation_id,
+        "timestamp": timestamp,
+        **kwargs,
+    }
 
 
 def _write_events(path: Path, events: List[Dict[str, Any]]) -> None:
@@ -81,7 +86,9 @@ class TestOutcomeClassification:
         assert outcome == "failed"
 
     def test_gate_1_failed_on_traceback_in_events(self) -> None:
-        events = [_make_event("prompt_classified", reason="Traceback (most recent call last)")]
+        events = [
+            _make_event("prompt_classified", reason="Traceback (most recent call last)")
+        ]
         outcome, _ = _mod.derive_session_outcome("completed", events)
         assert outcome == "failed"
 
@@ -113,10 +120,17 @@ class TestOutcomeClassification:
     def test_gate_2_success_on_completion_markers(self) -> None:
         """Original stub: work done + 'done' marker → 'success'."""
         events = [
-            _make_event("file_edited", file_path="a.py", language="python",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("prompt_classified", reason="task done",
-                        timestamp="2026-04-14T10:00:30+00:00"),
+            _make_event(
+                "file_edited",
+                file_path="a.py",
+                language="python",
+                timestamp="2026-04-14T10:00:00+00:00",
+            ),
+            _make_event(
+                "prompt_classified",
+                reason="task done",
+                timestamp="2026-04-14T10:00:30+00:00",
+            ),
         ]
         outcome, _ = _mod.derive_session_outcome("completed", events)
         assert outcome == "success"
@@ -134,18 +148,29 @@ class TestOutcomeClassification:
         via the status string and trigger the completion check.
         """
         events = [
-            _make_event("file_edited", file_path="a.py", language="python",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("file_edited", file_path="b.py", language="python",
-                        timestamp="2026-04-14T10:02:00+00:00"),
+            _make_event(
+                "file_edited",
+                file_path="a.py",
+                language="python",
+                timestamp="2026-04-14T10:00:00+00:00",
+            ),
+            _make_event(
+                "file_edited",
+                file_path="b.py",
+                language="python",
+                timestamp="2026-04-14T10:02:00+00:00",
+            ),
         ]
         outcome, _ = _mod.derive_session_outcome("ok", events)
         assert outcome != "success"
 
     def test_gate_2_success_with_finished_marker(self) -> None:
         events = [
-            _make_event("prompt_classified", reason="finished the task",
-                        timestamp="2026-04-14T10:00:00+00:00"),
+            _make_event(
+                "prompt_classified",
+                reason="finished the task",
+                timestamp="2026-04-14T10:00:00+00:00",
+            ),
         ]
         outcome, _ = _mod.derive_session_outcome("completed", events)
         assert outcome == "success"
@@ -153,10 +178,18 @@ class TestOutcomeClassification:
     def test_gate_3_abandoned_on_short_session(self) -> None:
         """Original stub: no completion + duration < 60s → 'abandoned'."""
         events = [
-            _make_event("file_edited", file_path="x.py", language="python",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("file_edited", file_path="y.py", language="python",
-                        timestamp="2026-04-14T10:00:10+00:00"),
+            _make_event(
+                "file_edited",
+                file_path="x.py",
+                language="python",
+                timestamp="2026-04-14T10:00:00+00:00",
+            ),
+            _make_event(
+                "file_edited",
+                file_path="y.py",
+                language="python",
+                timestamp="2026-04-14T10:00:10+00:00",
+            ),
         ]
         # status='ok' keeps the completion-marker check clean
         outcome, _ = _mod.derive_session_outcome("ok", events)
@@ -165,10 +198,12 @@ class TestOutcomeClassification:
     def test_gate_3_not_abandoned_on_long_session(self) -> None:
         """Duration >= 60s without completion markers → 'unknown', not 'abandoned'."""
         events = [
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:05:00+00:00"),
+            _make_event(
+                "shell_guard", decision="allow", timestamp="2026-04-14T10:00:00+00:00"
+            ),
+            _make_event(
+                "shell_guard", decision="allow", timestamp="2026-04-14T10:05:00+00:00"
+            ),
         ]
         outcome, _ = _mod.derive_session_outcome("ok", events)
         assert outcome == "unknown"
@@ -176,10 +211,12 @@ class TestOutcomeClassification:
     def test_gate_4_unknown_on_ambiguous_signals(self) -> None:
         """Original stub: long session, no completion, no errors → 'unknown'."""
         events = [
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:02:00+00:00"),
+            _make_event(
+                "shell_guard", decision="allow", timestamp="2026-04-14T10:00:00+00:00"
+            ),
+            _make_event(
+                "shell_guard", decision="allow", timestamp="2026-04-14T10:02:00+00:00"
+            ),
         ]
         outcome, _ = _mod.derive_session_outcome("completed", events)
         assert outcome == "unknown"
@@ -201,18 +238,23 @@ class TestOutcomeClassification:
 
 
 class TestSessionAggregation:
-    def test_mixed_events_aggregated_correctly(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_mixed_events_aggregated_correctly(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: prompts, edits, and shell events all counted."""
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event("prompt_classified"),
-            _make_event("prompt_classified"),
-            _make_event("file_edited", file_path="a.py", language="python"),
-            _make_event("file_edited", file_path="b.ts", language="typescript"),
-            _make_event("shell_guard", decision="allow"),
-            _make_event("shell_guard", decision="deny"),
-            _make_event("shell_guard", decision="warn"),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event("prompt_classified"),
+                _make_event("prompt_classified"),
+                _make_event("file_edited", file_path="a.py", language="python"),
+                _make_event("file_edited", file_path="b.ts", language="typescript"),
+                _make_event("shell_guard", decision="allow"),
+                _make_event("shell_guard", decision="deny"),
+                _make_event("shell_guard", decision="warn"),
+            ],
+        )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert result["prompts_classified"] == 2
@@ -221,7 +263,9 @@ class TestSessionAggregation:
         assert result["shell_commands"]["denied"] == 1
         assert result["shell_commands"]["warned"] == 1
 
-    def test_empty_events_file_produces_zero_counts(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_empty_events_file_produces_zero_counts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: empty log → all counts zero."""
         log = tmp_path / "events.jsonl"
         log.write_text("")
@@ -231,51 +275,74 @@ class TestSessionAggregation:
         assert result["files_edited"] == 0
         assert result["shell_commands"] == {"allowed": 0, "denied": 0, "warned": 0}
 
-    def test_missing_events_file_does_not_crash(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_events_file_does_not_crash(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: absent events.jsonl → returns zero-count summary."""
         monkeypatch.setattr(_mod, "EVENTS_LOG", tmp_path / "nonexistent.jsonl")
         result = _mod.aggregate_session("c-001", "completed")
         assert result["prompts_classified"] == 0
 
-    def test_only_matching_conversation_counted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_only_matching_conversation_counted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: events from other conversations are ignored."""
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event("prompt_classified", conversation_id="c-001"),
-            _make_event("prompt_classified", conversation_id="c-002"),
-            _make_event("file_edited", conversation_id="c-002", file_path="x.py", language="python"),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event("prompt_classified", conversation_id="c-001"),
+                _make_event("prompt_classified", conversation_id="c-002"),
+                _make_event(
+                    "file_edited",
+                    conversation_id="c-002",
+                    file_path="x.py",
+                    language="python",
+                ),
+            ],
+        )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert result["prompts_classified"] == 1
         assert result["files_edited"] == 0
 
-    def test_malformed_lines_skipped(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_malformed_lines_skipped(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: malformed JSON lines are silently skipped."""
         log = tmp_path / "events.jsonl"
         log.write_text(
-            json.dumps(_make_event("prompt_classified")) + "\n"
+            json.dumps(_make_event("prompt_classified"))
+            + "\n"
             + "THIS IS NOT JSON\n"
             + "{broken\n"
-            + json.dumps(_make_event("prompt_classified")) + "\n"
+            + json.dumps(_make_event("prompt_classified"))
+            + "\n"
         )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert result["prompts_classified"] == 2
 
-    def test_language_other_excluded_from_summary(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_language_other_excluded_from_summary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: language='other' is not included in the languages list."""
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event("file_edited", file_path="Makefile", language="other"),
-            _make_event("file_edited", file_path="app.py", language="python"),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event("file_edited", file_path="Makefile", language="other"),
+                _make_event("file_edited", file_path="app.py", language="python"),
+            ],
+        )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert "other" not in result["languages"]
         assert "python" in result["languages"]
 
-    def test_status_passed_through_to_summary(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_status_passed_through_to_summary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Original stub: raw status string appears in summary."""
         log = tmp_path / "events.jsonl"
         log.write_text("")
@@ -283,36 +350,50 @@ class TestSessionAggregation:
         result = _mod.aggregate_session("c-001", "my-custom-status")
         assert result["session_status"] == "my-custom-status"
 
-    def test_duplicate_file_paths_deduplicated(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_duplicate_file_paths_deduplicated(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Same file edited twice counts as 1 unique file."""
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event("file_edited", file_path="a.py", language="python"),
-            _make_event("file_edited", file_path="a.py", language="python"),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event("file_edited", file_path="a.py", language="python"),
+                _make_event("file_edited", file_path="a.py", language="python"),
+            ],
+        )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert result["files_edited"] == 1
 
-    def test_languages_sorted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_languages_sorted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event("file_edited", file_path="a.ts", language="typescript"),
-            _make_event("file_edited", file_path="b.py", language="python"),
-            _make_event("file_edited", file_path="c.js", language="javascript"),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event("file_edited", file_path="a.ts", language="typescript"),
+                _make_event("file_edited", file_path="b.py", language="python"),
+                _make_event("file_edited", file_path="c.js", language="javascript"),
+            ],
+        )
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("c-001", "completed")
         assert result["languages"] == sorted(result["languages"])
 
-    def test_summary_contains_conversation_id(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_summary_contains_conversation_id(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         log = tmp_path / "events.jsonl"
         log.write_text("")
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         result = _mod.aggregate_session("my-conv-id", "completed")
         assert result["conversation_id"] == "my-conv-id"
 
-    def test_summary_contains_outcome(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_summary_contains_outcome(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         log = tmp_path / "events.jsonl"
         log.write_text("")
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
@@ -369,7 +450,9 @@ class TestSessionSummaryPersistence:
         monkeypatch.setattr(_mod, "EVENTS_LOG", tmp_path / "events.jsonl")
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "", "status": "completed"})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": "", "status": "completed"}
+        )
         _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
@@ -403,7 +486,9 @@ class TestCorrelationThreading:
         events_out: List[Dict] = []
         monkeypatch.setattr(_mod, "read_session_context", lambda: session)
         monkeypatch.setattr(_mod, "log_event", lambda e: events_out.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": conv, "status": status}
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -411,26 +496,37 @@ class TestCorrelationThreading:
         _mod.main()
         return events_out[0]
 
-    def test_correlation_id_from_session_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_correlation_id_from_session_context(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         e = self._run(monkeypatch, session={"latest_correlation_id": "abc123def456"})
         assert e["correlation_id"] == "abc123def456"
         assert e["injected_pattern_ids"] == []
 
-    def test_missing_session_uses_empty_string(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_session_uses_empty_string(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         e = self._run(monkeypatch, session={})
         assert e["correlation_id"] == ""
         assert e["injected_pattern_ids"] == []
 
-    def test_extra_session_fields_do_not_crash(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        e = self._run(monkeypatch, session={
-            "latest_correlation_id": "valid0000001",
-            "conversation_id": "c-001",
-            "started_at": "2026-04-14T00:00:00+00:00",
-        })
+    def test_extra_session_fields_do_not_crash(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        e = self._run(
+            monkeypatch,
+            session={
+                "latest_correlation_id": "valid0000001",
+                "conversation_id": "c-001",
+                "started_at": "2026-04-14T00:00:00+00:00",
+            },
+        )
         assert e["correlation_id"] == "valid0000001"
         assert e["injected_pattern_ids"] == []
 
-    def test_correlation_id_on_failed_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_correlation_id_on_failed_session(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         e = self._run(
             monkeypatch,
             status="failed",
@@ -454,9 +550,15 @@ class TestTypedEventSchema:
         status: str = "completed",
     ) -> Dict:
         events_out: List[Dict] = []
-        monkeypatch.setattr(_mod, "read_session_context", lambda: {"latest_correlation_id": "test000abc12"})
+        monkeypatch.setattr(
+            _mod,
+            "read_session_context",
+            lambda: {"latest_correlation_id": "test000abc12"},
+        )
         monkeypatch.setattr(_mod, "log_event", lambda e: events_out.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": conv, "status": status}
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -464,7 +566,9 @@ class TestTypedEventSchema:
         _mod.main()
         return events_out[0]
 
-    def test_event_type_is_session_stopped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_event_type_is_session_stopped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         assert self._run(monkeypatch)["event"] == "session_stopped"
 
     def test_event_has_conversation_id(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -479,7 +583,9 @@ class TestTypedEventSchema:
     def test_event_has_session_outcome(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert "session_outcome" in self._run(monkeypatch)
 
-    def test_event_has_session_outcome_reason(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_event_has_session_outcome_reason(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         assert "session_outcome_reason" in self._run(monkeypatch)
 
     def test_event_has_hook_duration_ms(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -490,7 +596,9 @@ class TestTypedEventSchema:
         e = self._run(monkeypatch)
         assert "summary" in e and isinstance(e["summary"], dict)
 
-    def test_event_has_injected_pattern_ids_list(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_event_has_injected_pattern_ids_list(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         e = self._run(monkeypatch)
         assert "injected_pattern_ids" in e
         assert isinstance(e["injected_pattern_ids"], list)
@@ -500,27 +608,34 @@ class TestTypedEventSchema:
     ) -> None:
         """session_stopped telemetry carries the same deduped IDs as the outbox row."""
         log = tmp_path / "events.jsonl"
-        _write_events(log, [
-            _make_event(
-                "prompt_classified",
-                conversation_id="c-telemetry",
-                reason="task done",
-                injected_pattern_ids=["auto-aaa", "auto-bbb"],
-                timestamp="2026-04-14T10:00:00+00:00",
-            ),
-            _make_event(
-                "prompt_classified",
-                conversation_id="c-telemetry",
-                reason="follow-up done",
-                injected_pattern_ids=["auto-bbb", "auto-ccc"],
-                timestamp="2026-04-14T10:01:00+00:00",
-            ),
-        ])
+        _write_events(
+            log,
+            [
+                _make_event(
+                    "prompt_classified",
+                    conversation_id="c-telemetry",
+                    reason="task done",
+                    injected_pattern_ids=["auto-aaa", "auto-bbb"],
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+                _make_event(
+                    "prompt_classified",
+                    conversation_id="c-telemetry",
+                    reason="follow-up done",
+                    injected_pattern_ids=["auto-bbb", "auto-ccc"],
+                    timestamp="2026-04-14T10:01:00+00:00",
+                ),
+            ],
+        )
         events_out: List[Dict] = []
         monkeypatch.setattr(_mod, "EVENTS_LOG", log)
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda e: events_out.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-telemetry", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "c-telemetry", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
@@ -531,7 +646,11 @@ class TestTypedEventSchema:
     def test_stdout_is_empty_dict(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "c-1", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -544,7 +663,11 @@ class TestTypedEventSchema:
         events_out: List[Dict] = []
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda e: events_out.append(e))
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "c-1", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -552,7 +675,9 @@ class TestTypedEventSchema:
         _mod.main()
         assert len(events_out) == 1
 
-    def test_failed_status_reflected_in_event(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_failed_status_reflected_in_event(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         e = self._run(monkeypatch, status="failed")
         assert e["session_outcome"] == "failed"
 
@@ -563,8 +688,12 @@ class TestTypedEventSchema:
 
 
 class TestRobustness:
-    def test_exception_in_main_does_not_crash(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(_mod, "read_stdin", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    def test_exception_in_main_does_not_crash(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
         buf = io.StringIO()
@@ -576,7 +705,11 @@ class TestRobustness:
         """Even on success, stdout must be {} (informational hook)."""
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "c-1", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "c-1", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -587,9 +720,15 @@ class TestRobustness:
 
 
 class TestRecapFile:
-    def test_last_recap_written_on_stop(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_last_recap_written_on_stop(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         recap_path = tmp_path / "last-recap.md"
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "test-conv", "status": "success"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "test-conv", "status": "success"},
+        )
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
@@ -602,9 +741,15 @@ class TestRecapFile:
         assert recap_path.exists()
         assert "Session Recap" in recap_path.read_text()
 
-    def test_last_recap_contains_outcome(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_last_recap_contains_outcome(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         recap_path = tmp_path / "last-recap.md"
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "test-conv", "status": "failed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "test-conv", "status": "failed"},
+        )
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
@@ -633,16 +778,20 @@ class TestWriterInvocation:
         writer_calls: List[Dict] = []
 
         def fake_writer(patterns_file, evts, files_edited, session_outcome):
-            writer_calls.append({
-                "session_outcome": session_outcome,
-                "files_edited": files_edited,
-            })
+            writer_calls.append(
+                {
+                    "session_outcome": session_outcome,
+                    "files_edited": files_edited,
+                }
+            )
             return 0
 
         monkeypatch.setattr(_mod, "write_session_patterns", fake_writer)
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": conv, "status": status}
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: list(events))
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -650,33 +799,62 @@ class TestWriterInvocation:
         _mod.main()
         return {"calls": writer_calls}
 
-    def test_success_session_calls_writer_with_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        result = self._run(monkeypatch, status="completed", events=[
-            _make_event("file_edited", file_path="a.py", language="python",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("prompt_classified", reason="done",
-                        timestamp="2026-04-14T10:00:30+00:00"),
-        ])
+    def test_success_session_calls_writer_with_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result = self._run(
+            monkeypatch,
+            status="completed",
+            events=[
+                _make_event(
+                    "file_edited",
+                    file_path="a.py",
+                    language="python",
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+                _make_event(
+                    "prompt_classified",
+                    reason="done",
+                    timestamp="2026-04-14T10:00:30+00:00",
+                ),
+            ],
+        )
         assert len(result["calls"]) == 1
         assert result["calls"][0]["session_outcome"] == "success"
 
-    def test_failed_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_failed_session_calls_writer_for_metrics(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = self._run(monkeypatch, status="failed")
         assert len(result["calls"]) == 1
         assert result["calls"][0]["session_outcome"] == "failed"
 
-    def test_abandoned_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_abandoned_session_calls_writer_for_metrics(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = self._run(monkeypatch, status="ok", events=[])
         assert len(result["calls"]) == 1
         assert result["calls"][0]["session_outcome"] == "abandoned"
 
-    def test_unknown_session_calls_writer_for_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        result = self._run(monkeypatch, status="completed", events=[
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("shell_guard", decision="allow",
-                        timestamp="2026-04-14T10:02:00+00:00"),
-        ])
+    def test_unknown_session_calls_writer_for_metrics(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result = self._run(
+            monkeypatch,
+            status="completed",
+            events=[
+                _make_event(
+                    "shell_guard",
+                    decision="allow",
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+                _make_event(
+                    "shell_guard",
+                    decision="allow",
+                    timestamp="2026-04-14T10:02:00+00:00",
+                ),
+            ],
+        )
         assert len(result["calls"]) == 1
         assert result["calls"][0]["session_outcome"] == "unknown"
 
@@ -689,7 +867,9 @@ class TestWriterInvocation:
     def test_session_without_injected_ids_does_not_crash(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        plain_events = [_make_event("prompt_classified", matched_agent="debugging", score=0.9)]
+        plain_events = [
+            _make_event("prompt_classified", matched_agent="debugging", score=0.9)
+        ]
         result = self._run(monkeypatch, status="failed", events=plain_events)
         assert len(result["calls"]) == 1  # writer called, no crash
 
@@ -715,7 +895,9 @@ class TestSessionOutbox:
         monkeypatch.setattr(_mod, "write_session_patterns", lambda *a, **k: 0)
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": conv, "status": status})
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": conv, "status": status}
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: list(events))
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -726,12 +908,20 @@ class TestSessionOutbox:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         outbox = tmp_path / "outbox.jsonl"
-        self._run_with_outbox(monkeypatch, outbox, events=[
-            _make_event("prompt_classified", matched_agent="debugging",
-                        matched_confidence=0.9, patterns_injected=2,
-                        injected_pattern_ids=["auto-aaa", "auto-bbb"],
-                        timestamp="2026-04-14T10:00:30+00:00"),
-        ])
+        self._run_with_outbox(
+            monkeypatch,
+            outbox,
+            events=[
+                _make_event(
+                    "prompt_classified",
+                    matched_agent="debugging",
+                    matched_confidence=0.9,
+                    patterns_injected=2,
+                    injected_pattern_ids=["auto-aaa", "auto-bbb"],
+                    timestamp="2026-04-14T10:00:30+00:00",
+                ),
+            ],
+        )
         lines = outbox.read_text().splitlines()
         assert len(lines) == 1
         data = json.loads(lines[0])
@@ -743,14 +933,24 @@ class TestSessionOutbox:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         outbox = tmp_path / "outbox.jsonl"
-        self._run_with_outbox(monkeypatch, outbox, events=[
-            _make_event("prompt_classified", patterns_injected=3,
-                        injected_pattern_ids=["auto-aaa"],
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("prompt_classified", patterns_injected=2,
-                        injected_pattern_ids=["auto-bbb"],
-                        timestamp="2026-04-14T10:01:00+00:00"),
-        ])
+        self._run_with_outbox(
+            monkeypatch,
+            outbox,
+            events=[
+                _make_event(
+                    "prompt_classified",
+                    patterns_injected=3,
+                    injected_pattern_ids=["auto-aaa"],
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+                _make_event(
+                    "prompt_classified",
+                    patterns_injected=2,
+                    injected_pattern_ids=["auto-bbb"],
+                    timestamp="2026-04-14T10:01:00+00:00",
+                ),
+            ],
+        )
         data = json.loads(outbox.read_text().strip())
         assert data["patterns_injected"] == 5
 
@@ -758,14 +958,24 @@ class TestSessionOutbox:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         outbox = tmp_path / "outbox.jsonl"
-        self._run_with_outbox(monkeypatch, outbox, events=[
-            _make_event("prompt_classified", patterns_injected=2,
-                        injected_pattern_ids=["auto-aaa", "auto-bbb"],
-                        timestamp="2026-04-14T10:00:00+00:00"),
-            _make_event("prompt_classified", patterns_injected=2,
-                        injected_pattern_ids=["auto-bbb", "auto-ccc"],
-                        timestamp="2026-04-14T10:01:00+00:00"),
-        ])
+        self._run_with_outbox(
+            monkeypatch,
+            outbox,
+            events=[
+                _make_event(
+                    "prompt_classified",
+                    patterns_injected=2,
+                    injected_pattern_ids=["auto-aaa", "auto-bbb"],
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+                _make_event(
+                    "prompt_classified",
+                    patterns_injected=2,
+                    injected_pattern_ids=["auto-bbb", "auto-ccc"],
+                    timestamp="2026-04-14T10:01:00+00:00",
+                ),
+            ],
+        )
         data = json.loads(outbox.read_text().strip())
         # auto-bbb appears in both events but must be deduped; order of first appearance kept
         assert data["injected_pattern_ids"] == ["auto-aaa", "auto-bbb", "auto-ccc"]
@@ -774,12 +984,20 @@ class TestSessionOutbox:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         outbox = tmp_path / "outbox.jsonl"
-        self._run_with_outbox(monkeypatch, outbox, events=[
-            _make_event("prompt_classified", matched_agent="debug-intelligence",
-                        score=0.95, patterns_injected=1,
-                        injected_pattern_ids=["auto-aaa"],
-                        timestamp="2026-04-14T10:00:00+00:00"),
-        ])
+        self._run_with_outbox(
+            monkeypatch,
+            outbox,
+            events=[
+                _make_event(
+                    "prompt_classified",
+                    matched_agent="debug-intelligence",
+                    score=0.95,
+                    patterns_injected=1,
+                    injected_pattern_ids=["auto-aaa"],
+                    timestamp="2026-04-14T10:00:00+00:00",
+                ),
+            ],
+        )
         data = json.loads(outbox.read_text().strip())
         assert data["matched_confidence"] == 0.95
         assert data["started_at"] == "2026-04-14T10:00:00+00:00"
@@ -804,11 +1022,19 @@ class TestSessionOutbox:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         buf = io.StringIO()
-        monkeypatch.setattr(_mod, "write_session_outcome", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+        monkeypatch.setattr(
+            _mod,
+            "write_session_outcome",
+            lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")),
+        )
         monkeypatch.setattr(_mod, "write_session_patterns", lambda *a, **k: 0)
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "ob-err", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "ob-err", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
@@ -838,10 +1064,16 @@ class TestSessionOutbox:
         monkeypatch.setenv("OMNICURSOR_OUTBOX_FILE", str(outbox))
         monkeypatch.setattr(_mod, "read_session_context", lambda: {})
         monkeypatch.setattr(_mod, "log_event", lambda _: None)
-        monkeypatch.setattr(_mod, "read_stdin", lambda: {"conversation_id": "reg-001", "status": "completed"})
+        monkeypatch.setattr(
+            _mod,
+            "read_stdin",
+            lambda: {"conversation_id": "reg-001", "status": "completed"},
+        )
         monkeypatch.setattr(_mod, "_load_events", lambda cid: [])
         monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
         _stub_stop_emit_and_pattern_sync(monkeypatch)
         monkeypatch.setattr(sys, "stdout", io.StringIO())
         _mod.main()
-        assert writer_called[0], "write_session_patterns must still be called when outbox is present"
+        assert writer_called[0], (
+            "write_session_patterns must still be called when outbox is present"
+        )

@@ -39,7 +39,9 @@ def emitted(monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str, Dict]]:
     monkeypatch.setattr(_mod, "log_event", lambda _: None)
     monkeypatch.setattr(_mod, "read_session_context", lambda: {})
     monkeypatch.setattr(
-        _mod, "send_event", lambda topic, payload: events.append((topic, payload)) or True
+        _mod,
+        "send_event",
+        lambda topic, payload: events.append((topic, payload)) or True,
     )
     return events
 

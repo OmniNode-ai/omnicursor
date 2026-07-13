@@ -120,21 +120,35 @@ class TestClassifyPrompt:
         assert score == 0.0
 
     def test_case_insensitive_matching(self) -> None:
-        agents = [{"name": "test-agent", "activation_patterns": {
-            "explicit_triggers": ["DEBUG"], "context_triggers": [],
-        }}]
+        agents = [
+            {
+                "name": "test-agent",
+                "activation_patterns": {
+                    "explicit_triggers": ["DEBUG"],
+                    "context_triggers": [],
+                },
+            }
+        ]
         name, score, _ = _mod.classify_prompt("debug this now", agents)
         assert name == "test-agent"
         assert score >= _mod.HARD_FLOOR
 
     def test_highest_score_wins(self) -> None:
         agents = [
-            {"name": "weak-agent", "activation_patterns": {
-                "explicit_triggers": ["qux"], "context_triggers": ["bar baz"],
-            }},
-            {"name": "strong-agent", "activation_patterns": {
-                "explicit_triggers": ["bar"], "context_triggers": [],
-            }},
+            {
+                "name": "weak-agent",
+                "activation_patterns": {
+                    "explicit_triggers": ["qux"],
+                    "context_triggers": ["bar baz"],
+                },
+            },
+            {
+                "name": "strong-agent",
+                "activation_patterns": {
+                    "explicit_triggers": ["bar"],
+                    "context_triggers": [],
+                },
+            },
         ]
         name, _, _ = _mod.classify_prompt("foo bar baz", agents)
         assert name == "strong-agent"
@@ -209,7 +223,9 @@ class TestSessionIdentity:
         _mod._init_session_fallback(conv_id)
         mtime = (fake_sessions / conv_id / "session_initialized").stat().st_mtime
         _mod._init_session_fallback(conv_id)
-        assert (fake_sessions / conv_id / "session_initialized").stat().st_mtime == mtime
+        assert (
+            fake_sessions / conv_id / "session_initialized"
+        ).stat().st_mtime == mtime
 
     def test_different_conv_ids_each_get_flag(self, fake_sessions: Path) -> None:
         _mod._init_session_fallback("session-A")
@@ -493,7 +509,9 @@ class TestCanonicalEmit:
         events = self._emitted(monkeypatch, _COMPLEX_PROMPT)
         topics = [t for t, _ in events]
         assert "onex.cmd.omnicursor.node-delegation-request.v1" not in topics
-        assert dict(events)["cursor.hook.prompt"]["payload"]["delegation_required"] is True
+        assert (
+            dict(events)["cursor.hook.prompt"]["payload"]["delegation_required"] is True
+        )
 
     def test_simple_prompt_delegation_false_in_payload(
         self, fake_sessions: Path, monkeypatch: pytest.MonkeyPatch
@@ -503,9 +521,7 @@ class TestCanonicalEmit:
 
 
 class TestPrivacySplit:
-    def _emitted(
-        self, monkeypatch: pytest.MonkeyPatch, prompt: str
-    ) -> Dict[str, Dict]:
+    def _emitted(self, monkeypatch: pytest.MonkeyPatch, prompt: str) -> Dict[str, Dict]:
         return dict(_emitted_events(monkeypatch, prompt, conv_id="p-1"))
 
     def test_cmd_payload_carries_full_redacted_prompt(

@@ -17,11 +17,39 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-STOPWORDS: frozenset[str] = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
+STOPWORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "has",
+        "have",
+        "i",
+        "in",
+        "is",
+        "it",
+        "my",
+        "not",
+        "of",
+        "on",
+        "or",
+        "the",
+        "this",
+        "that",
+        "to",
+        "was",
+        "we",
+        "with",
+        "you",
+    }
+)
 
 PATTERN_RELEVANCE_THRESHOLD: float = 0.7
 MAX_PATTERNS: int = 5
@@ -30,7 +58,8 @@ MAX_PATTERNS: int = 5
 def extract_keywords(text: str) -> list[str]:
     """Tokenize prompt into significant lowercase words (stopwords excluded)."""
     return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
+        w
+        for w in re.findall(r"\b\w+\b", text.lower())
         if w not in STOPWORDS and len(w) > 2
     ]
 
@@ -54,10 +83,9 @@ def score_pattern_relevance(
         base = 0.3
 
     desc = pattern.get("description", "")
-    desc_words = (
-        {w for w in re.findall(r"\b\w+\b", str(desc).lower()) if len(w) > 2}
-        - STOPWORDS
-    )
+    desc_words = {
+        w for w in re.findall(r"\b\w+\b", str(desc).lower()) if len(w) > 2
+    } - STOPWORDS
     if desc_words and prompt_words:
         overlap_ratio = len(prompt_words & desc_words) / len(desc_words)
         boost = overlap_ratio * 0.4

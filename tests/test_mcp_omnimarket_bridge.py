@@ -59,29 +59,45 @@ def test_tool_registered() -> None:
 
 def test_tool_calls_bridge_with_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     spy = _BridgeSpy(_OK_RESULT)
-    monkeypatch.setattr(omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy)
+    monkeypatch.setattr(
+        omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy
+    )
 
     _run(omnimarket_bridge_server.mcp.call_tool("run_local_review", {}))
 
     assert len(spy.calls) == 1
-    assert spy.calls[0] == {"dry_run": True, "max_iterations": 10, "required_clean_runs": 2}
+    assert spy.calls[0] == {
+        "dry_run": True,
+        "max_iterations": 10,
+        "required_clean_runs": 2,
+    }
 
 
 def test_tool_forwards_custom_params(monkeypatch: pytest.MonkeyPatch) -> None:
     spy = _BridgeSpy(_OK_RESULT)
-    monkeypatch.setattr(omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy)
+    monkeypatch.setattr(
+        omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy
+    )
 
-    _run(omnimarket_bridge_server.mcp.call_tool(
-        "run_local_review",
-        {"dry_run": False, "max_iterations": 5, "required_clean_runs": 3},
-    ))
+    _run(
+        omnimarket_bridge_server.mcp.call_tool(
+            "run_local_review",
+            {"dry_run": False, "max_iterations": 5, "required_clean_runs": 3},
+        )
+    )
 
-    assert spy.calls[0] == {"dry_run": False, "max_iterations": 5, "required_clean_runs": 3}
+    assert spy.calls[0] == {
+        "dry_run": False,
+        "max_iterations": 5,
+        "required_clean_runs": 3,
+    }
 
 
 def test_tool_returns_parseable_json(monkeypatch: pytest.MonkeyPatch) -> None:
     spy = _BridgeSpy(_OK_RESULT)
-    monkeypatch.setattr(omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy)
+    monkeypatch.setattr(
+        omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy
+    )
 
     content_blocks, _structured = _run(
         omnimarket_bridge_server.mcp.call_tool("run_local_review", {})
@@ -95,7 +111,9 @@ def test_tool_returns_parseable_json(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_tool_returns_error_as_json(monkeypatch: pytest.MonkeyPatch) -> None:
     spy = _BridgeSpy(_FAIL_RESULT)
-    monkeypatch.setattr(omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy)
+    monkeypatch.setattr(
+        omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy
+    )
 
     content_blocks, _structured = _run(
         omnimarket_bridge_server.mcp.call_tool("run_local_review", {})
@@ -108,7 +126,9 @@ def test_tool_returns_error_as_json(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_default_dry_run_is_true(monkeypatch: pytest.MonkeyPatch) -> None:
     spy = _BridgeSpy(_OK_RESULT)
-    monkeypatch.setattr(omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy)
+    monkeypatch.setattr(
+        omnimarket_bridge_server.omnimarket_bridge, "run_local_review", spy
+    )
 
     _run(omnimarket_bridge_server.mcp.call_tool("run_local_review", {}))
 

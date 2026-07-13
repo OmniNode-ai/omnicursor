@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 from .schemas import AgentContext
-from .scoring import HARD_FLOOR, STOPWORDS, extract_keywords, fuzzy_threshold, score_agent
+from .scoring import (
+    HARD_FLOOR,
+    STOPWORDS,
+    extract_keywords,
+    fuzzy_threshold,
+    score_agent,
+)
 
 __all__ = [
     "AGENT_CONTEXTS",
@@ -225,6 +231,7 @@ except OSError:
 # Synthetic activation patterns for hardcoded agents
 # ---------------------------------------------------------------------------
 
+
 def _build_hardcoded_raw_agents() -> List[Dict[str, Any]]:
     """Build raw agent dicts for hardcoded AGENT_CONTEXTS using ALIASES as triggers.
 
@@ -239,15 +246,17 @@ def _build_hardcoded_raw_agents() -> List[Dict[str, Any]]:
     result = []
     for category, ctx in AGENT_CONTEXTS.items():
         triggers = sorted({category} | set(reverse.get(category, [])))
-        result.append({
-            "name": ctx.agent_name,
-            "category": category,
-            "activation_patterns": {
-                "explicit_triggers": triggers,
-                "context_triggers": [],
-                "activation_keywords": triggers,
-            },
-        })
+        result.append(
+            {
+                "name": ctx.agent_name,
+                "category": category,
+                "activation_patterns": {
+                    "explicit_triggers": triggers,
+                    "context_triggers": [],
+                    "activation_keywords": triggers,
+                },
+            }
+        )
     return result
 
 
@@ -258,8 +267,7 @@ _JSON_CATEGORIES: Set[str] = {a.get("category", "") for a in _RAW_JSON_AGENTS}
 
 # Combined scoring pool: JSON agents first; hardcoded only where JSON doesn't already cover.
 _ALL_RAW_AGENTS: List[Dict[str, Any]] = _RAW_JSON_AGENTS + [
-    a for a in _HARDCODED_RAW_AGENTS
-    if a.get("category", "") not in _JSON_CATEGORIES
+    a for a in _HARDCODED_RAW_AGENTS if a.get("category", "") not in _JSON_CATEGORIES
 ]
 
 
@@ -354,7 +362,12 @@ def reload_agents() -> None:
     Useful in tests or after adding new ``.cursor/agents/*.json`` files without
     restarting the process.
     """
-    global _JSON_AGENTS, _RAW_JSON_AGENTS, _JSON_CATEGORIES, _ALL_RAW_AGENTS, _MERGED_CONTEXTS
+    global \
+        _JSON_AGENTS, \
+        _RAW_JSON_AGENTS, \
+        _JSON_CATEGORIES, \
+        _ALL_RAW_AGENTS, \
+        _MERGED_CONTEXTS
 
     _JSON_AGENTS = _load_json_agents()
     _RAW_JSON_AGENTS = []
@@ -370,7 +383,8 @@ def reload_agents() -> None:
 
     _JSON_CATEGORIES = {a.get("category", "") for a in _RAW_JSON_AGENTS}
     _ALL_RAW_AGENTS = _RAW_JSON_AGENTS + [
-        a for a in _HARDCODED_RAW_AGENTS
+        a
+        for a in _HARDCODED_RAW_AGENTS
         if a.get("category", "") not in _JSON_CATEGORIES
     ]
     _MERGED_CONTEXTS = {**AGENT_CONTEXTS, **_JSON_AGENTS}

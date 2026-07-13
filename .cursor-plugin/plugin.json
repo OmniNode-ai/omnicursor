@@ -29,5 +29,6 @@
   "rules": ".cursor/rules",
   "agents": ".cursor/agents",
   "skills": ".cursor/skills",
-  "hooks": ".cursor/hooks.json"
+  "hooks": ".cursor/hooks.json",
+  "mcpServers": ".cursor/mcp.json"
 }

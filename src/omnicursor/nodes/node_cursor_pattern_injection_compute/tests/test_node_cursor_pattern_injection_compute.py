@@ -6,9 +6,15 @@ import json
 
 import pytest
 
-from omnicursor.nodes.node_cursor_pattern_injection_compute.models.input import PatternInjectionInput
-from omnicursor.nodes.node_cursor_pattern_injection_compute.models.output import PatternInjectionOutput
-from omnicursor.nodes.node_cursor_pattern_injection_compute.handlers.handle_pattern_inject import handle_pattern_inject
+from omnicursor.nodes.node_cursor_pattern_injection_compute.models.input import (
+    PatternInjectionInput,
+)
+from omnicursor.nodes.node_cursor_pattern_injection_compute.models.output import (
+    PatternInjectionOutput,
+)
+from omnicursor.nodes.node_cursor_pattern_injection_compute.handlers.handle_pattern_inject import (
+    handle_pattern_inject,
+)
 from omnicursor.nodes.node_cursor_pattern_injection_compute.node import run
 
 
@@ -22,10 +28,16 @@ def empty_patterns_file(tmp_path):
 @pytest.fixture
 def patterns_file_with_data(tmp_path):
     f = tmp_path / "learned_patterns.json"
-    f.write_text(json.dumps({"patterns": [
-        {"pattern": "debug", "domain": "debugging", "weight": 0.9},
-        {"pattern": "fix bug", "domain": "debugging", "weight": 0.8},
-    ]}))
+    f.write_text(
+        json.dumps(
+            {
+                "patterns": [
+                    {"pattern": "debug", "domain": "debugging", "weight": 0.9},
+                    {"pattern": "fix bug", "domain": "debugging", "weight": 0.8},
+                ]
+            }
+        )
+    )
     return f
 
 
@@ -46,16 +58,18 @@ class TestPatternInjectionModels:
 
 class TestHandlerPatternInject:
     def test_empty_file_returns_empty_patterns(self, empty_patterns_file):
-        result = handle_pattern_inject(PatternInjectionInput(
-            prompt="debug this", patterns_file=empty_patterns_file
-        ))
+        result = handle_pattern_inject(
+            PatternInjectionInput(
+                prompt="debug this", patterns_file=empty_patterns_file
+            )
+        )
         assert isinstance(result, PatternInjectionOutput)
         assert result.count == len(result.patterns)
 
     def test_output_count_matches_patterns_length(self, empty_patterns_file):
-        result = handle_pattern_inject(PatternInjectionInput(
-            prompt="anything", patterns_file=empty_patterns_file
-        ))
+        result = handle_pattern_inject(
+            PatternInjectionInput(prompt="anything", patterns_file=empty_patterns_file)
+        )
         assert result.count == len(result.patterns)
 
 

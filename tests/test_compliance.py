@@ -198,10 +198,7 @@ def test_recap_fully_compliant() -> None:
 
 
 def test_recap_missing_next_steps() -> None:
-    summary = (
-        "Session outcome was success. "
-        "Files edited: src/foo.py."
-    )
+    summary = "Session outcome was success. Files edited: src/foo.py."
     result = check_compliance("recap", summary)
     assert result.compliant is False
     assert "suggests_next_steps" in result.missing
@@ -243,10 +240,7 @@ def test_plan_to_tickets_fully_compliant() -> None:
 
 
 def test_plan_to_tickets_missing_epic() -> None:
-    summary = (
-        "Parsing plan file. Found 3 tasks. "
-        "Created tickets: OMN-1, OMN-2, OMN-3."
-    )
+    summary = "Parsing plan file. Found 3 tasks. Created tickets: OMN-1, OMN-2, OMN-3."
     result = check_compliance("plan-to-tickets", summary)
     assert result.compliant is False
     assert "creates_epic" in result.missing
@@ -268,11 +262,7 @@ def test_execute_plan_fully_compliant() -> None:
 
 
 def test_execute_plan_missing_summary() -> None:
-    summary = (
-        "Running plan-review: PASS. "
-        "Created tickets via plan-to-tickets."
-    )
+    summary = "Running plan-review: PASS. Created tickets via plan-to-tickets."
     result = check_compliance("execute-plan", summary)
     assert result.compliant is False
     assert "reports_summary" in result.missing
-

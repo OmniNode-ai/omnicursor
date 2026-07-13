@@ -41,7 +41,9 @@ def emitted(monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str, Dict]]:
     monkeypatch.setattr(_mod, "log_event", lambda _: None)
     monkeypatch.setattr(_mod, "read_session_context", lambda: {})
     monkeypatch.setattr(
-        _mod, "send_event", lambda topic, payload: events.append((topic, payload)) or True
+        _mod,
+        "send_event",
+        lambda topic, payload: events.append((topic, payload)) or True,
     )
     return events
 
@@ -71,14 +73,20 @@ class TestRefresh:
     ) -> None:
         captured: Dict[str, Any] = {}
         monkeypatch.setattr(
-            _mod, "fetch_patterns",
-            lambda domain, **k: captured.update(domain=domain)
-            or [{"pattern_id": "p1", "description": "thin nodes"}],
+            _mod,
+            "fetch_patterns",
+            lambda domain, **k: (
+                captured.update(domain=domain)
+                or [{"pattern_id": "p1", "description": "thin nodes"}]
+            ),
         )
         out = _run(
             monkeypatch,
-            {"conversation_id": "c1", "tool_name": "edit_file",
-             "tool_input": {"file_path": "src/app.py"}},
+            {
+                "conversation_id": "c1",
+                "tool_name": "edit_file",
+                "tool_input": {"file_path": "src/app.py"},
+            },
         )
         assert captured["domain"] == "python"  # inferred from .py
         assert "p1" in out["additional_context"]
@@ -89,8 +97,11 @@ class TestRefresh:
         monkeypatch.setattr(_mod, "fetch_patterns", lambda *a, **k: [])
         out = _run(
             monkeypatch,
-            {"conversation_id": "c1", "tool_name": "edit_file",
-             "tool_input": {"file_path": "x.py"}},
+            {
+                "conversation_id": "c1",
+                "tool_name": "edit_file",
+                "tool_input": {"file_path": "x.py"},
+            },
         )
         assert out == {}
 
@@ -100,8 +111,11 @@ class TestRefresh:
         monkeypatch.setattr(_mod, "fetch_patterns", lambda *a, **k: [])
         _run(
             monkeypatch,
-            {"conversation_id": "c1", "tool_name": "edit_file",
-             "tool_input": {"file_path": "x.py"}},
+            {
+                "conversation_id": "c1",
+                "tool_name": "edit_file",
+                "tool_input": {"file_path": "x.py"},
+            },
         )
         # Semantic registry key (stop.py pattern) — never a topic literal.
         events = {t: p for t, p in emitted}

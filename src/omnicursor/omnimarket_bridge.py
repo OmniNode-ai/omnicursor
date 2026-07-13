@@ -113,7 +113,11 @@ def run_local_review(
 
     try:
         proc = subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True, timeout=_TIMEOUT_SECONDS,
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=_TIMEOUT_SECONDS,
             env=env,
         )
     except subprocess.TimeoutExpired:
@@ -204,13 +208,23 @@ def _run_node(
 
     try:
         proc = subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env,
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return BridgeResult(
-            ok=False, returncode=-1, state=None, stderr="",
+            ok=False,
+            returncode=-1,
+            state=None,
+            stderr="",
             error=f"Subprocess timed out after {timeout}s",
-            command=cmd, cwd=cwd, python=python,
+            command=cmd,
+            cwd=cwd,
+            python=python,
         )
 
     state: Optional[Dict[str, Any]] = None
@@ -223,18 +237,35 @@ def _run_node(
 
     if proc.returncode != 0:
         return BridgeResult(
-            ok=False, returncode=proc.returncode, state=state, stderr=proc.stderr,
+            ok=False,
+            returncode=proc.returncode,
+            state=state,
+            stderr=proc.stderr,
             error=proc.stderr.strip() or parse_error or f"Exit code {proc.returncode}",
-            command=cmd, cwd=cwd, python=python,
+            command=cmd,
+            cwd=cwd,
+            python=python,
         )
     if parse_error:
         return BridgeResult(
-            ok=False, returncode=proc.returncode, state=None, stderr=proc.stderr,
-            error=parse_error, command=cmd, cwd=cwd, python=python,
+            ok=False,
+            returncode=proc.returncode,
+            state=None,
+            stderr=proc.stderr,
+            error=parse_error,
+            command=cmd,
+            cwd=cwd,
+            python=python,
         )
     return BridgeResult(
-        ok=True, returncode=0, state=state, stderr=proc.stderr,
-        error=None, command=cmd, cwd=cwd, python=python,
+        ok=True,
+        returncode=0,
+        state=state,
+        stderr=proc.stderr,
+        error=None,
+        command=cmd,
+        cwd=cwd,
+        python=python,
     )
 
 
@@ -282,11 +313,16 @@ def run_ci_watch(
     Timeout: timeout_minutes + 5 minute buffer.
     """
     args = [
-        "--pr-number", str(pr_number),
-        "--repo", repo,
-        "--correlation-id", correlation_id,
-        "--timeout-minutes", str(timeout_minutes),
-        "--max-fix-cycles", str(max_fix_cycles),
+        "--pr-number",
+        str(pr_number),
+        "--repo",
+        repo,
+        "--correlation-id",
+        correlation_id,
+        "--timeout-minutes",
+        str(timeout_minutes),
+        "--max-fix-cycles",
+        str(max_fix_cycles),
     ]
     if dry_run:
         args.append("--dry-run")

@@ -32,8 +32,11 @@ if ! "${PYTHON_BIN}" -m ruff --version >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[pre-commit] Lint: ruff check src/ tests/ .cursor/hooks/"
-"${PYTHON_BIN}" -m ruff check src/ tests/ .cursor/hooks/
+echo "[pre-commit] Lint: ruff check src/ tests/ .cursor/hooks/ scripts/ci/"
+"${PYTHON_BIN}" -m ruff check src/ tests/ .cursor/hooks/ scripts/ci/
+
+echo "[pre-commit] Format: ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/"
+"${PYTHON_BIN}" -m ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/
 
 echo "[pre-commit] Test: pytest tests/ -v"
 "${PYTHON_BIN}" -m pytest tests/ -v
@@ -53,5 +56,12 @@ if missing:
 
 print(f"All {len(skills)} skills have compliance entries.")
 PY
+
+# A10.7 plugin gates (fast, stdlib+pyyaml only — same scripts CI runs).
+echo "[pre-commit] Plugin gates (scripts/ci/)"
+"${PYTHON_BIN}" scripts/ci/check_manifest.py
+"${PYTHON_BIN}" scripts/ci/check_frontmatter.py
+"${PYTHON_BIN}" scripts/ci/check_topic_literals.py
+"${PYTHON_BIN}" scripts/ci/check_hook_stdlib_only.py
 
 echo "[pre-commit] All checks passed."

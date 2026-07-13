@@ -35,6 +35,7 @@ from omnicursor.scoring import HARD_FLOOR, extract_keywords, score_agent  # noqa
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_agents() -> list[dict]:
     agents = []
     for path in sorted(AGENTS_DIR.glob("*.json")):
@@ -46,10 +47,12 @@ def _load_prompts() -> list[dict]:
     rows = []
     with open(PROMPTS_CSV, newline="") as f:
         for row in csv.DictReader(f):
-            rows.append({
-                "prompt": row["prompt_text"].strip().strip('"'),
-                "expected": row["expected_agent"].strip(),
-            })
+            rows.append(
+                {
+                    "prompt": row["prompt_text"].strip().strip('"'),
+                    "expected": row["expected_agent"].strip(),
+                }
+            )
     return rows
 
 
@@ -96,6 +99,7 @@ def _compute_macro(results: list[dict]) -> tuple[float, float]:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def eval_results() -> list[dict]:
     agents = _load_agents()
@@ -103,12 +107,16 @@ def eval_results() -> list[dict]:
     results = []
     for p in prompts:
         predicted, score = _classify(p["prompt"], agents)
-        results.append({"expected": p["expected"], "predicted": predicted, "score": score})
+        results.append(
+            {"expected": p["expected"], "predicted": predicted, "score": score}
+        )
     return results
 
 
 def test_routing_prompt_count(eval_results: list[dict]) -> None:
-    assert len(eval_results) >= 100, f"Expected ≥100 labeled prompts, got {len(eval_results)}"
+    assert len(eval_results) >= 100, (
+        f"Expected ≥100 labeled prompts, got {len(eval_results)}"
+    )
 
 
 def test_routing_macro_precision(eval_results: list[dict]) -> None:

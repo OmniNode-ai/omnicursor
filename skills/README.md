@@ -12,5 +12,5 @@ Each skill has YAML frontmatter (`name:`, `description:`) followed by the skill 
 2. Mirror it to `.cursor/skills/onex-<slug>/SKILL.md`.
 3. Add a `compliance.py` entry and update `tests/test_compliance.py` / `tests/test_skills.py`.
 
-See `.cursor-plugin/plugin.json` (official manifest) and `cursor-plugin.json` (install/surfaces companion).
+See `.cursor-plugin/plugin.json` (the single canonical manifest).
 </content>

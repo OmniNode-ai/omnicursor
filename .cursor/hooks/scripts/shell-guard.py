@@ -63,7 +63,9 @@ def main() -> None:
         session = read_session_context()
         correlation_id: str = session.get("latest_correlation_id", "")
 
-        response = guard_command(command, conversation_id=conversation_id, sessions_root=SESSIONS_DIR)
+        response = guard_command(
+            command, conversation_id=conversation_id, sessions_root=SESSIONS_DIR
+        )
 
         # Translate the guard result to Cursor's documented beforeShellExecution
         # output: {permission: allow|deny|ask, user_message, agent_message}. The

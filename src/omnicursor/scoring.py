@@ -21,17 +21,46 @@ from typing import Any
 # macro precision ≥ 0.80, macro recall ≥ 0.60 (CI gate in test_routing_eval.py).
 HARD_FLOOR: float = 0.55
 
-STOPWORDS: frozenset[str] = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
+STOPWORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "has",
+        "have",
+        "i",
+        "in",
+        "is",
+        "it",
+        "my",
+        "not",
+        "of",
+        "on",
+        "or",
+        "the",
+        "this",
+        "that",
+        "to",
+        "was",
+        "we",
+        "with",
+        "you",
+    }
+)
 
 
 def extract_keywords(text: str) -> list[str]:
     """Tokenize *text* into significant lowercase words (stopwords excluded)."""
     return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
+        w
+        for w in re.findall(r"\b\w+\b", text.lower())
         if w not in STOPWORDS and len(w) > 2
     ]
 

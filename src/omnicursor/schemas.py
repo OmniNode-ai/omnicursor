@@ -46,4 +46,3 @@ class DatabaseStatus(BaseModel):
 
     backend: str
     status: str
-

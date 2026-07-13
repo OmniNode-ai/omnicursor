@@ -46,9 +46,7 @@ def test_filter_patterns_respects_threshold(tmp_path: Path) -> None:
     assert all(isinstance(x, dict) for x in selected)
     assert len(selected) <= MAX_PATTERNS
     for p in selected:
-        assert (
-            score_pattern_relevance(p, "hooks", words) >= PATTERN_RELEVANCE_THRESHOLD
-        )
+        assert score_pattern_relevance(p, "hooks", words) >= PATTERN_RELEVANCE_THRESHOLD
 
 
 def test_load_pattern_dicts_missing_file(tmp_path: Path) -> None:

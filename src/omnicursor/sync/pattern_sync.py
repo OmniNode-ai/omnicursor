@@ -16,16 +16,24 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+_DEFAULT_BASE_URL = "http://localhost:18091"
+
+
 def _base_url(override: Optional[str]) -> str:
     # Single-sourced on INTELLIGENCE_SERVICE_URL — the same env var the hooks
     # read (lib/context_injection.py). OMNIINTELLIGENCE_URL is a deprecated
     # fallback kept for one release.
-    return (
+    base = (
         override
         or os.environ.get("INTELLIGENCE_SERVICE_URL")
         or os.environ.get("OMNIINTELLIGENCE_URL")
-        or "http://localhost:18091"
+        or _DEFAULT_BASE_URL
     ).rstrip("/")
+    # urlopen accepts file:// and custom schemes; constrain env/override input
+    # to http(s) so a misconfigured URL can't read local files (bandit B310).
+    if not base.startswith(("http://", "https://")):
+        return _DEFAULT_BASE_URL
+    return base
 
 
 def _probe_health(base: str, *, timeout_s: float) -> bool:
@@ -33,7 +41,8 @@ def _probe_health(base: str, *, timeout_s: float) -> bool:
     url = f"{base}/health"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s):
+        # Scheme constrained to http(s) by _base_url.
+        with urllib.request.urlopen(req, timeout=timeout_s):  # nosec B310
             return True
     except (OSError, urllib.error.URLError, urllib.error.HTTPError):
         return False
@@ -55,7 +64,6 @@ def _read_local_patterns(path: Path) -> list[Any]:
         if isinstance(patterns, list):
             return patterns
     return []
-
 
 
 def _pattern_identity(pattern: Any) -> str:
@@ -107,7 +115,8 @@ def run(
     url = f"{base}/api/v1/patterns"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+        # Scheme constrained to http(s) by _base_url.
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310
             raw = resp.read().decode("utf-8")
         body: Any = json.loads(raw)
         if isinstance(body, list):
@@ -116,7 +125,9 @@ def run(
             remote_patterns = body["patterns"]
         else:
             return False
-        normalized: dict[str, Any] = {"patterns": _merge_patterns(local_patterns, remote_patterns)}
+        normalized: dict[str, Any] = {
+            "patterns": _merge_patterns(local_patterns, remote_patterns)
+        }
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(normalized, indent=2, ensure_ascii=False) + "\n"
         fd, tmp_name = tempfile.mkstemp(
@@ -136,5 +147,11 @@ def run(
                 pass
             raise
         return True
-    except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TypeError):
+    except (
+        OSError,
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        json.JSONDecodeError,
+        TypeError,
+    ):
         return False

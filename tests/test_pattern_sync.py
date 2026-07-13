@@ -59,7 +59,9 @@ def test_run_writes_list_response(tmp_path: Path) -> None:
     def fake_urlopen(*_a, **_kw):  # type: ignore[no-untyped-def]
         return _Resp()
 
-    with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen):
+    with mock.patch(
+        "omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen
+    ):
         assert run(target, base_url="http://example.invalid", timeout_s=1.0) is True
     data = json.loads(target.read_text())
     assert data["patterns"] == payload
@@ -83,7 +85,9 @@ def test_run_writes_dict_with_patterns_key(tmp_path: Path) -> None:
     def fake_urlopen(*_a, **_kw):  # type: ignore[no-untyped-def]
         return _Resp()
 
-    with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen):
+    with mock.patch(
+        "omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen
+    ):
         assert run(target, base_url="http://example.invalid") is True
     assert json.loads(target.read_text()) == body
 
@@ -122,7 +126,9 @@ def test_run_merges_remote_patterns_with_local(tmp_path: Path) -> None:
     def fake_urlopen(*_a, **_kw):  # type: ignore[no-untyped-def]
         return _Resp()
 
-    with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen):
+    with mock.patch(
+        "omnicursor.sync.pattern_sync.urllib.request.urlopen", fake_urlopen
+    ):
         assert run(target, base_url="http://example.invalid") is True
 
     data = json.loads(target.read_text(encoding="utf-8"))
@@ -176,6 +182,7 @@ def test_run_offline_falls_back_to_local_only_without_raising(tmp_path: Path) ->
 # Defensive behaviour — new in Option B mínima
 # ---------------------------------------------------------------------------
 
+
 class _Resp:
     """Minimal urlopen context-manager stub."""
 
@@ -193,7 +200,9 @@ class _Resp:
 
 
 class TestPatternSyncDefensive:
-    def test_health_probe_fails_offline_returns_false_no_file(self, tmp_path: Path) -> None:
+    def test_health_probe_fails_offline_returns_false_no_file(
+        self, tmp_path: Path
+    ) -> None:
         target = tmp_path / "out.json"
         with mock.patch(
             "omnicursor.sync.pattern_sync.urllib.request.urlopen",
@@ -222,11 +231,15 @@ class TestPatternSyncDefensive:
                 fp=None,
             )
 
-        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _two_calls):
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen", _two_calls
+        ):
             assert run(target, base_url="http://x", timeout_s=1.0) is False
         assert json.loads(target.read_text()) == original
 
-    def test_unexpected_body_returns_false_preserves_existing(self, tmp_path: Path) -> None:
+    def test_unexpected_body_returns_false_preserves_existing(
+        self, tmp_path: Path
+    ) -> None:
         target = tmp_path / "out.json"
         original = {"patterns": [{"pattern_id": "keep"}]}
         target.write_text(json.dumps(original))
@@ -252,7 +265,9 @@ class TestPatternSyncDefensive:
 
         monkeypatch.setenv("INTELLIGENCE_SERVICE_URL", "http://primary-host:1111")
         monkeypatch.setenv("OMNIINTELLIGENCE_URL", "http://legacy-host:9999")
-        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture
+        ):
             run(target, timeout_s=1.0)
         assert all("primary-host:1111" in u for u in captured)
 
@@ -269,7 +284,9 @@ class TestPatternSyncDefensive:
 
         monkeypatch.delenv("INTELLIGENCE_SERVICE_URL", raising=False)
         monkeypatch.setenv("OMNIINTELLIGENCE_URL", "http://custom-host:9999")
-        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture
+        ):
             run(target, timeout_s=1.0)
         assert all("custom-host:9999" in u for u in captured)
 
@@ -285,7 +302,9 @@ class TestPatternSyncDefensive:
 
         monkeypatch.delenv("INTELLIGENCE_SERVICE_URL", raising=False)
         monkeypatch.delenv("OMNIINTELLIGENCE_URL", raising=False)
-        with mock.patch("omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture):
+        with mock.patch(
+            "omnicursor.sync.pattern_sync.urllib.request.urlopen", _capture
+        ):
             run(target, timeout_s=1.0)
         assert all("18091" in u for u in captured)
 
@@ -303,7 +322,11 @@ class TestPatternSyncDefensive:
     def test_shim_delegates_to_canonical_run(self, tmp_path: Path) -> None:
         """lib/pattern_sync.py shim executes the same logic as the canonical run."""
         shim_path = (
-            Path(__file__).parent.parent / ".cursor" / "hooks" / "lib" / "pattern_sync.py"
+            Path(__file__).parent.parent
+            / ".cursor"
+            / "hooks"
+            / "lib"
+            / "pattern_sync.py"
         )
         spec = importlib.util.spec_from_file_location("_test_shim_ps", shim_path)
         assert spec is not None and spec.loader is not None

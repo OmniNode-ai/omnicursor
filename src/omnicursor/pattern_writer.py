@@ -36,12 +36,16 @@ from typing import Any, Dict, List
 # hooks lib (on sys.path when invoked from the stop hook); fall back to
 # loading it by path for package contexts (tests, CI) in the repo checkout.
 try:
-    from redaction import redact_secrets
+    from redaction import redact_secrets  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover - exercised via the package import path
     import importlib.util as _ilu
 
     _redaction_path = (
-        Path(__file__).resolve().parents[2] / ".cursor" / "hooks" / "lib" / "redaction.py"
+        Path(__file__).resolve().parents[2]
+        / ".cursor"
+        / "hooks"
+        / "lib"
+        / "redaction.py"
     )
     _spec = _ilu.spec_from_file_location("redaction", _redaction_path)
     _redaction = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
@@ -73,21 +77,51 @@ MAX_PATTERNS_PER_DOMAIN: int = 20
 UTILIZATION_EVICT_MIN_INJECTIONS: int = 10
 UTILIZATION_EVICT_MIN_RATE: float = 0.2
 
-STOPWORDS: frozenset = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "have", "i", "in", "is", "it", "my", "not", "of", "on",
-    "or", "the", "this", "that", "to", "was", "we", "with", "you",
-})
+STOPWORDS: frozenset = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "has",
+        "have",
+        "i",
+        "in",
+        "is",
+        "it",
+        "my",
+        "not",
+        "of",
+        "on",
+        "or",
+        "the",
+        "this",
+        "that",
+        "to",
+        "was",
+        "we",
+        "with",
+        "you",
+    }
+)
 
 
 def _make_pattern_id(domain: str, pattern_key: str) -> str:
     raw = f"{domain}:{pattern_key}".encode("utf-8")
-    return "auto-" + hashlib.sha1(raw).hexdigest()[:12]
+    # Content-address only, never a security boundary (bandit B324).
+    return "auto-" + hashlib.sha1(raw, usedforsecurity=False).hexdigest()[:12]
 
 
 def _keywords(text: str) -> List[str]:
     return [
-        w for w in re.findall(r"\b\w+\b", text.lower())
+        w
+        for w in re.findall(r"\b\w+\b", text.lower())
         if w not in STOPWORDS and len(w) > 2
     ]
 
@@ -96,7 +130,7 @@ def _agent_to_domain(agent_name: str) -> str:
     domain = agent_name.lower()
     for prefix in ("agent-", "omnicursor-"):
         if domain.startswith(prefix):
-            domain = domain[len(prefix):]
+            domain = domain[len(prefix) :]
     return domain.replace("-", "_")
 
 
@@ -183,10 +217,14 @@ def _upsert_pattern(
             )
             updated = {
                 **p,
-                "weight": min(WEIGHT_CAP, round(p.get("weight", INITIAL_WEIGHT) + increment, 3)),
+                "weight": min(
+                    WEIGHT_CAP, round(p.get("weight", INITIAL_WEIGHT) + increment, 3)
+                ),
                 "success_count": p.get("success_count", 1) + 1,
-                "injection_count": int(p.get("injection_count", 0)) + (1 if injected_success else 0),
-                "utilization_successes": int(p.get("utilization_successes", 0)) + (1 if injected_success else 0),
+                "injection_count": int(p.get("injection_count", 0))
+                + (1 if injected_success else 0),
+                "utilization_successes": int(p.get("utilization_successes", 0))
+                + (1 if injected_success else 0),
                 "last_seen": now,
                 "description": description,
             }
@@ -270,12 +308,14 @@ def extract_patterns_from_events(
         description = "Auto-learned: {} → {} (score {:.2f})".format(
             redact_secrets(snippet)[:60], agent, score
         )
-        candidates.append({
-            "domain": domain,
-            "keywords": keywords,
-            "description": description,
-            "injected": int(evt.get("patterns_injected", 0)) > 0,
-        })
+        candidates.append(
+            {
+                "domain": domain,
+                "keywords": keywords,
+                "description": description,
+                "injected": int(evt.get("patterns_injected", 0)) > 0,
+            }
+        )
 
     return candidates
 
@@ -300,9 +340,7 @@ def write_session_patterns(
 
     # Build an index for O(1) lookup by pattern_id.
     id_index: Dict[str, int] = {
-        p["pattern_id"]: i
-        for i, p in enumerate(existing)
-        if p.get("pattern_id")
+        p["pattern_id"]: i for i, p in enumerate(existing) if p.get("pattern_id")
     }
 
     changed = 0
@@ -329,7 +367,10 @@ def write_session_patterns(
                 p = {
                     **p,
                     "utilization_successes": p["utilization_successes"] + 1,
-                    "weight": min(WEIGHT_CAP, round(p.get("weight", INITIAL_WEIGHT) + increment, 3)),
+                    "weight": min(
+                        WEIGHT_CAP,
+                        round(p.get("weight", INITIAL_WEIGHT) + increment, 3),
+                    ),
                     "last_seen": now,
                 }
             existing[idx] = p

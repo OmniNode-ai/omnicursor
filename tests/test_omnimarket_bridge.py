@@ -73,18 +73,14 @@ def _patch_root(monkeypatch: pytest.MonkeyPatch, root: Optional[Path]) -> None:
     monkeypatch.setattr(omnimarket_bridge, "_resolve_root", lambda: root)
 
 
-def _patch_subprocess(
-    monkeypatch: pytest.MonkeyPatch, spy: _SubprocessSpy
-) -> None:
+def _patch_subprocess(monkeypatch: pytest.MonkeyPatch, spy: _SubprocessSpy) -> None:
     monkeypatch.setattr(omnimarket_bridge.subprocess, "run", spy)
 
 
 # --- success path ---
 
 
-def test_success_parses_json(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_success_parses_json(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout=json.dumps(_VALID_STATE))
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -100,9 +96,7 @@ def test_success_parses_json(
 # --- CLI flag forwarding ---
 
 
-def test_dry_run_flag(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_dry_run_flag(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout=json.dumps(_VALID_STATE))
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -112,9 +106,7 @@ def test_dry_run_flag(
     assert "--dry-run" in spy.calls[0]["cmd"]
 
 
-def test_max_iterations_flag(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_max_iterations_flag(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout=json.dumps(_VALID_STATE))
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -140,9 +132,7 @@ def test_required_clean_runs_flag(
     assert cmd[idx + 1] == "3"
 
 
-def test_all_defaults(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_all_defaults(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout=json.dumps(_VALID_STATE))
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -208,9 +198,7 @@ def test_fallback_to_repo_local(
 # --- failure paths ---
 
 
-def test_nonzero_returncode(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_nonzero_returncode(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout="", stderr="ImportError: no module", returncode=1)
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -222,9 +210,7 @@ def test_nonzero_returncode(
     assert "ImportError" in (result["error"] or "")
 
 
-def test_invalid_json_stdout(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_invalid_json_stdout(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(stdout="not json at all")
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -236,9 +222,7 @@ def test_invalid_json_stdout(
     assert "JSON parse error" in (result["error"] or "")
 
 
-def test_timeout(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_timeout(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     spy = _SubprocessSpy(raise_timeout=True)
     _patch_root(monkeypatch, fake_root)
     _patch_subprocess(monkeypatch, spy)
@@ -252,9 +236,7 @@ def test_timeout(
 # --- debug fields ---
 
 
-def test_custom_python_env(
-    monkeypatch: pytest.MonkeyPatch, fake_root: Path
-) -> None:
+def test_custom_python_env(monkeypatch: pytest.MonkeyPatch, fake_root: Path) -> None:
     monkeypatch.setenv("OMNIMARKET_PYTHON", "/custom/bin/python")
     spy = _SubprocessSpy(stdout=json.dumps(_VALID_STATE))
     _patch_root(monkeypatch, fake_root)
@@ -357,8 +339,8 @@ def test_run_ticket_pipeline_optional_flags_before_positional_id(
     assert "--ticket-id" not in cmd
     assert "--skip-test-iterate" in cmd
     assert "--dry-run" in cmd
-    assert cmd.index("--skip-test-iterate") < cmd.index("--dry-run") < cmd.index(
-        "OMN-42"
+    assert (
+        cmd.index("--skip-test-iterate") < cmd.index("--dry-run") < cmd.index("OMN-42")
     )
     assert cmd[-1] == "OMN-42"
 

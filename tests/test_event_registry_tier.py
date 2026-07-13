@@ -35,7 +35,10 @@ _VALID_TIERS = {"duty_critical", "telemetry"}
 _EXPECTED_TIERS: Dict[Tuple[str, str], str] = {
     ("session.started", "onex.evt.omnicursor.session-started.v1"): "telemetry",
     ("session.ended", "onex.evt.omnicursor.session-ended.v1"): "telemetry",
-    ("session.outcome", "onex.cmd.omniintelligence.session-outcome.v1"): "duty_critical",
+    (
+        "session.outcome",
+        "onex.cmd.omniintelligence.session-outcome.v1",
+    ): "duty_critical",
     ("session.outcome", "onex.evt.omnicursor.session-outcome.v1"): "duty_critical",
     (
         "utilization.scoring.requested",
@@ -68,7 +71,9 @@ class TestRegistryStructure:
             for event_type, rule in _fan_out_rules(_registry_doc())
             if "tier" not in rule
         ]
-        assert missing == [], f"fan-out rules without tier (daemon won't load): {missing}"
+        assert missing == [], (
+            f"fan-out rules without tier (daemon won't load): {missing}"
+        )
 
     def test_every_tier_is_valid(self) -> None:
         invalid = [

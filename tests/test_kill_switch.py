@@ -335,7 +335,9 @@ class TestMaskEnablesNamedHooks:
         monkeypatch.setenv("OMNICURSOR_HOOKS_MASK", "shell")
         calls: List[str] = []
         monkeypatch.setattr(
-            _shell, "read_stdin", lambda: {"command": "rm -rf /", "conversation_id": "c-1"}
+            _shell,
+            "read_stdin",
+            lambda: {"command": "rm -rf /", "conversation_id": "c-1"},
         )
         monkeypatch.setattr(_shell, "read_session_context", lambda: {})
         monkeypatch.setattr(_shell, "log_event", _recorder(calls, "log_event"))
@@ -353,7 +355,9 @@ class TestMaskEnablesNamedHooks:
     ) -> None:
         monkeypatch.setenv("OMNICURSOR_HOOKS_MASK", "prompt")
         calls, out = _run_instrumented(
-            _shell, ["read_stdin", "log_event", "send_event", "guard_command"], monkeypatch
+            _shell,
+            ["read_stdin", "log_event", "send_event", "guard_command"],
+            monkeypatch,
         )
         assert calls == []
         assert out == {"permission": "allow"}
@@ -367,7 +371,9 @@ class TestDisabledShellGuardFailsOpen:
         # kill-switch turns off side effects; it must never block the user.
         monkeypatch.setenv("OMNICURSOR_HOOKS_DISABLE", "1")
         monkeypatch.setattr(
-            _shell, "read_stdin", lambda: {"command": "rm -rf /", "conversation_id": "c-1"}
+            _shell,
+            "read_stdin",
+            lambda: {"command": "rm -rf /", "conversation_id": "c-1"},
         )
         out = io.StringIO()
         monkeypatch.setattr(sys, "stdout", out)

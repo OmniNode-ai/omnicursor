@@ -46,7 +46,10 @@ SOFT_WARN: List[Tuple[re.Pattern[str], str]] = [
         (r"\bchmod\s+777\b", "World-writable permissions are a security risk"),
         (r"\bsudo\s+rm\b", "Elevated removal is risky"),
         (r"\beval\b", "eval executes arbitrary strings as code"),
-        (r"rm\s+-[^\s]*r[^\s]*f[^\s]*\s+\S+", "Recursive force removal — verify the target path"),
+        (
+            r"rm\s+-[^\s]*r[^\s]*f[^\s]*\s+\S+",
+            "Recursive force removal — verify the target path",
+        ),
     ]
 ]
 

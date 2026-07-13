@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from omnicursor.nodes.node_cursor_session_outcome_orchestrator.models.input import SessionOutcomeInput
-from omnicursor.nodes.node_cursor_session_outcome_orchestrator.models.output import SessionOutcomeOutput
-from omnicursor.nodes.node_cursor_session_outcome_orchestrator.handlers.handle_session_stop import handle_session_stop
+from omnicursor.nodes.node_cursor_session_outcome_orchestrator.models.input import (
+    SessionOutcomeInput,
+)
+from omnicursor.nodes.node_cursor_session_outcome_orchestrator.models.output import (
+    SessionOutcomeOutput,
+)
+from omnicursor.nodes.node_cursor_session_outcome_orchestrator.handlers.handle_session_stop import (
+    handle_session_stop,
+)
 from omnicursor.nodes.node_cursor_session_outcome_orchestrator.node import run
 from omnicursor.session_outcome import format_recap
 
@@ -44,7 +50,9 @@ class TestHandlerSessionStop:
             {"event": "prompt_classified", "timestamp": "2026-01-01T00:01:00"},
             {"text": "Task completed successfully", "timestamp": "2026-01-01T00:02:00"},
         ]
-        result = handle_session_stop(SessionOutcomeInput(status="success", events=events))
+        result = handle_session_stop(
+            SessionOutcomeInput(status="success", events=events)
+        )
         assert result.outcome in {"success", "unknown"}
 
     def test_output_is_typed(self):

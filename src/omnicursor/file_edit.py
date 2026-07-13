@@ -90,7 +90,9 @@ def run_tsc_check(file_path: str) -> int:
             timeout=15,
         )
         output = (result.stdout or "").strip()
-        return len([ln for ln in output.splitlines() if ln.strip() and "error TS" in ln])
+        return len(
+            [ln for ln in output.splitlines() if ln.strip() and "error TS" in ln]
+        )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return 0
 

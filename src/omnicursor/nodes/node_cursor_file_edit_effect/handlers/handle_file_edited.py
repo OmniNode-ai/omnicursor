@@ -8,11 +8,13 @@ from omnicursor.nodes.node_cursor_file_edit_effect.models.output import FileEdit
 
 
 def handle_file_edited(input: FileEditInput) -> FileEditOutput:
-    result = handle_edit({
-        "file_path": input.file_path,
-        "edits": input.edits,
-        "conversation_id": input.conversation_id,
-    })
+    result = handle_edit(
+        {
+            "file_path": input.file_path,
+            "edits": input.edits,
+            "conversation_id": input.conversation_id,
+        }
+    )
     return FileEditOutput(
         event=result["event"],
         file_path=result["file_path"],

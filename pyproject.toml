@@ -20,6 +20,12 @@ dev = [
 mcp = [
   "mcp>=1.26.0,<2.0.0",
 ]
+ci = [
+  "ruff",
+  "mypy",
+  "bandit",
+  "detect-secrets",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -33,4 +39,14 @@ omnicursor = ["nodes/*/contract.yaml"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# yaml ships no stubs by default; mcp is an optional extra not installed in
+# the default CI env. Neither gap is an omnicursor typing defect.
+module = ["yaml", "yaml.*", "mcp.*"]
+ignore_missing_imports = true
 
