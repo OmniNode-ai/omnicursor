@@ -90,6 +90,10 @@ def check(root: Path) -> list[str]:
             rel = manifest.get(key)
             if not rel:
                 findings.append(f"{manifest_path}: missing component path '{key}'")
+            elif not isinstance(rel, str):
+                findings.append(
+                    f"{manifest_path}: component '{key}' must be a string path"
+                )
             elif not (root / rel).exists():
                 findings.append(
                     f"{manifest_path}: component '{key}' path {rel} does not exist"

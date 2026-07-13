@@ -16,6 +16,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: no job writes to the repo.
+permissions:
+  contents: read
+
 jobs:
   # Pre-existing job: ruff + pytest + skill-compliance coverage
   # (+ ruff format, ported from omniclaude).
@@ -25,6 +29,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -64,6 +70,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -87,6 +95,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -118,6 +128,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -136,14 +148,15 @@ jobs:
       - name: Detect-secrets baseline compare
         run: |
           cp .secrets.baseline .secrets.baseline.bak
+          # tests/ IS scanned: its fake fixtures (redaction inputs) are audited
+          # baseline entries, so a real credential in a test still fails.
           detect-secrets scan \
             --baseline .secrets.baseline \
             --exclude-files '\.venv/' \
             --exclude-files '^build/' \
             --exclude-files 'egg-info/' \
             --exclude-files '^\.git/' \
-            --exclude-files '\.env\.omninode\.example$' \
-            --exclude-files '^tests/'
+            --exclude-files '\.env\.omninode\.example$'
           # Content-addressed compare (file, hashed_secret): new findings fail;
           # line-number shifts of audited baseline entries do not.
           python3 - <<'EOF'
@@ -175,6 +188,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check markdown links (offline)
         uses: lycheeverse/lychee-action@v2
@@ -199,16 +214,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           path: omnicursor
 
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: OmniNode-ai/omnimarket
           ref: dev
           path: omnimarket
 
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: OmniNode-ai/omnibase_core
           ref: dev
           path: omnibase_core

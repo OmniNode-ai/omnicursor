@@ -150,14 +150,23 @@ if [ "$UNINSTALL" = "1" ]; then
     # A10.5 — opt-in local-data purge. Plain --uninstall never touches
     # ~/.omnicursor/ (learned_patterns.json, outbox.jsonl, events.jsonl,
     # emit.sock/pid, event-spool/, logs/, hooks-disabled marker).
+    # The hooks hardcode ~/.omnicursor (lib/_common.py), so the only dir this
+    # script will ever destroy is one literally named ".omnicursor" — resolve
+    # symlinks first, then refuse anything else (a typo'd OMNICURSOR_DATA_DIR
+    # must not become an rm -rf of /etc or an unrelated user directory).
     if [ "$PURGE" = "1" ]; then
         OMNICURSOR_DATA="${OMNICURSOR_DATA_DIR:-$HOME/.omnicursor}"
+        OMNICURSOR_DATA="$(readlink -f "$OMNICURSOR_DATA" 2>/dev/null || printf '%s' "$OMNICURSOR_DATA")"
         case "$OMNICURSOR_DATA" in
-            ""|"/"|"$HOME")
+            ""|"/"|"$HOME"|"$(readlink -f "$HOME" 2>/dev/null)")
                 echo "  refuse to purge unsafe data dir: '$OMNICURSOR_DATA'" >&2
                 exit 1
                 ;;
         esac
+        if [ "$(basename "$OMNICURSOR_DATA")" != ".omnicursor" ]; then
+            echo "  refuse to purge dir not named '.omnicursor': '$OMNICURSOR_DATA'" >&2
+            exit 1
+        fi
         if [ -d "$OMNICURSOR_DATA" ]; then
             if [ "$DRY_RUN" = "1" ]; then
                 echo "  [dry-run] rm -rf $OMNICURSOR_DATA"

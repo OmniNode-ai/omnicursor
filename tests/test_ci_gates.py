@@ -115,6 +115,20 @@ def test_frontmatter_gate_flags_dual_location_drift(tmp_path: Path) -> None:
     assert "dual-location parity" in result.stdout
 
 
+def test_frontmatter_gate_reports_missing_mirrors_dir(tmp_path: Path) -> None:
+    # No .cursor/skills at all: the gate must report the missing mirror as a
+    # finding, never die with a traceback (CodeRabbit PR-#10 Major).
+    canonical = tmp_path / "skills" / "solo.md"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text(
+        "---\nname: onex-solo\ndescription: >-\n  A long enough description for this fixture.\n---\n"
+    )
+    result = _run(FRONTMATTER_GATE, root=tmp_path)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "no mirror" in result.stdout
+    assert "Traceback" not in result.stderr
+
+
 def test_frontmatter_gate_flags_duplicate_agent_category(tmp_path: Path) -> None:
     # The pr-review/address-pr-comments shape: two agents, one category.
     _skill_fixture(tmp_path, "ok", "A long enough description for the fixture skill.")

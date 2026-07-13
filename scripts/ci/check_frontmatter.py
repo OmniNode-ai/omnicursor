@@ -86,11 +86,17 @@ def check_skills(root: Path) -> list[str]:
         for f in sorted((root / "skills").glob("*.md"))
         if f.name != "README.md"
     }
-    mirrors = {
-        d.name.removeprefix("onex-"): d / "SKILL.md"
-        for d in sorted((root / ".cursor" / "skills").iterdir())
-        if d.is_dir() and (d / "SKILL.md").exists()
-    }
+    # A gate reports findings; it never dies with a traceback on a missing dir.
+    mirrors_dir = root / ".cursor" / "skills"
+    mirrors = (
+        {
+            d.name.removeprefix("onex-"): d / "SKILL.md"
+            for d in sorted(mirrors_dir.iterdir())
+            if d.is_dir() and (d / "SKILL.md").exists()
+        }
+        if mirrors_dir.is_dir()
+        else {}
+    )
 
     for slug, path in canonical.items():
         data = _frontmatter(path, findings)

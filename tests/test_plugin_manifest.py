@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -75,27 +76,15 @@ def test_cursor_plugin_manifest_version_format() -> None:
 # reject unknown top-level keys, so non-official keys (`requires`, `install`,
 # `execution`, `surfaces`, `manifest`) must never reappear: their facts live in
 # README (cursor floor) and pyproject.toml (python floor) instead.
-OFFICIAL_MANIFEST_FIELDS = {
-    "name",
-    "displayName",
-    "publisher",
-    "category",
-    "tags",
-    "description",
-    "version",
-    "author",
-    "homepage",
-    "repository",
-    "license",
-    "keywords",
-    "logo",
-    "rules",
-    "agents",
-    "skills",
-    "commands",
-    "hooks",
-    "mcpServers",
-}
+# Single source of truth: the CI gate's allowlist (scripts/ci isn't a package,
+# so load it by path).
+_spec = importlib.util.spec_from_file_location(
+    "_check_manifest_gate", REPO_ROOT / "scripts" / "ci" / "check_manifest.py"
+)
+assert _spec is not None and _spec.loader is not None
+_check_manifest_gate = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_check_manifest_gate)
+OFFICIAL_MANIFEST_FIELDS = _check_manifest_gate.OFFICIAL_MANIFEST_FIELDS
 
 
 def test_legacy_manifest_removed() -> None:
@@ -248,7 +237,7 @@ def test_install_dry_run_stages_only_curated_payload(tmp_path: Path) -> None:
 
 def test_install_payload_and_uninstall_lifecycle(tmp_path: Path) -> None:
     plugins = tmp_path / "plugins"
-    data = tmp_path / "data"
+    data = tmp_path / ".omnicursor"
     data.mkdir()
     (data / "learned_patterns.json").write_text("{}")
 
@@ -277,7 +266,7 @@ def test_install_payload_and_uninstall_lifecycle(tmp_path: Path) -> None:
 
 def test_uninstall_purge_is_opt_in_and_guarded(tmp_path: Path) -> None:
     plugins = tmp_path / "plugins"
-    data = tmp_path / "data"
+    data = tmp_path / ".omnicursor"
     data.mkdir()
     (data / "outbox.jsonl").write_text("")
 
@@ -287,12 +276,13 @@ def test_uninstall_purge_is_opt_in_and_guarded(tmp_path: Path) -> None:
     result = _run_installer("--purge", plugins_dir=plugins, data_dir=data)
     assert result.returncode != 0
 
-    # Dry-run shows the purge without executing it.
+    # Dry-run shows the purge without executing it. (The script resolves
+    # symlinks before printing, so assert on the basename, not the raw path.)
     result = _run_installer(
         "--uninstall", "--purge", "--dry-run", plugins_dir=plugins, data_dir=data
     )
     assert result.returncode == 0, result.stderr
-    assert "rm -rf" in result.stdout and str(data) in result.stdout
+    assert "rm -rf" in result.stdout and ".omnicursor" in result.stdout
     assert data.exists()
 
     # Real purge removes the data dir.
@@ -309,3 +299,17 @@ def test_uninstall_purge_refuses_unsafe_data_dir(tmp_path: Path) -> None:
     )
     assert result.returncode != 0
     assert "refuse to purge" in result.stdout + result.stderr
+
+
+def test_uninstall_purge_refuses_dir_not_named_omnicursor(tmp_path: Path) -> None:
+    # The hooks only ever write ~/.omnicursor; a typo'd OMNICURSOR_DATA_DIR
+    # pointing anywhere else must be refused, not rm -rf'd.
+    data = tmp_path / "important-stuff"
+    data.mkdir()
+    (data / "keep.me").write_text("")
+    result = _run_installer(
+        "--uninstall", "--purge", plugins_dir=tmp_path / "plugins", data_dir=data
+    )
+    assert result.returncode != 0
+    assert "not named '.omnicursor'" in result.stdout + result.stderr
+    assert (data / "keep.me").exists()
