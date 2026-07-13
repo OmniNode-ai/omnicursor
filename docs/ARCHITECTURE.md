@@ -312,8 +312,11 @@ hook ──send_event({event_type, payload})──▶ emit.sock ──▶ shared
 ```
 
 - **Best-effort, timeout-bound:** if the socket is missing or the daemon is absent,
-  `send_event` returns `False` and the hook continues — emission is soft-fail only,
-  waiting at most `OMNICURSOR_EMIT_TIMEOUT` (default 0.5s) on a live socket.
+  `send_event` returns `False` and the hook continues — emission is soft-fail only.
+  Each socket operation (connect, send, each response read) is bounded by
+  `OMNICURSOR_EMIT_TIMEOUT` (default 0.5s); the bound is per-operation, not
+  end-to-end, so a live daemon streaming its reply can hold the call slightly
+  longer, but a dead or absent daemon can never hang a hook.
 - **No bespoke stack:** there is no Cursor-owned sidecar/drainer/publisher. The wire
   protocol (`{"event_type", "payload"}\n` → `{"status": "queued", "event_id"}\n`) is
   the shared OmniClaude/omnimarket daemon protocol, so OmniCursor inherits whatever

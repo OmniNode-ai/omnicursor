@@ -12,7 +12,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# A superseded run on the same ref provides no signal — cancel it.
+# A superseded PR run provides no signal — cancel it. Push runs on main are
+# never cancelled: every merge commit keeps a complete CI record.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
