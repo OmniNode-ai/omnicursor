@@ -24,6 +24,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -31,6 +32,7 @@ from _common import (
     LEARNED_PATTERNS_FILE,
     SEED_PATTERNS_FILE,
     SESSIONS_DIR,
+    log_event,
 )
 from pattern_loader import get_pattern_cache
 from prompt_pattern_selection import (
@@ -232,6 +234,28 @@ def _prior_session_block(prior_summary: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _proof_sentinel(channel: str) -> str:
+    """Per-fire proof sentinel line, or ``''`` when proof mode is off.
+
+    When ``OMNICURSOR_INJECTION_SENTINEL=1``, mint a fresh UUID for this fire,
+    record it in ``events.jsonl``, and return a marker line for the injected
+    block. The injection-receipt check (``docs/W4_INJECTION_EVIDENCE.md``
+    R1/R2/R4) passes only when the model's verbatim echo matches the logged
+    value — the static banner cannot serve as the receipt token.
+    """
+    if os.environ.get("OMNICURSOR_INJECTION_SENTINEL") != "1":
+        return ""
+    sentinel = str(uuid.uuid4())
+    log_event(
+        {
+            "hook_event": "injection_sentinel_minted",
+            "channel": channel,
+            "sentinel": sentinel,
+        }
+    )
+    return "<!-- OmniCursor: sentinel {} -->".format(sentinel)
+
+
 def build_session_context(
     *,
     patterns: List[Dict[str, Any]],
@@ -247,6 +271,9 @@ def build_session_context(
     header = "<!-- OmniCursor: sessionStart injection patterns={} -->".format(
         len(patterns[:MAX_PATTERNS])
     )
+    sentinel = _proof_sentinel("sessionStart")
+    if sentinel:
+        header = header + "\n" + sentinel
     sections: List[str] = [
         "## OmniCursor Session Context\n\n"
         "Agent routing is emitted per prompt for backend learning; the guidance "
@@ -268,13 +295,23 @@ def build_refresh_context(
     patterns: List[Dict[str, Any]],
     domain: str,
 ) -> str:
-    """Build the ``postToolUse.additional_context`` refresh block, or '' if empty."""
+    """Build the ``postToolUse.additional_context`` refresh block, or '' if empty.
+
+    In proof mode (``OMNICURSOR_INJECTION_SENTINEL=1``) a sentinel-bearing block
+    is returned even with no patterns, so the R1 channel trial can run in a
+    clean environment where nothing has been learned yet.
+    """
     pattern_lines = _patterns_block(
         patterns, "### Learned Patterns (refreshed · {})".format(domain)
     )
-    if not pattern_lines:
+    sentinel = _proof_sentinel("postToolUse")
+    if not pattern_lines and not sentinel:
         return ""
     header = "<!-- OmniCursor: postToolUse refresh domain={} patterns={} -->".format(
         domain, len(patterns[:MAX_PATTERNS])
     )
+    if sentinel:
+        header = header + "\n" + sentinel
+    if not pattern_lines:
+        return header
     return header + "\n\n" + "\n".join(pattern_lines)

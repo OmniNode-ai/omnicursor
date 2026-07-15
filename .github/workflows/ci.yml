@@ -9,12 +9,20 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Fork PRs need a maintainer's "Approve and run" before Actions execute, and
+  # that has never been granted — so as of #8 this workflow had ZERO runs in the
+  # repo's history and every PR merged on local-gate evidence alone. The push
+  # trigger guarantees a post-merge run on main regardless of that friction;
+  # workflow_dispatch lets a maintainer run CI on any ref without a PR.
   push:
     branches: [main]
+  workflow_dispatch:
 
+# A superseded PR run provides no signal — cancel it. Push runs on main are
+# never cancelled: every merge commit keeps a complete CI record.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Least privilege: no job writes to the repo.
 permissions:

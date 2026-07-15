@@ -15,7 +15,7 @@ versus *what is opt-in or aspirational*, read [`CURRENT_STATE.md`](./CURRENT_STA
 
 ## 1. The big picture
 
-```
+```text
                         Cursor IDE (user prompt, shell, file edits, stop)
                                           │
         ┌─────────────────────────────────┴─────────────────────────────────┐
@@ -223,7 +223,7 @@ flat "max of all four":
 
 OmniCursor closes a feedback loop between routing and session outcomes:
 
-```
+```text
 sessionStart / postToolUse             prompt hook               stop hook
 ──────────────────────────             ───────────               ─────────
 inject relevance-ranked patterns       classify prompt →         derive outcome (4-gate)
@@ -306,13 +306,17 @@ daemon** (omnimarket `node_emit_daemon` — the same daemon OmniClaude uses), wh
 is responsible for queueing, spooling, and publishing to Kafka. The hook stays
 stdlib-only and never talks to Kafka itself.
 
-```
+```text
 hook ──send_event({event_type, payload})──▶ emit.sock ──▶ shared emit daemon ──▶ Kafka
                                                             (omnimarket node_emit_daemon)
 ```
 
-- **Best-effort, non-blocking:** if the socket is missing or the daemon is absent,
-  `send_event` returns `False` and the hook continues — emission never blocks Cursor.
+- **Best-effort, timeout-bound:** if the socket is missing or the daemon is absent,
+  `send_event` returns `False` and the hook continues — emission is soft-fail only.
+  Each socket operation (connect, send, each response read) is bounded by
+  `OMNICURSOR_EMIT_TIMEOUT` (default 0.5s); the bound is per-operation, not
+  end-to-end, so a live daemon streaming its reply can hold the call slightly
+  longer, but a dead or absent daemon can never hang a hook.
 - **No bespoke stack:** there is no Cursor-owned sidecar/drainer/publisher. The wire
   protocol (`{"event_type", "payload"}\n` → `{"status": "queued", "event_id"}\n`) is
   the shared OmniClaude/omnimarket daemon protocol, so OmniCursor inherits whatever
