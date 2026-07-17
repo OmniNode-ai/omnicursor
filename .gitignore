@@ -18,6 +18,9 @@ omnidash-main/
 # IDE / editor
 .vscode/
 .claude/settings.local.json
+# Claude Code worktrees — a nested repo committed as a phantom gitlink (no
+# .gitmodules entry) breaks actions/checkout's submodule cleanup on every job.
+.claude/worktrees/
 
 # Python
 __pycache__/
