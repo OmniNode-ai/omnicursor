@@ -19,6 +19,17 @@ from typing import Any, Optional
 _DEFAULT_BASE_URL = "http://localhost:18091"
 
 
+class PatternSyncConfigError(ValueError):
+    """A configured service URL is invalid (non-http(s) scheme).
+
+    Raised instead of silently substituting the default URL: a typo'd
+    INTELLIGENCE_SERVICE_URL must not redirect pattern traffic to localhost
+    behind the operator's back. Hook callers wrap sync in a blanket
+    ``except Exception`` (session-start.py), so for them this fails closed
+    as a no-op sync.
+    """
+
+
 def _base_url(override: Optional[str]) -> str:
     # Single-sourced on INTELLIGENCE_SERVICE_URL — the same env var the hooks
     # read (lib/context_injection.py). OMNIINTELLIGENCE_URL is a deprecated
@@ -32,7 +43,9 @@ def _base_url(override: Optional[str]) -> str:
     # urlopen accepts file:// and custom schemes; constrain env/override input
     # to http(s) so a misconfigured URL can't read local files (bandit B310).
     if not base.startswith(("http://", "https://")):
-        return _DEFAULT_BASE_URL
+        raise PatternSyncConfigError(
+            f"pattern-sync service URL must be http(s), got: {base!r}"
+        )
     return base
 
 
@@ -103,7 +116,8 @@ def run(
     service is offline. Local patterns are preserved — remote patterns are
     appended only if not already present (local takes priority).
 
-    Returns True if remote patterns were fetched and merged.
+    Returns True if remote patterns were fetched and merged. Raises
+    PatternSyncConfigError if the configured URL has a non-http(s) scheme.
     """
     path = target_file or (Path.home() / ".omnicursor" / "learned_patterns.json")
     base = _base_url(base_url)
