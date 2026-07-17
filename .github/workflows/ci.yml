@@ -17,6 +17,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Weekly moving-head probe: sibling-drift tracks the LIVE omnimarket /
+  # omnibase_core dev heads only on this schedule, where a failure can't
+  # block an unrelated PR. PR/push runs use the pinned refs below so a
+  # required check never changes result while the PR's SHA is unchanged
+  # (PR #10 review, point 2).
+  schedule:
+    - cron: "17 9 * * 1"
 
 # A superseded PR run provides no signal — cancel it. Push runs on main are
 # never cancelled: every merge commit keeps a complete CI record.
@@ -220,6 +227,12 @@ jobs:
   sibling-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Governed sibling pins: PR/push runs are deterministic against these
+      # SHAs; only the weekly scheduled run probes the moving dev heads.
+      # Refresh deliberately with a chore commit when adopting new heads.
+      OMNIMARKET_PIN: 9067a97f29e4e53b010892b48b265fa73127c36e
+      OMNIBASE_CORE_PIN: 665b9657f2d310cec647fdc5e0093ae28835bbab
 
     steps:
       - uses: actions/checkout@v4
@@ -231,14 +244,14 @@ jobs:
         with:
           persist-credentials: false
           repository: OmniNode-ai/omnimarket
-          ref: dev
+          ref: ${{ github.event_name == 'schedule' && 'dev' || env.OMNIMARKET_PIN }}
           path: omnimarket
 
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           repository: OmniNode-ai/omnibase_core
-          ref: dev
+          ref: ${{ github.event_name == 'schedule' && 'dev' || env.OMNIBASE_CORE_PIN }}
           path: omnibase_core
 
       - uses: actions/setup-python@v5
