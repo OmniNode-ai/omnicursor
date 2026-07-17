@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -76,15 +75,11 @@ def test_cursor_plugin_manifest_version_format() -> None:
 # reject unknown top-level keys, so non-official keys (`requires`, `install`,
 # `execution`, `surfaces`, `manifest`) must never reappear: their facts live in
 # README (cursor floor) and pyproject.toml (python floor) instead.
-# Single source of truth: the CI gate's allowlist (scripts/ci isn't a package,
-# so load it by path).
-_spec = importlib.util.spec_from_file_location(
-    "_check_manifest_gate", REPO_ROOT / "scripts" / "ci" / "check_manifest.py"
+# Single source of truth: the pinned official cursor/plugins schema
+# (schemas/README.md has the pin provenance — PR #10 review, point 5).
+OFFICIAL_MANIFEST_FIELDS = set(
+    _load_json(REPO_ROOT / "schemas" / "cursor-plugin.schema.json")["properties"]
 )
-assert _spec is not None and _spec.loader is not None
-_check_manifest_gate = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_check_manifest_gate)
-OFFICIAL_MANIFEST_FIELDS = _check_manifest_gate.OFFICIAL_MANIFEST_FIELDS
 
 
 def test_legacy_manifest_removed() -> None:

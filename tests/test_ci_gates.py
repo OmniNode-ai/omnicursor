@@ -229,4 +229,6 @@ def test_manifest_gate_flags_legacy_manifest_and_unknown_keys(tmp_path: Path) ->
     result = _run(MANIFEST_GATE, root=tmp_path)
     assert result.returncode == 1
     assert "legacy root manifest" in result.stdout
-    assert "non-official keys" in result.stdout and "requires" in result.stdout
+    # Unknown keys are caught by the pinned official schema now
+    # (additionalProperties=false), not a handwritten allowlist.
+    assert "official schema" in result.stdout and "'requires'" in result.stdout
