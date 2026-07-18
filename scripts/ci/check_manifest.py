@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""CI gate (A10.7): plugin manifest + MCP wiring structural validation.
+"""CI gate (A10.7): plugin manifest + MCP wiring validation.
 
-Validates the single canonical manifest (A10.2), the shipped MCP registration
-(A10.3), and the CHANGELOG/version sync (A10.1) — the packaging invariants
-Phase 2 established. Structural stand-in for AJV validation against the
-`cursor/plugins` schema until that schema is pinned (NEEDS CODE VERIFICATION
-in the phase plan); the official-field allowlist below is the schema-safe
-subset from CURSOR_PLUGIN_RESEARCH_2026-06-18.md.
+Validates the single canonical manifest (A10.2) against the **pinned official
+`cursor/plugins` schema** (`schemas/cursor-plugin.schema.json` — provenance in
+`schemas/README.md`), plus the project invariants the schema cannot express:
+component paths exist, semver version, CHANGELOG/version sync (A10.1), and
+the shipped MCP registration (A10.3).
 
 Exit 0 = clean; exit 1 = findings printed to stdout.
 """
@@ -20,29 +19,34 @@ import subprocess
 import sys
 from pathlib import Path
 
-OFFICIAL_MANIFEST_FIELDS = {
-    "name",
-    "displayName",
-    "publisher",
-    "category",
-    "tags",
-    "description",
-    "version",
-    "author",
-    "homepage",
-    "repository",
-    "license",
-    "keywords",
-    "logo",
-    "rules",
-    "agents",
-    "skills",
-    "commands",
-    "hooks",
-    "mcpServers",
-}
-
 MCP_SERVER_NAME = "omnicursor-omnimarket"
+SCHEMA_RELPATH = "schemas/cursor-plugin.schema.json"
+
+
+def _validate_against_official_schema(manifest: dict, findings: list[str]) -> None:
+    """Official-schema validation (strict: additionalProperties=false, name
+    pattern/required). Replaces the former handwritten field allowlist.
+
+    The pinned schema ships with this gate (script-relative, not --root
+    relative), so sandbox fixtures validate against the same schema."""
+    try:
+        import jsonschema
+    except ImportError:
+        findings.append(
+            f"{SCHEMA_RELPATH}: jsonschema not installed — the official-schema "
+            "gate cannot run (pip install jsonschema)"
+        )
+        return
+    schema_path = Path(__file__).resolve().parents[2] / SCHEMA_RELPATH
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        findings.append(f"{schema_path}: unreadable pinned schema ({exc})")
+        return
+    validator = jsonschema.Draft7Validator(schema)
+    for error in sorted(validator.iter_errors(manifest), key=str):
+        where = "/".join(str(p) for p in error.absolute_path) or "<root>"
+        findings.append(f"plugin.json vs official schema: {where}: {error.message}")
 
 
 def _load_json(path: Path, findings: list[str]) -> dict | None:
@@ -74,15 +78,13 @@ def check(root: Path) -> list[str]:
 
     manifest = _load_json(manifest_path, findings)
     if manifest is not None:
-        for field in ("name", "displayName", "version", "description"):
+        # Official schema: required name (+ pattern), field types, and the
+        # strict additionalProperties=false key check.
+        _validate_against_official_schema(manifest, findings)
+        # Project policy on top of the schema (which requires only 'name').
+        for field in ("displayName", "version", "description"):
             if not manifest.get(field):
                 findings.append(f"{manifest_path}: missing required field '{field}'")
-        unknown = set(manifest) - OFFICIAL_MANIFEST_FIELDS
-        if unknown:
-            findings.append(
-                f"{manifest_path}: non-official keys {sorted(unknown)} risk failing "
-                "the strict cursor/plugins schema (keep such facts in README/pyproject)"
-            )
         version = str(manifest.get("version", ""))
         if not re.fullmatch(r"\d+\.\d+\.\d+", version):
             findings.append(f"{manifest_path}: version '{version}' is not semver X.Y.Z")

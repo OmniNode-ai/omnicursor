@@ -8,7 +8,9 @@ import urllib.error
 from pathlib import Path
 from unittest import mock
 
-from omnicursor.sync.pattern_sync import run
+import pytest
+
+from omnicursor.sync.pattern_sync import PatternSyncConfigError, run
 
 
 def test_run_uses_default_base_url_port_18091(tmp_path: Path) -> None:
@@ -344,3 +346,51 @@ class TestPatternSyncDefensive:
         assert result is True
         data = json.loads(target.read_text())
         assert data["patterns"] == body
+
+
+class TestBaseUrlValidation:
+    """A misconfigured service URL must fail closed, not silently redirect
+    to the default localhost destination (PR #10 review, point 3)."""
+
+    def test_invalid_scheme_override_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(PatternSyncConfigError):
+            run(tmp_path / "out.json", base_url="file:///etc/passwd")
+
+    def test_invalid_scheme_env_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("INTELLIGENCE_SERVICE_URL", "ftp://intelligence:18091")
+        with pytest.raises(PatternSyncConfigError):
+            run(tmp_path / "out.json")
+
+    def test_deprecated_env_fallback_also_validated(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("INTELLIGENCE_SERVICE_URL", raising=False)
+        monkeypatch.setenv("OMNIINTELLIGENCE_URL", "gopher://x")
+        with pytest.raises(PatternSyncConfigError):
+            run(tmp_path / "out.json")
+
+    def test_error_is_a_value_error(self) -> None:
+        # Callers that predate the typed error and catch ValueError keep working.
+        assert issubclass(PatternSyncConfigError, ValueError)
+
+    def test_invalid_scheme_does_not_touch_target_file(self, tmp_path: Path) -> None:
+        target = tmp_path / "out.json"
+        target.write_text('{"patterns": [{"pattern_id": "keep"}]}')
+        with pytest.raises(PatternSyncConfigError):
+            run(target, base_url="file:///etc/passwd")
+        assert json.loads(target.read_text())["patterns"] == [{"pattern_id": "keep"}]
+
+    def test_hook_call_site_survives_misconfig(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """session-start.py wraps sync in `except Exception` — misconfig must
+        degrade to a no-op sync there, never a crashed hook."""
+        monkeypatch.setenv("INTELLIGENCE_SERVICE_URL", "file:///etc/passwd")
+        try:
+            run(tmp_path / "out.json")
+        except Exception as exc:  # noqa: BLE001 — mirrors the hook's blanket catch
+            assert isinstance(exc, PatternSyncConfigError)
+        else:
+            pytest.fail("expected PatternSyncConfigError")
