@@ -24,12 +24,11 @@ cd ~/tools/OmniCursor
 ./scripts/install-plugin.sh
 ```
 
-This symlinks the repo to `~/.cursor/plugins/local/omnicursor`. Equivalent manual step:
-
-```bash
-mkdir -p ~/.cursor/plugins/local
-ln -sfn ~/tools/OmniCursor ~/.cursor/plugins/local/omnicursor
-```
+This stages a **curated runtime payload** (rules, hooks, skills, agents,
+manifest, `src/omnicursor/`, event-registry config — never `tests/`, `docker/`,
+`eval/`, or `.git`) into `build/plugin/` and symlinks that to
+`~/.cursor/plugins/local/omnicursor`. Don't symlink the repo root by hand — the
+curated payload is what keeps dev-only files out of the installed plugin.
 
 **Check status:**
 
@@ -117,29 +116,23 @@ See [`.cursor/skills/`](../.cursor/skills/) for the full set. Architecture detai
 
 Skills like `onex-plan-to-tickets` and `onex-execute-plan` need the Linear MCP server.
 
-**1. Get a Linear API key** — Linear → Settings → API → Personal API keys.
-
-**2. Add to `~/.cursor/mcp.json`:**
+**1. Add Linear's hosted MCP server to `~/.cursor/mcp.json`:**
 
 ```json
 {
   "mcpServers": {
     "linear": {
-      "command": "npx",
-      "args": ["-y", "@linear/mcp-server"],
-      "env": {
-        "LINEAR_API_KEY": "lin_api_XXXX"
-      }
+      "url": "https://mcp.linear.app/mcp"
     }
   }
 }
 ```
 
-Replace `lin_api_XXXX` with your actual key.
+**2. Restart Cursor and authenticate** — Cursor prompts a browser OAuth flow
+against your Linear workspace the first time the server is used (no API key
+needed; hosted MCP uses OAuth).
 
-**3. Restart Cursor** — the `tracker.*` MCP tools become available in chat.
-
-**4. Verify** — open a Cursor chat and say "list my Linear teams". It should return your teams.
+**3. Verify** — open a Cursor chat and say "list my Linear teams". It should return your teams.
 
 ---
 

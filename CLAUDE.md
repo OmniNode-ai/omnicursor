@@ -22,7 +22,7 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]" ruff          # [dev] is pytest-only; ruff is a separate dep
 git config core.hooksPath .githooks   # wire the shared pre-commit gate
 
-# Tests (640 tests across 24 test modules)
+# Tests (704 tests across 31 test modules; +55 node-suite tests under src/omnicursor/nodes/*/tests/)
 pytest tests/ -v                      # full suite
 pytest tests/test_agents.py -v        # single file
 pytest tests/ -k "debug"              # by name pattern
@@ -44,12 +44,15 @@ Runs the same checks as CI, in order:
    an entry in `src/omnicursor/compliance.py`.
 
 Emergency bypass only: `git commit --no-verify`. CI (`.github/workflows/ci.yml`) runs the
-same checks on Python 3.12 — plus mypy, bandit, detect-secrets (baseline compare), offline
-link check, the A10.7 plugin gates (`scripts/ci/`: manifest/MCP, frontmatter+category,
-topic-literal, hook stdlib-only), shellcheck, and a sibling-drift job that checks out the
-public `omnimarket`/`omnibase_core` repos so the registry/canonical-event tests actually
-run — on **pull requests to `main` and pushes to `main`**. Branch protection should
-require the aggregate `ci-summary` job.
+same checks on Python 3.12 with the `.[dev,mcp]` extras (so the MCP-launcher sandbox smoke
+runs hosted) — plus mypy, bandit, detect-secrets (baseline compare), offline link check,
+the A10.7 plugin gates (`scripts/ci/`: manifest validated against the pinned official
+cursor/plugins schema in `schemas/`, MCP wiring, frontmatter+category, topic-literal,
+hook stdlib-only), shellcheck, and a sibling-drift job that checks out
+`omnimarket`/`omnibase_core` at governed pin SHAs (the weekly scheduled run probes the
+moving `dev` heads instead) — on **pull requests to `main`, pushes to `main`,
+`workflow_dispatch`, and a weekly schedule**. Branch protection should require the
+aggregate `ci-summary` job.
 
 ## Architecture (overview — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for depth)
 

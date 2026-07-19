@@ -106,7 +106,7 @@ pip install -e ".[mcp]"          # the mcp dependency for the bridge server
 export OMNIMARKET_ROOT=/path/to/omnimarket   # local omnimarket checkout
 ```
 
-The bridge subprocess interpreter can be overridden with `OMNIMARKET_PYTHON`. **Linear MCP is a separate dependency** (already enabled in `.cursor/settings.json`) — `onex-execute-plan` needs both. The registered `python3` must be able to import `omnicursor` and `mcp` (use the venv above, or ensure `PYTHONPATH` covers `src/`).
+The bridge subprocess interpreter can be overridden with `OMNIMARKET_PYTHON`. **Linear MCP is a separate dependency** (already enabled in `.cursor/settings.json`) — `onex-execute-plan` needs both. The server is started via [`.cursor/mcp-launcher.py`](./.cursor/mcp-launcher.py), which resolves the plugin's own `src/` onto `sys.path` — the registered `python3` only needs to be able to import `mcp` (the `.[mcp]` extra above).
 
 ## Skills (17)
 
@@ -140,10 +140,12 @@ OmniCursor/
 │   ├── hooks/                   # 7 hook scripts + lib/
 │   ├── hooks.json
 │   ├── mcp.json                 # omnicursor-omnimarket bridge registration
+│   ├── mcp-launcher.py          # plugin-root-resolving MCP server launcher
 │   ├── skills/                  # onex-*/SKILL.md mirrors
 │   └── agents/                  # 17 JSON routing configs
 ├── config/event_registry/       # Emit-daemon fan-out registry (semantic key → topics)
-├── docs/                        # QUICKSTART, ARCHITECTURE
+├── docs/                        # QUICKSTART, ARCHITECTURE, CURRENT_STATE, injection evidence
+├── schemas/                     # Pinned official cursor/plugins manifest schema (CI gate)
 ├── provisioning/                # Optional launchd/systemd templates for the emit daemon
 ├── skills/                      # Canonical skill Markdown
 ├── src/omnicursor/              # Python library + node contracts
@@ -172,7 +174,8 @@ The tracked pre-commit hook runs the same checks as CI (`ruff`, `pytest`, skill 
 | Doc | Purpose |
 |-----|---------|
 | [docs/QUICKSTART.md](./docs/QUICKSTART.md) | Install, hooks, skills, Linear MCP, privacy |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, buckets, routing, intelligence A/B/C |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, buckets, routing, intelligence A/B |
+| [docs/CURRENT_STATE.md](./docs/CURRENT_STATE.md) | What works today, opt-in tiers, known drift, tests & CI |
 | [docs/README.md](./docs/README.md) | Documentation map |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history (Keep a Changelog) |
 
