@@ -41,6 +41,25 @@ All notable changes to OmniCursor are documented here. The format follows
   hook topic-literal gate, stdlib-only hook import guard, dual-location skill
   parity, agent-category uniqueness, shellcheck, secret scan, README link
   check, ruff format check (A10.7).
+- Runnable injection-receipt protocol: with `OMNICURSOR_INJECTION_SENTINEL=1`,
+  `context_injection.py` mints a per-fire `uuid4()` sentinel on both injection
+  channels (`sessionStart` + `postToolUse`), logs it to
+  `~/.omnicursor/events.jsonl`, and the receipt check is *verbatim echo ==
+  logged value*; R3 (cloud) is a negative check where a clean no-op is PASS.
+  Default-off path byte-identical. (#9)
+- CI `push`/`workflow_dispatch` triggers so main gets a post-merge run
+  regardless of fork-PR approval friction. (#9)
+- Plugin-root-resolving MCP launcher (`.cursor/mcp-launcher.py`): resolves
+  `src/` from its own real path so the server starts from any host workspace;
+  sandbox smoke test covers initialize → tools/list → tools/call; CI installs
+  the `mcp` extra so the smoke runs hosted. (#12)
+- Weekly scheduled sibling-drift probe of the moving `omnimarket`/
+  `omnibase_core` dev heads; PR/push runs pin governed SHAs for
+  deterministic required checks. (#12)
+- Official `cursor/plugins` manifest schema vendored at a pinned commit
+  (`schemas/cursor-plugin.schema.json` + provenance) and enforced by
+  `check_manifest.py` via jsonschema, replacing the handwritten field
+  allowlist. (#12)
 
 ### Changed
 - Documentation sanitized for OSS (local-env examples, `OMN-XXXX`
@@ -59,6 +78,16 @@ All notable changes to OmniCursor are documented here. The format follows
   setup sections (A10.6).
 
 ### Fixed
+- Phantom worktree gitlink (`.claude/worktrees/ecstatic-murdock`, a
+  mode-160000 entry with no `.gitmodules` URL) removed — it broke
+  `actions/checkout`'s submodule cleanup under `persist-credentials: false`,
+  failing all six CI jobs on main's first hosted run; `.claude/worktrees/`
+  is now gitignored. (#11)
+- `pattern_sync._base_url()` fails closed: a non-http(s)
+  `INTELLIGENCE_SERVICE_URL`/override now raises a typed
+  `PatternSyncConfigError` instead of silently redirecting to the default
+  localhost URL (hooks degrade to a no-op sync via their existing blanket
+  catch). (#12)
 - `shell-guard.py` fail-open: a telemetry-emit failure could downgrade a
   computed `deny`/`ask` to `allow`; the decision is now written to stdout
   before the emit, which is isolated in its own `try/except`. (#5)

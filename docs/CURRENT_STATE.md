@@ -1,6 +1,6 @@
 # Current State
 
-> **Snapshot date:** June 2026 · **Package version:** `0.1.0`
+> **Snapshot date:** July 2026 · **Package version:** `0.1.0`
 > This document describes *what actually works today*. For *how it is designed*,
 > read [`ARCHITECTURE.md`](./ARCHITECTURE.md). When this doc and the code
 > disagree, the code wins.
@@ -14,7 +14,7 @@
 | Agent configs | **17** | `.cursor/agents/*.json` |
 | Active hooks | **7** | `.cursor/hooks.json` |
 | Node contracts | **7** (one per hook event) | `src/omnicursor/nodes/*/contract.yaml` |
-| Test functions | **561** across **29** test files | `tests/`, `src/omnicursor/nodes/*/tests/` |
+| Test functions | **759** across **36** test files | `tests/` (704/31) + `src/omnicursor/nodes/*/tests/` (55/5) |
 | Compliance smoke-checks | **17** keys | `src/omnicursor/compliance.py` |
 
 ---
@@ -43,8 +43,10 @@ These need only the plugin symlink — no network, no Docker, no extra deps:
 > block-only (`{continue, user_message}`) and does **not** consume `systemMessage` —
 > the earlier per-prompt injection was a structural no-op. Injection now flows through
 > `sessionStart.additional_context` (initial) and `postToolUse.additional_context`
-> (refresh), per the live Cursor hooks docs. Whether a given Cursor version renders
-> injected context should still be confirmed with the H.5 probe.
+> (refresh), per the live Cursor hooks docs. `sessionStart` injection is **proven**
+> on Cursor 3.10.11 (local IDE) — see [`W4_INJECTION_EVIDENCE.md`](./W4_INJECTION_EVIDENCE.md)
+> for the scoped verdict, the `OMNICURSOR_INJECTION_SENTINEL=1` receipt protocol,
+> and the open residuals (R1: `postToolUse` unproven; R2: N=1; R3: cloud; R4: other builds).
 
 ---
 
@@ -104,8 +106,6 @@ plugin, but they shape any work in these areas.
    `polymorphic-agent` (eval/CI).
 8. **No `[tool.ruff]` config and unpinned ruff** — a ruff release can change lint
    results with no repo change.
-9. **`hostile-reviewer.md` has malformed/nested frontmatter** (a second
-   OmniClaude YAML block embedded in the body).
 
 ---
 
@@ -116,18 +116,23 @@ plugin, but they shape any work in these areas.
   and exercise each lifecycle event; (c) the routing eval gate
   (`test_routing_eval.py`) + manual human-graded prompts/rubrics under
   `tests/prompts/` and `tests/rubrics/`.
-- **CI** (`.github/workflows/ci.yml`): runs on **pull requests to `main` and
-  pushes to `main`** (A10.7). Jobs — all secret-free/fork-safe: `lint-and-test`
-  (ruff check + `ruff format --check` + pytest + skill-coverage substring
+- **CI** (`.github/workflows/ci.yml`): runs on **pull requests to `main`,
+  pushes to `main`, `workflow_dispatch`, and a weekly schedule** (A10.7 +
+  the #12 hardening pass). Jobs — all secret-free/fork-safe: `lint-and-test`
+  (ruff check + `ruff format --check` + pytest with the `.[dev,mcp]` extras
+  so the MCP-launcher sandbox smoke runs hosted + skill-coverage substring
   check), `typecheck` (mypy over `src/`), `plugin-gates` (`scripts/ci/`:
-  manifest/MCP wiring, skill/agent frontmatter + dual-location parity +
+  manifest validated against the **pinned official cursor/plugins schema**
+  (`schemas/cursor-plugin.schema.json`, provenance in `schemas/README.md`)
+  plus MCP wiring, skill/agent frontmatter + dual-location parity +
   category uniqueness, hardcoded-topic-literal guard over `.cursor/hooks/`,
   hook stdlib-only imports, shellcheck), `security` (bandit; detect-secrets
   vs the audited `.secrets.baseline`), `links` (offline lychee over
-  README/CHANGELOG/docs), `sibling-drift` (checks out public
-  `omnimarket`/`omnibase_core` so the registry/canonical-event drift tests
-  run instead of skipping), and the `ci-summary` aggregate for branch
-  protection.
+  README/CHANGELOG/docs), `sibling-drift` (checks out
+  `omnimarket`/`omnibase_core` at **governed pin SHAs** on PR/push runs —
+  deterministic for a given PR SHA — while the weekly scheduled run probes
+  the moving `dev` heads non-blockingly), and the `ci-summary` aggregate for
+  branch protection.
 - **Pre-commit** (`.githooks/pre-commit`, enable with
   `git config core.hooksPath .githooks`): mirrors the fast local subset —
   ruff check + format, pytest, skill coverage, and the four `scripts/ci/`
@@ -142,8 +147,7 @@ plugin, but they shape any work in these areas.
 | Branch | Notes |
 |--------|-------|
 | `main` | Default — full plugin, routing, hooks, Options A/B sources, tests |
-| `intelligence/option-b` | Topic/history branch — **diff against `main`** before assuming divergence |
-| Feature branches (`awu42/omn-*`, `julian/*`, …) | In-flight work — check `git branch -a` |
+| Feature branches (`awu42/*`, `julian/*`, …) | In-flight work — check `git branch -a`. Historical topic branches (e.g. `intelligence/option-b`) live on contributors' forks, not this repo |
 
 ---
 

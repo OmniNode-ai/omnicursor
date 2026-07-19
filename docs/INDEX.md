@@ -21,6 +21,7 @@ The map of OmniCursor's active documentation. Start here.
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Surfaces, hooks, routing, node contracts, learning loop, event emission, bridge, packaging |
 | [`CURRENT_STATE.md`](./CURRENT_STATE.md) | Snapshot of what is built / opt-in / drifting; tests & CI; branches |
 | [`QUICKSTART.md`](./QUICKSTART.md) | End-user setup and usage |
+| [`W4_INJECTION_EVIDENCE.md`](./W4_INJECTION_EVIDENCE.md) | Injection proof (scoped verdict), sentinel receipt protocol, open residuals R1–R4 |
 
 ## By task
 
@@ -34,6 +35,7 @@ The map of OmniCursor's active documentation. Start here.
 | Add or change a skill | [`ARCHITECTURE.md` §3](./ARCHITECTURE.md#3-skills) → `skills/`, `.cursor/skills/`, `compliance.py`, tests |
 | Work on event emission | [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-event-emission) → `.cursor/hooks/lib/emit_client.py` (shared platform emit daemon) |
 | Wire the OmniMarket bridge / MCP | [`ARCHITECTURE.md` §9](./ARCHITECTURE.md#9-omnimarket-bridge--mcp) → `OMNIMARKET_ROOT` |
+| Verify context injection actually works | [`W4_INJECTION_EVIDENCE.md`](./W4_INJECTION_EVIDENCE.md) → `OMNICURSOR_INJECTION_SENTINEL=1` sentinel protocol |
 
 ## Planned documents
 

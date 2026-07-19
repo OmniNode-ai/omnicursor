@@ -1,12 +1,13 @@
 # Architecture
 
-> **Status:** Living reference. Last verified against the codebase: **June 2026**.
+> **Status:** Living reference. Last verified against the codebase: **July 2026**.
 > When this document and the code disagree, the **code wins** — see [Source-of-truth hierarchy](#source-of-truth-hierarchy).
 
 OmniCursor is a **Cursor-native adaptation of OmniClaude**. It packages an
 agent/methodology layer as a **Cursor plugin** and backs it with a Python
-library that exists for **tests, CI, and optional scripting** — the IDE
-behavior itself does not import that library at runtime.
+library that is the **single source of truth for shared hook logic** — the
+stdlib-only hook scripts reach it via `sys.path` at runtime, and the same
+modules serve tests, CI, and optional scripting.
 
 This document explains how the pieces fit together. For *what currently works*
 versus *what is opt-in or aspirational*, read [`CURRENT_STATE.md`](./CURRENT_STATE.md).
@@ -48,7 +49,7 @@ There are **four behavior surfaces** plus **one support library**:
 | **Skills** | `skills/*.md` (17) + `.cursor/skills/onex-*/SKILL.md` (17) | Methodology playbooks the model reads on demand |
 | **Agents** | `.cursor/agents/*.json` (17) | Routing personas scored against the prompt |
 | **Hooks** | `.cursor/hooks/scripts/*.py` (7) | Deterministic, stdlib-only lifecycle scripts |
-| **Library** | `src/omnicursor/` | Routing, scoring, skills, compliance, contracts, bridge — for **pytest/CI/scripting only** |
+| **Library** | `src/omnicursor/` | Routing, scoring, skills, compliance, contracts, bridge — shared hook logic + pytest/CI/scripting |
 
 > **Key boundary:** the hooks are **stdlib-only** and must run without a
 > virtualenv. The active scripts reach shared logic by inserting `.cursor/hooks/lib/`
@@ -279,9 +280,9 @@ Both the runtime hook scripts and the importable node surface delegate to the
 - **In-process surface:** each node's `node.py` → `handler.py` → `handlers/*.py` →
   typed `models/*.py` re-runs the same delegation for tests/CI/scripting.
 
-The genuinely **duplicated, self-contained** copies of the logic live only in the
-**legacy `.cursor/hooks/on_*.py`** (see §4) — and those have drifted from the
-active scripts, with no automated parity guard.
+There is **no duplicated hook logic left in the tree** — the legacy
+`.cursor/hooks/on_*.py` set (self-contained copies that had drifted from the
+active scripts) was deleted in the W4 alignment (see §4).
 
 > Known field-mapping gaps in the in-process node surface (document, don't mistake
 > for bugs): the shell-guard soft-warn message and the file-edit `tsc` findings
@@ -339,10 +340,16 @@ omniintelligence service APIs directly.
   exists (dev convenience). On a clean clone neither is present, so bridge/MCP calls
   error until `OMNIMARKET_ROOT` is set. (The in-process handler fallback mentioned
   in older docs is **not implemented** — subprocess only.)
-- **MCP server** (`python -m omnicursor.mcp`, stdio, name `omnicursor-omnimarket`)
-  exposes three tools: `run_local_review`, `run_ticket_pipeline`, `run_ci_watch`.
-  Needs the optional `mcp` extra (`pip install -e ".[mcp]"`); `run_ci_watch`
-  needs the `gh` CLI.
+- **MCP server** (stdio, name `omnicursor-omnimarket`) exposes three tools:
+  `run_local_review`, `run_ticket_pipeline`, `run_ci_watch`. Needs the optional
+  `mcp` extra (`pip install -e ".[mcp]"`); `run_ci_watch` needs the `gh` CLI.
+- **Launch path:** `.cursor/mcp.json` runs `.cursor/mcp-launcher.py`, which
+  resolves the plugin root from its **own real path** (the same
+  `Path(__file__).resolve()` idiom the hooks use) and puts `<root>/src` on
+  `sys.path` before starting the server — so the import works from any host
+  workspace, with no `PYTHONPATH` pin. It fails closed with a diagnostic when
+  no `src/omnicursor` sibling exists. Smoke-tested end-to-end from a sandbox
+  cwd (`tests/test_mcp_launcher.py`: initialize → tools/list → tools/call).
 
 ---
 
