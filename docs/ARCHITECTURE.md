@@ -414,7 +414,8 @@ When documents disagree:
 1. **Actual current codebase behavior**
 2. This file and the other docs under `docs/` — repo conventions & architecture
 3. `omnicursor-team-guidance.md` — demo-focused guidance (local; gitignored)
-4. `omniclaude-main/` — read-only reference library (gitignored; absent from a clean clone)
+4. `omniclaude/` — read-only reference checkout (local-only; absent from a clean clone).
+   Note: `omniclaude-main/` is NOT in `.gitignore` — use `omniclaude/` or it will be tracked.
 
 ---
 
