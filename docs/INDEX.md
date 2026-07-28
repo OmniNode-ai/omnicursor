@@ -22,6 +22,7 @@ The map of OmniCursor's active documentation. Start here.
 | [`CURRENT_STATE.md`](./CURRENT_STATE.md) | Snapshot of what is built / opt-in / drifting; tests & CI; branches |
 | [`QUICKSTART.md`](./QUICKSTART.md) | End-user setup and usage |
 | [`W4_INJECTION_EVIDENCE.md`](./W4_INJECTION_EVIDENCE.md) | Injection proof (scoped verdict), sentinel receipt protocol, open residuals R1–R4 |
+| [`RUNTIME_ENVIRONMENT_RECIPE.md`](./RUNTIME_ENVIRONMENT_RECIPE.md) | Reproducible local runtime-proof environment (compose + host kernel); C3 receipt bring-up and troubleshooting |
 
 ## By task
 
