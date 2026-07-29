@@ -379,6 +379,9 @@ All networked tiers are **opt-in**; the plugin works fully offline.
 
 ## 11. Local state (`~/.omnicursor/`)
 
+> Privacy-oriented view of the same directory (what stays vs. what can leave your
+> machine): [README → Privacy](../README.md#privacy).
+
 | Path | Purpose |
 |------|---------|
 | `events.jsonl` | Raw hook event audit log |

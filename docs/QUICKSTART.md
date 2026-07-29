@@ -52,17 +52,13 @@ No per-repo setup. Hooks and rules load from the plugin install path for every w
 
 ### Hooks (automatic)
 
-| Hook | When it fires | What it does |
-|------|--------------|--------------|
-| `sessionStart` | New chat | Injects session context (baseline patterns + delegation rule + prior session) via `additional_context`; ensures the emit daemon |
-| `beforeSubmitPrompt` | Every prompt | Routes to the best agent and emits the classification for learning (block-only; does not inject) |
-| `beforeShellExecution` | Every shell command | Blocks dangerous commands (e.g. `rm -rf /`, `--no-verify`), warns on risky ones |
-| `afterFileEdit` | Every file save | Runs `ruff check` / `tsc` diagnostically on edited files |
-| `postToolUse` | After a tool runs | Refreshes injected patterns via `additional_context` for the tool's inferred domain |
-| `stop` | Loop end | Classifies session outcome (success / failed / abandoned), writes recap for next session |
-| `sessionEnd` | Chat closed | Emits the true session-close event |
+Seven Cursor lifecycle hooks load automatically — `sessionStart`,
+`beforeSubmitPrompt`, `beforeShellExecution`, `afterFileEdit`, `postToolUse`,
+`stop`, `sessionEnd`. Only **shell-guard** (`beforeShellExecution`) can block a
+command; every other hook is observe/inject-only and always exits 0.
 
-Only **shell-guard** can block execution. All other hooks always exit 0.
+Full per-hook behavior: [README → Hooks](../README.md#hooks) ·
+[ARCHITECTURE.md §4](./ARCHITECTURE.md#4-hooks).
 
 ### Rules (always-on + keyword)
 
@@ -95,16 +91,13 @@ Say the keyword in chat and Cursor reads the skill file and follows it.
 | `recap` or `/recap` | onex-recap | Inline session recap; auto-injects previous recap at start |
 | `worktree` | onex-using-git-worktrees | Git worktree workflow |
 
-#### Bucket 2 — Local files
+#### Bucket 3 — External services (Linear MCP)
 
-| Keyword | Skill | What it does |
-|---------|-------|--------------|
-| `create ticket` | onex-plan-ticket | Converts a plan task into a structured YAML ticket template |
-
-#### Bucket 3 — External services
+Bucket 2 is retired at the skill level; the `12-plan-ticket` **rule** stays local-only (YAML template, no external calls). Canonical classification: [ARCHITECTURE.md §3](./ARCHITECTURE.md#3-skills).
 
 | Keyword | Skill | Requires | What it does |
 |---------|-------|----------|--------------|
+| `create ticket` | onex-plan-ticket | Linear MCP | Turns a plan task into a Linear ticket (the rule's local YAML template still works offline) |
 | `plan to tickets` | onex-plan-to-tickets | Linear MCP | Batch-create Linear tickets from a plan |
 | `execute plan` | onex-execute-plan | Linear MCP (+ OmniMarket for node dispatch) | Autonomous ticket execution pipeline |
 
@@ -185,7 +178,7 @@ CI runs the same checks on every PR to `main`.
 Key contributor docs:
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, buckets, routing, event emission
-- [README.md](./README.md) — documentation map
+- [INDEX.md](./INDEX.md) — documentation map
 
 ---
 

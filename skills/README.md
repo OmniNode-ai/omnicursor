@@ -13,4 +13,3 @@ Each skill has YAML frontmatter (`name:`, `description:`) followed by the skill 
 3. Add a `compliance.py` entry and update `tests/test_compliance.py` / `tests/test_skills.py`.
 
 See `.cursor-plugin/plugin.json` (the single canonical manifest).
-</content>

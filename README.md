@@ -73,7 +73,7 @@ Supporting code lives in `.cursor/hooks/lib/` (`_common.py`, `emit_client.py`, `
 
 ## Privacy
 
-**What stays on your machine** — everything under `~/.omnicursor/`:
+**What stays on your machine** — everything under `~/.omnicursor/` (purpose-oriented view of the same paths: [ARCHITECTURE.md §11](./docs/ARCHITECTURE.md#11-local-state-omnicursor)):
 
 | Path | Content |
 |------|---------|
@@ -110,13 +110,14 @@ The bridge subprocess interpreter can be overridden with `OMNIMARKET_PYTHON`. **
 
 ## Skills (17)
 
-Canonical Markdown in [`skills/`](./skills/), mirrored for Cursor at [`.cursor/skills/onex-<slug>/SKILL.md`](./.cursor/skills/). Each skill id is **`onex-<slug>`** (YAML `name`, `/` picker, compliance registry).
+Canonical Markdown in [`skills/`](./skills/), mirrored for Cursor at [`.cursor/skills/onex-<slug>/SKILL.md`](./.cursor/skills/). Each skill id is **`onex-<slug>`** (YAML `name`, `/` picker, compliance registry). Bucket classification is canonical in [ARCHITECTURE.md §3](./docs/ARCHITECTURE.md#3-skills).
 
 | Bucket | Skills |
 |--------|--------|
 | **1 — Methodology** | brainstorming, writing-plans, systematic-debugging, pr-review, pr-polish, hostile-reviewer, defense-in-depth, docs-reality-sync, merge-planner, insights-to-plan, plan-review, handoff, recap, using-git-worktrees |
-| **2 — Local files** | plan-ticket |
-| **3 — External services** | plan-to-tickets, execute-plan (Linear MCP + OmniMarket) |
+| **3 — External services** (Linear MCP; execute-plan adds OmniMarket) | plan-ticket, plan-to-tickets, execute-plan |
+
+Bucket 2 is retired at the skill level; the **rule** `12-plan-ticket` still emits a local YAML template with no external calls (see [ARCHITECTURE.md §3](./docs/ARCHITECTURE.md#3-skills)).
 
 ## Python library
 
@@ -158,16 +159,7 @@ OmniCursor/
 
 ## Developer setup
 
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit
-pytest tests/ -v
-ruff check src/ tests/ .cursor/hooks/
-```
-
-The tracked pre-commit hook runs the same checks as CI (`ruff`, `pytest`, skill compliance). Use `git commit --no-verify` only for emergency bypasses.
+Full contributor setup — virtualenv, editable install, pre-commit wiring, tests, and lint — lives in **[docs/QUICKSTART.md § Developer setup](./docs/QUICKSTART.md#developer-setup-contributing-to-omnicursor)**. The tracked pre-commit hook runs the same checks as CI (`ruff`, `pytest`, skill compliance); use `git commit --no-verify` only for emergency bypasses.
 
 ## Documentation
 
@@ -176,7 +168,7 @@ The tracked pre-commit hook runs the same checks as CI (`ruff`, `pytest`, skill 
 | [docs/QUICKSTART.md](./docs/QUICKSTART.md) | Install, hooks, skills, Linear MCP, privacy |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layers, buckets, routing, intelligence A/B |
 | [docs/CURRENT_STATE.md](./docs/CURRENT_STATE.md) | What works today, opt-in tiers, known drift, tests & CI |
-| [docs/README.md](./docs/README.md) | Documentation map |
+| [docs/INDEX.md](./docs/INDEX.md) | Documentation map & read-first order |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history (Keep a Changelog) |
 
 Directory guides: `.cursor/`, `docs/`, `skills/`, `src/omnicursor/`, `tests/` each have a `README.md`.
