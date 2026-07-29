@@ -104,8 +104,11 @@ plugin, but they shape any work in these areas.
    the documented default is off — copying it verbatim silently enables Option B.
 7. **Fallback name split.** `omnicursor-generalist` (library) vs
    `polymorphic-agent` (eval/CI).
-8. **No `[tool.ruff]` config and unpinned ruff** — a ruff release can change lint
-   results with no repo change.
+8. **Unpinned ruff, but rule set now pinned in-repo.** The `ruff` dep is still
+   unpinned, so a release can still change *formatting*; however `pyproject.toml`
+   now carries a `[tool.ruff.lint]` block (`select = ["E4", "E7", "E9", "F"]`)
+   that pins the pre-0.16 default lint rule set — added 2026-07-26 after ruff
+   0.16.0 expanded the defaults and reddened the tree with zero code changes.
 
 ---
 
