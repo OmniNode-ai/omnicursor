@@ -173,11 +173,11 @@ Then reload Cursor. Local session data under `~/.omnicursor/` is not removed.
 cd ~/tools/OmniCursor
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]" ruff # [dev] is pytest-only; ruff is a separate dep
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit
 pytest tests/ -v
-ruff check src/ tests/ .cursor/hooks/
+ruff check src/ tests/ .cursor/hooks/ scripts/ci/
 ```
 
 CI runs the same checks on every PR to `main`.
