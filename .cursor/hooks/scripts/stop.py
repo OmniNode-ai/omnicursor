@@ -32,6 +32,7 @@ from _common import (
     write_stdout,
 )
 from emit_client import send_event
+from measurement_emitter import emit_phase_metrics
 from omnicursor.pattern_writer import write_session_patterns
 from omnicursor.session_outcome import derive_session_outcome, format_recap
 from omnicursor.session_outbox import write_session_outcome
@@ -278,6 +279,36 @@ def main() -> None:
                         "ended_at": outbox_payload["ended_at"],
                         "error": _error,
                     },
+                )
+            except Exception:
+                pass
+
+            # B5 measurement parity: one ContractPhaseMetrics per session, so a
+            # Cursor session is counted alongside a Claude one in promotion-gate
+            # and attribution analytics. The plan's bar is "at least one
+            # measurement event per session", and stop is the only session-close
+            # boundary, so this is the emit point.
+            #
+            # phase="implement" is PROVISIONAL. ContractEnumPipelinePhase
+            # (plan|implement|verify|review|release) describes a ticket pipeline;
+            # a Cursor turn has no equivalent and the enum has no "unknown"
+            # member, so a value must be chosen. Revisit if the platform rules
+            # differently -- it is a one-line change here.
+            #
+            # ticket_id is left empty: the contract requires the field to be
+            # present, not non-empty, and dropping the measurement instead would
+            # make Cursor under-report, which is the gap B5 exists to close.
+            try:
+                _wall_ms = 0.0
+                _t0, _t1 = outbox_payload["started_at"], outbox_payload["ended_at"]
+                if _t0 and _t1:
+                    _p = lambda v: datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                    _wall_ms = max(0.0, (_p(_t1) - _p(_t0)).total_seconds() * 1000.0)
+                emit_phase_metrics(
+                    run_id=conversation_id,
+                    phase="implement",
+                    wall_clock_ms=_wall_ms,
+                    producer_kind="agent",
                 )
             except Exception:
                 pass
