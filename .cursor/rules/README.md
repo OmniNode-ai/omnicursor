@@ -7,6 +7,7 @@ OmniCursor **behavior surface** for the model. Rules `00`–`03` are **always on
 | [`00-omninode-concepts.mdc`](./00-omninode-concepts.mdc) | ONEX vocabulary, buckets 1–3, pipeline stages. |
 | [`01-codebase-research.mdc`](./01-codebase-research.mdc) | Bounded file-reading policy for agents. |
 | [`02-no-secrets-in-commits.mdc`](./02-no-secrets-in-commits.mdc) | No API keys, tokens, or real env values in repo or suggested commits. |
+| [`03-omnicursor-ownership.mdc`](./03-omnicursor-ownership.mdc) | Always-on OmniCursor/OmniMarket ownership boundary. |
 | [`10-brainstorming.mdc`](./10-brainstorming.mdc) | Bucket 1 — idea → design doc. |
 | [`11-writing-plans.mdc`](./11-writing-plans.mdc) | Bucket 1 — design → implementation plan. |
 | [`12-plan-ticket.mdc`](./12-plan-ticket.mdc) | Bucket 2 — plan → YAML ticket template (local only). |
