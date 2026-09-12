@@ -32,6 +32,7 @@ from _common import (
     write_stdout,
 )
 from emit_client import send_event
+from measurement_emitter import emit_phase_metrics
 from omnicursor.pattern_writer import write_session_patterns
 from omnicursor.session_outcome import derive_session_outcome, format_recap
 from omnicursor.session_outbox import write_session_outcome
@@ -63,6 +64,22 @@ def _load_events(conversation_id: str) -> List[Dict[str, Any]]:
     except OSError:
         pass
     return events
+
+
+def _wall_clock_ms(started_at: Optional[str], ended_at: Optional[str]) -> float:
+    """Session duration for the B5 measurement (ContractDurationMetrics.wall_clock_ms).
+
+    Both bounds come from the outbox payload as ISO-8601 strings (``ended_at``
+    carries a ``Z`` suffix, which ``fromisoformat`` only accepts from 3.11 —
+    hooks run under the system python3). 0.0 when either bound is missing; a
+    malformed timestamp raises and the fire-and-forget caller skips the emit,
+    the same posture as the original inline derivation.
+    """
+    if not started_at or not ended_at:
+        return 0.0
+    t0 = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+    t1 = datetime.fromisoformat(str(ended_at).replace("Z", "+00:00"))
+    return max(0.0, (t1 - t0).total_seconds() * 1000.0)
 
 
 def _build_outbox_payload(
@@ -278,6 +295,36 @@ def main() -> None:
                         "ended_at": outbox_payload["ended_at"],
                         "error": _error,
                     },
+                )
+            except Exception:
+                pass
+
+            # B5 measurement parity (OMN-16598): one ContractPhaseMetrics per
+            # session, so a Cursor session is counted alongside a Claude one in
+            # promotion-gate and attribution analytics. The plan's bar is "at
+            # least one measurement event per session", and stop is the only
+            # session-close boundary, so this is the emit point.
+            #
+            # phase="implement" is FINAL (platform ruling, 2026-08-31): parity
+            # with the donor, whose own convention for an unknown pipeline phase
+            # is IMPLEMENT (omniclaude phase_instrumentation.py, three call
+            # sites). Cursor has no phase machine; inferring one from the
+            # classified intent would inject heuristic labels into a stream whose
+            # Claude rows are all mechanical, and consumers already segment by
+            # producer_kind / toolchain. OMN-16601 tracks an UNKNOWN enum member;
+            # if it lands, both platforms flip together.
+            #
+            # ticket_id is left empty: the contract requires the field to be
+            # present, not non-empty, and dropping the measurement instead would
+            # make Cursor under-report, which is the gap B5 exists to close.
+            try:
+                emit_phase_metrics(
+                    run_id=conversation_id,
+                    phase="implement",
+                    wall_clock_ms=_wall_clock_ms(
+                        outbox_payload["started_at"], outbox_payload["ended_at"]
+                    ),
+                    producer_kind="agent",
                 )
             except Exception:
                 pass

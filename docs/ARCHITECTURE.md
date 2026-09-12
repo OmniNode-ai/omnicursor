@@ -146,7 +146,7 @@ Seven Cursor lifecycle events are wired in `.cursor/hooks.json` to
 | `beforeShellExecution` | `scripts/shell-guard.py` | **Yes** | Two-tier guard: **9 HARD_BLOCK** (deny) + **12 SOFT_WARN** (allow + warning); optional DoD/dispatch gates. Output `{permission: allow\|deny\|ask, user_message, agent_message}` |
 | `afterFileEdit` | `scripts/post-edit.py` | No | Diagnostic `ruff check` (`.py`) and `tsc --noEmit` (`.ts`) — **never `--fix`**, never modifies files; emits `tool-executed` |
 | `postToolUse` | `scripts/post-tool-use.py` | No | **Refreshes** injected context via `additional_context` (patterns for the tool's inferred domain); emits `tool-executed` |
-| `stop` | `scripts/stop.py` | No | Aggregates session events → classifies outcome (4-gate); writes recap, patterns, and the durable outbox (loop-end) |
+| `stop` | `scripts/stop.py` | No | Aggregates session events → classifies outcome (4-gate); writes recap, patterns, and the durable outbox (loop-end); emits one `ContractPhaseMetrics` measurement per session (`phase.metrics`, B5) |
 | `sessionEnd` | `scripts/session-end.py` | No | Emit `session-ended` (true conversation close, complements `stop`); fire-and-forget |
 
 - **Only `shell-guard.py` can deny** (via `{"permission": "deny"}`).

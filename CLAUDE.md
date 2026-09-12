@@ -75,7 +75,7 @@ Four behavior surfaces + one library:
 | `shell-guard.py` | `beforeShellExecution` | **Only** hook that can deny (`{permission: allow\|deny\|ask, ...}`). Tiers: **9 HARD_BLOCK** (deny), **12 SOFT_WARN** (allow + warn); config-gated DoD/dispatch deny tiers, off by default. |
 | `post-edit.py` | `afterFileEdit` | Diagnostic only: `ruff check` on `.py`, `tsc --noEmit` on `.ts`/`.tsx`. **Never `--fix`, never modifies files.** |
 | `post-tool-use.py` | `postToolUse` | **Refreshes** injected context via `additional_context` (domain inferred from the tool's file path). |
-| `stop.py` | `stop` | Aggregate events → outcome (`failed`/`success`/`abandoned`/`unknown`) via a 4-gate tree; write durable `~/.omnicursor/outbox.jsonl`. Loop-end signal. |
+| `stop.py` | `stop` | Aggregate events → outcome (`failed`/`success`/`abandoned`/`unknown`) via a 4-gate tree; write durable `~/.omnicursor/outbox.jsonl`. Loop-end signal. Emits one `ContractPhaseMetrics` measurement per session (B5). |
 | `session-end.py` | `sessionEnd` | Emit `session-ended` (true conversation close). Fire-and-forget. |
 
 **Injection reality:** Cursor exposes exactly two live injection channels —

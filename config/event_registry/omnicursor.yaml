@@ -103,3 +103,22 @@ events:
         description: "Injection tracking for A/B analysis"
     partition_key_field: session_id
     required_fields: [injection_id, session_id, cohort]
+
+  # =========================================================================
+  # Measurement Events (B5)
+  # =========================================================================
+  # Gives Cursor the same measurement footprint a Claude session has; before
+  # this Cursor emitted none, so it was invisible to promotion-gate and
+  # attribution analytics. Payload is a ContractMeasurementEvent envelope
+  # wrapping ContractPhaseMetrics -- see .cursor/hooks/lib/measurement_emitter.py.
+  phase.metrics:
+    fan_out:
+      - topic: "onex.evt.omnicursor.phase-metrics.v1"
+        tier: telemetry
+        description: "Phase instrumentation metrics for attribution analytics"
+    # No partition_key_field: the daemon resolves it with a flat
+    # payload.get() (event_registry.py:329), and run_id lives at
+    # payload.run_id inside the envelope -- so naming it here would
+    # silently resolve to None. omniclaude's phase.metrics entry omits
+    # it for the same reason.
+    required_fields: [event_id, event_type, timestamp_iso, payload]

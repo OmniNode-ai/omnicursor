@@ -7,6 +7,13 @@ All notable changes to OmniCursor are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- B5 measurement parity: the `stop` hook emits one `ContractPhaseMetrics`
+  measurement per Cursor session (`phase.metrics` →
+  `onex.evt.omnicursor.phase-metrics.v1`, tier telemetry) through the shared
+  emit daemon, with `toolchain="cursor"` / `producer_kind="agent"` as native
+  `ContractMeasurementContext` fields and `extensions` empty;
+  `phase="implement"` per the platform ruling (the donor's unknown-phase
+  default). Re-land of `awu42/b5-cursor-measurement-parity`. (OMN-16598)
 - MIT `LICENSE` at repo root (OmniNode org standard). (#1)
 - Real Cursor hook contract coverage: `sessionStart`, `postToolUse`, and
   `sessionEnd` hooks join the original four — 7 lifecycle hooks total — plus

@@ -7,7 +7,7 @@ import io
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -33,12 +33,16 @@ _mod = _load("stop", _SCRIPTS / "stop.py")
 
 
 def _stub_stop_emit_and_pattern_sync(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stub stop.py's emit for isolated tests.
+    """Stub stop.py's emits for isolated tests.
 
     Pattern sync moved to the sessionStart hook (W4), so stop.py no longer
-    imports ``sync_learned_patterns`` — only ``send_event`` needs stubbing here.
+    imports ``sync_learned_patterns``. Two emits need stubbing: ``send_event``
+    (session.outcome / utilization.scoring.requested) and the B5
+    ``emit_phase_metrics`` (OMN-16598), which would otherwise reach the real
+    emit socket through measurement_emitter.send_event.
     """
     monkeypatch.setattr(_mod, "send_event", lambda *a, **k: False)
+    monkeypatch.setattr(_mod, "emit_phase_metrics", lambda *a, **k: False)
 
 
 # ---------------------------------------------------------------------------
@@ -1077,3 +1081,125 @@ class TestSessionOutbox:
         assert writer_called[0], (
             "write_session_patterns must still be called when outbox is present"
         )
+
+
+# ---------------------------------------------------------------------------
+# B5 measurement parity (OMN-16598) — one ContractPhaseMetrics per session
+# ---------------------------------------------------------------------------
+
+
+class TestB5MeasurementEmit:
+    def _run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        conv: str = "b5-001",
+        events: List[Dict[str, Any]] = [],
+        emitter: Any = None,
+    ) -> Tuple[List[Dict[str, Any]], str]:
+        """Run stop.py main(); return (emit_phase_metrics kwargs per call, stdout)."""
+        calls: List[Dict[str, Any]] = []
+
+        def _record(**kwargs: Any) -> bool:
+            calls.append(kwargs)
+            return True
+
+        monkeypatch.setenv("OMNICURSOR_OUTBOX_FILE", str(tmp_path / "outbox.jsonl"))
+        monkeypatch.setattr(_mod, "write_session_patterns", lambda *a, **k: 0)
+        monkeypatch.setattr(_mod, "read_session_context", lambda: {})
+        monkeypatch.setattr(_mod, "log_event", lambda _: None)
+        monkeypatch.setattr(
+            _mod, "read_stdin", lambda: {"conversation_id": conv, "status": "completed"}
+        )
+        monkeypatch.setattr(_mod, "_load_events", lambda cid: list(events))
+        monkeypatch.setattr(_mod, "_write_session_summary", lambda cid, s: None)
+        monkeypatch.setattr(_mod, "send_event", lambda *a, **k: False)
+        monkeypatch.setattr(_mod, "emit_phase_metrics", emitter or _record)
+        out = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", out)
+        _mod.main()
+        return calls, out.getvalue()
+
+    def test_stop_emits_exactly_one_phase_metrics_per_session(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        calls, _ = self._run(
+            monkeypatch, tmp_path, events=[_make_event("prompt_classified")]
+        )
+        assert len(calls) == 1
+        assert calls[0]["run_id"] == "b5-001"
+        assert calls[0]["phase"] == "implement"  # platform ruling 2026-08-31
+        assert calls[0]["producer_kind"] == "agent"
+
+    def test_wall_clock_ms_derived_from_outbox_timestamps(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        real_build = _mod._build_outbox_payload
+
+        def _fixed(*args: Any) -> Dict[str, Any]:
+            payload = real_build(*args)
+            payload["started_at"] = "2026-04-14T10:00:00+00:00"
+            payload["ended_at"] = "2026-04-14T10:00:30Z"
+            return payload
+
+        monkeypatch.setattr(_mod, "_build_outbox_payload", _fixed)
+        calls, _ = self._run(
+            monkeypatch, tmp_path, events=[_make_event("prompt_classified")]
+        )
+        assert calls[0]["wall_clock_ms"] == 30000.0
+
+    def test_wall_clock_ms_is_zero_without_a_start_timestamp(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        calls, _ = self._run(
+            monkeypatch, tmp_path, events=[]
+        )  # no events → no started_at
+        assert calls[0]["wall_clock_ms"] == 0.0
+
+    def test_wall_clock_helper_clamps_and_defaults(self) -> None:
+        assert _mod._wall_clock_ms(None, "2026-04-14T10:00:30Z") == 0.0
+        assert _mod._wall_clock_ms("2026-04-14T10:00:00+00:00", None) == 0.0
+        assert (
+            _mod._wall_clock_ms("2026-04-14T10:00:30Z", "2026-04-14T10:00:00Z") == 0.0
+        )
+
+    def test_no_measurement_without_conversation_id(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        calls, _ = self._run(monkeypatch, tmp_path, conv="")
+        assert calls == []
+
+    def test_measurement_emit_failure_never_crashes_the_hook(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        def _boom(**_: Any) -> bool:
+            raise RuntimeError("daemon exploded")
+
+        _, out = self._run(
+            monkeypatch,
+            tmp_path,
+            events=[_make_event("prompt_classified")],
+            emitter=_boom,
+        )
+        assert json.loads(out.strip()) == {}
+
+    def test_real_emitter_sends_the_registry_key_not_a_topic(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        emitter_mod = sys.modules["measurement_emitter"]
+        sent: List[Tuple[str, Dict[str, Any]]] = []
+
+        def _capture(event_type: str, payload: Dict[str, Any]) -> bool:
+            sent.append((event_type, payload))
+            return True
+
+        monkeypatch.setattr(emitter_mod, "send_event", _capture)
+        self._run(
+            monkeypatch,
+            tmp_path,
+            events=[_make_event("prompt_classified")],
+            emitter=emitter_mod.emit_phase_metrics,
+        )
+        assert [event_type for event_type, _ in sent] == ["phase.metrics"]
+        assert sent[0][1]["payload"]["context"]["toolchain"] == "cursor"
+        assert sent[0][1]["payload"]["run_id"] == "b5-001"

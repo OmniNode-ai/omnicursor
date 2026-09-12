@@ -51,6 +51,9 @@ _EXPECTED_TIERS: Dict[Tuple[str, str], str] = {
     ("prompt.submitted", "onex.evt.omnicursor.prompt-submitted.v1"): "telemetry",
     ("tool.executed", "onex.evt.omnicursor.tool-executed.v1"): "telemetry",
     ("injection.recorded", "onex.evt.omnicursor.injection-recorded.v1"): "telemetry",
+    # B5 (OMN-16598): mirrors the canonical claude_code phase.metrics leg
+    # (omnimarket .../node_emit_daemon/registries/topics.yaml, tier telemetry).
+    ("phase.metrics", "onex.evt.omnicursor.phase-metrics.v1"): "telemetry",
 }
 
 
@@ -132,6 +135,27 @@ class TestPromptFanOut:
         ]
         assert events["session.started"]["required_fields"] == ["session_id"]
         assert events["session.ended"]["required_fields"] == ["session_id"]
+        assert events["phase.metrics"]["required_fields"] == [
+            "event_id",
+            "event_type",
+            "timestamp_iso",
+            "payload",
+        ]
+
+
+class TestPhaseMetricsFanOut:
+    """B5 (OMN-16598) — one telemetry evt leg, no partition key by design."""
+
+    def test_phase_metrics_fans_only_to_the_evt_topic(self) -> None:
+        fan_out = _registry_doc()["events"]["phase.metrics"]["fan_out"]
+        assert [r["topic"] for r in fan_out] == ["onex.evt.omnicursor.phase-metrics.v1"]
+        assert fan_out[0]["tier"] == "telemetry"
+
+    def test_phase_metrics_declares_no_partition_key_field(self) -> None:
+        # The daemon resolves partition_key_field with a flat payload.get();
+        # run_id lives at payload.run_id inside the envelope, so naming it
+        # would silently resolve to None. Same as omniclaude's entry.
+        assert "partition_key_field" not in _registry_doc()["events"]["phase.metrics"]
 
 
 # ---------------------------------------------------------------------------
