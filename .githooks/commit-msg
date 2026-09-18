@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Strip AI-generated Co-Authored-By trailers from commit messages (OMN-18557, OMN-18426).
+#
+# WHY THIS REPO GETS A .githooks FILE RATHER THAN A .pre-commit-config.yaml.
+# omnicursor pins `git config core.hooksPath .githooks` (CLAUDE.md:21) with a hand-written
+# pre-commit gate beside this file. `core.hooksPath` and `pre-commit install` write to
+# different places and do NOT compose -- whichever is set last silently wins -- so adding a
+# pre-commit config here would either be dead or would disable the existing ruff/pytest gate.
+# The other fifteen repos carry the identical rule as the `strip-ai-coauthor-trailer`
+# pre-commit hook; this is the same regex, wired the way this repo already works.
+#
+# Measured 2026-09-18: 17 of omnicursor's last 32 commits carried such a trailer. The other
+# four config-less repos (.github, omnibot, omnigemini, omniui) carried zero, which is why
+# only this one gets the hook.
+set -euo pipefail
+
+MSG_FILE="${1:?commit-msg hook requires the message file path}"
+[[ -f "${MSG_FILE}" ]] || exit 0
+
+# Matches the canonical entry used fleet-wide:
+#   perl -i -ne 'print unless /^co-authored-by:.*claude.*noreply@anthropic\.com/i'
+# Anchored at line start and case-insensitive, so a human trailer and any mention of the
+# string inside prose both survive; only the trailer line itself is removed.
+if ! perl -i -ne 'print unless /^co-authored-by:.*claude.*noreply\@anthropic\.com/i' "${MSG_FILE}"; then
+  echo "[commit-msg] failed to filter ${MSG_FILE}" >&2
+  exit 1
+fi
