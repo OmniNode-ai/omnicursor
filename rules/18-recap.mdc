@@ -1,0 +1,11 @@
+---
+description: Session recap — summarize what happened this session
+globs: []
+alwaysApply: false
+---
+
+When the user says "recap", "/recap", or "summarize this session":
+read [onex-recap](../skills/onex-recap/SKILL.md) and follow it exactly (skill id **`onex-recap`**).
+Do not write output to any file — display inline in chat only.
+
+OmniCursor resource links resolve relative to this installed rule file. The project README and user-provided paths refer to the workspace being analyzed, not the plugin.

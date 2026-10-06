@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CI gate (A10.7): no hardcoded ``onex.*`` topic literals under .cursor/hooks/.
+"""CI gate (A10.7): no hardcoded ``onex.*`` topic literals under hooks/.
 
 Jonah's OMN-13944 analog for this fork (PR #4 review follow-up): hooks emit
 **registry semantic keys** (``cursor.hook.prompt``, ``tool.executed``, ...) —
@@ -8,7 +8,7 @@ full ``onex.*`` literal in hook code is a bug even when it names the right
 topic: it bypasses the registry as the single source of truth.
 
 Mechanics: AST scan of every string constant (f-string parts included) in
-``.cursor/hooks/**/*.py``. Docstrings are exempt (prose may *reference* a
+``hooks/**/*.py``. Docstrings are exempt (prose may *reference* a
 topic); comments never reach the AST. Test files asserting the *absence* of
 literals live under tests/, outside this gate's scope by construction.
 
@@ -63,7 +63,13 @@ def check_file(path: Path) -> list[str]:
 
 def check(root: Path) -> list[str]:
     findings: list[str] = []
-    for path in sorted((root / ".cursor" / "hooks").rglob("*.py")):
+    hooks = root / "hooks"
+    if not hooks.is_dir():
+        return ["hooks: missing directory"]
+    paths = sorted(p for p in hooks.rglob("*.py") if "__pycache__" not in p.parts)
+    if not paths:
+        return ["hooks: no Python files"]
+    for path in paths:
         if "__pycache__" in path.parts:
             continue
         findings.extend(check_file(path))

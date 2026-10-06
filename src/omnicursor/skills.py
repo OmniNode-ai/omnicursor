@@ -38,7 +38,7 @@ def canonical_skill_id(skill_name: str) -> str:
 
 
 class SkillRepository:
-    """Load skills from ``.cursor/skills/onex-<slug>/SKILL.md`` (Cursor-native format)."""
+    """Load skills from ``skills/onex-<slug>/SKILL.md`` (Cursor-native format)."""
 
     def __init__(self, skills_dir: Path = SKILLS_DIR) -> None:
         self.skills_dir = skills_dir

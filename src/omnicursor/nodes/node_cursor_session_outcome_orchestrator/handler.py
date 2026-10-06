@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Library surface for ``node_cursor_session_outcome_orchestrator``.
 
-Runtime execution is ``.cursor/hooks/scripts/stop.py`` (stdlib only).
+Runtime execution is ``hooks/scripts/stop.py`` (stdlib only).
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ CONTRACT_NAME = "node_cursor_session_outcome_orchestrator"
 def hook_binding() -> dict[str, str | bool]:
     return {
         "hook_event": "stop",
-        "hooks_json_command": 'python3 "${CLAUDE_PLUGIN_ROOT}/.cursor/hooks/scripts/stop.py"',
-        "implementation": ".cursor/hooks/scripts/stop.py",
+        "hooks_json_command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop.py"',
+        "implementation": "hooks/scripts/stop.py",
         "blocking": False,
     }

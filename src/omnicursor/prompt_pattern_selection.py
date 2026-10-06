@@ -5,7 +5,7 @@
 Shared by:
   - src/omnicursor/nodes/node_cursor_pattern_injection_compute/handlers/
   - src/omnicursor/prompt_pattern_read.py  (re-exports for backwards compat)
-  - .cursor/hooks/lib/prompt_pattern_selection.py  (thin shim re-exports from here)
+  - hooks/lib/prompt_pattern_selection.py  (thin shim re-exports from here)
 
 Stdlib-only — no pip dependencies.
 """

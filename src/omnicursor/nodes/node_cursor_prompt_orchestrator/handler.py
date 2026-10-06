@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Library surface for ``node_cursor_prompt_orchestrator``.
 
-Runtime execution is ``.cursor/hooks/scripts/user-prompt-submit.py`` (stdlib only).
+Runtime execution is ``hooks/scripts/user-prompt-submit.py`` (stdlib only).
 This module documents the binding for tests and tooling.
 """
 
@@ -14,7 +14,7 @@ CONTRACT_NAME = "node_cursor_prompt_orchestrator"
 def hook_binding() -> dict[str, str | bool]:
     return {
         "hook_event": "beforeSubmitPrompt",
-        "hooks_json_command": 'python3 "${CLAUDE_PLUGIN_ROOT}/.cursor/hooks/scripts/user-prompt-submit.py"',
-        "implementation": ".cursor/hooks/scripts/user-prompt-submit.py",
+        "hooks_json_command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/user-prompt-submit.py"',
+        "implementation": "hooks/scripts/user-prompt-submit.py",
         "blocking": False,
     }

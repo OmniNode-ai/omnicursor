@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/lib/measurement_emitter.py — B5 measurement parity (OMN-16598).
+"""Tests for hooks/lib/measurement_emitter.py — B5 measurement parity (OMN-16598).
 
 Shape tests run everywhere (stdlib + pytest). The SPI validation tests import
 omnibase_spi's measurement contracts straight from the sibling checkout
@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
+_LIB = _ROOT / "hooks" / "lib"
 _SPI_SRC = _ROOT.parent / "omnibase_spi" / "src"
 _SPI_MEASUREMENT = _SPI_SRC / "omnibase_spi" / "contracts" / "measurement"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name

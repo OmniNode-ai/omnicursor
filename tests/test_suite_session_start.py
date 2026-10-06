@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/scripts/session-start.py — session init + injection.
+"""Tests for hooks/scripts/session-start.py — session init + injection.
 
 The sessionStart hook initializes session state, best-effort daemon-ensures +
 syncs patterns (local only), injects session-level context via additional_context,
@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
-_SCRIPTS = _ROOT / ".cursor" / "hooks" / "scripts"
+_LIB = _ROOT / "hooks" / "lib"
+_SCRIPTS = _ROOT / "hooks" / "scripts"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name
 
 

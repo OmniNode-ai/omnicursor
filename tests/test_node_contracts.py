@@ -32,13 +32,13 @@ def test_load_all_contracts_validates() -> None:
     assert "node_cursor_pattern_injection_compute" in names
     for c in contracts:
         assert c.cursor_native.hook_event
-        assert c.cursor_native.implementation.startswith(".cursor/hooks/")
+        assert c.cursor_native.implementation.startswith("hooks/")
 
 
 def test_hooks_json_matches_contracts() -> None:
     """When run from the OmniCursor repo, hooks.json commands match contracts."""
     repo_root = Path(__file__).resolve().parents[1]
-    hooks = repo_root / ".cursor" / "hooks.json"
+    hooks = repo_root / "hooks" / "hooks.json"
     if not hooks.is_file():
         pytest.skip("hooks.json not present (not OmniCursor repo checkout)")
     assert hooks_registration_ok(load_all_contracts())

@@ -24,7 +24,7 @@ def repository() -> SkillRepository:
 def test_load_systematic_debugging_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("systematic-debugging")
     assert skill.skill_name == "onex-systematic-debugging"
-    assert skill.path == ".cursor/skills/onex-systematic-debugging/SKILL.md"
+    assert skill.path == "skills/onex-systematic-debugging/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-systematic-debugging\n"
     )
@@ -33,7 +33,7 @@ def test_load_systematic_debugging_skill(repository: SkillRepository) -> None:
 def test_load_brainstorming_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("brainstorming")
     assert skill.skill_name == "onex-brainstorming"
-    assert skill.path == ".cursor/skills/onex-brainstorming/SKILL.md"
+    assert skill.path == "skills/onex-brainstorming/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-brainstorming\n"
     )
@@ -42,7 +42,7 @@ def test_load_brainstorming_skill(repository: SkillRepository) -> None:
 def test_load_writing_plans_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("writing-plans")
     assert skill.skill_name == "onex-writing-plans"
-    assert skill.path == ".cursor/skills/onex-writing-plans/SKILL.md"
+    assert skill.path == "skills/onex-writing-plans/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-writing-plans\n"
     )
@@ -51,7 +51,7 @@ def test_load_writing_plans_skill(repository: SkillRepository) -> None:
 def test_load_plan_ticket_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("plan-ticket")
     assert skill.skill_name == "onex-plan-ticket"
-    assert skill.path == ".cursor/skills/onex-plan-ticket/SKILL.md"
+    assert skill.path == "skills/onex-plan-ticket/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-plan-ticket\n"
     )
@@ -60,7 +60,7 @@ def test_load_plan_ticket_skill(repository: SkillRepository) -> None:
 def test_load_docs_reality_sync_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("docs-reality-sync")
     assert skill.skill_name == "onex-docs-reality-sync"
-    assert skill.path == ".cursor/skills/onex-docs-reality-sync/SKILL.md"
+    assert skill.path == "skills/onex-docs-reality-sync/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-docs-reality-sync\n"
     )
@@ -93,7 +93,7 @@ def test_available_skills_lists_all(repository: SkillRepository) -> None:
 def test_load_recap_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("recap")
     assert skill.skill_name == "onex-recap"
-    assert skill.path == ".cursor/skills/onex-recap/SKILL.md"
+    assert skill.path == "skills/onex-recap/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-recap\n"
     )
@@ -102,7 +102,7 @@ def test_load_recap_skill(repository: SkillRepository) -> None:
 def test_load_plan_review_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("plan-review")
     assert skill.skill_name == "onex-plan-review"
-    assert skill.path == ".cursor/skills/onex-plan-review/SKILL.md"
+    assert skill.path == "skills/onex-plan-review/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-plan-review\n"
     )
@@ -111,7 +111,7 @@ def test_load_plan_review_skill(repository: SkillRepository) -> None:
 def test_load_plan_to_tickets_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("plan-to-tickets")
     assert skill.skill_name == "onex-plan-to-tickets"
-    assert skill.path == ".cursor/skills/onex-plan-to-tickets/SKILL.md"
+    assert skill.path == "skills/onex-plan-to-tickets/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-plan-to-tickets\n"
     )
@@ -120,7 +120,7 @@ def test_load_plan_to_tickets_skill(repository: SkillRepository) -> None:
 def test_load_execute_plan_skill(repository: SkillRepository) -> None:
     skill = repository.load_skill("execute-plan")
     assert skill.skill_name == "onex-execute-plan"
-    assert skill.path == ".cursor/skills/onex-execute-plan/SKILL.md"
+    assert skill.path == "skills/onex-execute-plan/SKILL.md"
     assert _skill_markdown_without_frontmatter(skill.content).startswith(
         "# onex-execute-plan\n"
     )
@@ -128,7 +128,7 @@ def test_load_execute_plan_skill(repository: SkillRepository) -> None:
 
 def test_all_skills_cursor_frontmatter_onex_namespace() -> None:
     canonical_dir = _REPO / "skills"
-    for path in sorted(canonical_dir.glob("*.md")):
+    for path in sorted(canonical_dir.glob("*/SKILL.md")):
         if path.stem.upper() == "README":
             continue
         raw = path.read_text(encoding="utf-8")
@@ -137,7 +137,7 @@ def test_all_skills_cursor_frontmatter_onex_namespace() -> None:
         fm = yaml.safe_load(m.group(1))
         assert fm is not None and isinstance(fm, dict), path
         name = fm.get("name")
-        assert name == f"onex-{path.stem}", f"name mismatch in {path}: {name!r}"
+        assert name == path.parent.name, f"name mismatch in {path}: {name!r}"
         description = fm.get("description")
         assert description, f"missing description in {path}"
         # A truthy-but-degenerate value like "---" (a folded scalar swallowing
@@ -164,26 +164,13 @@ def test_load_nonexistent_skill_raises(repository: SkillRepository) -> None:
         repository.load_skill("nonexistent")
 
 
-def test_skills_dual_path_parity() -> None:
-    """skills/*.md and .cursor/skills/*/SKILL.md must have identical content."""
-    canonical_dir = _REPO / "skills"
-    cursor_dir = _REPO / ".cursor" / "skills"
-    mismatches = []
-    for canonical in sorted(canonical_dir.glob("*.md")):
-        if canonical.stem.upper() == "README":
-            continue
-        name = canonical.stem
-        cursor_subdir = canonical_skill_id(name)
-        cursor_copy = cursor_dir / cursor_subdir / "SKILL.md"
-        if not cursor_copy.exists():
-            mismatches.append(
-                f"{name}: .cursor/skills/{cursor_subdir}/SKILL.md missing"
-            )
-            continue
-        if canonical.read_text(encoding="utf-8") != cursor_copy.read_text(
-            encoding="utf-8"
-        ):
-            mismatches.append(
-                f"{name}: skills/{name}.md and .cursor/skills/{cursor_subdir}/SKILL.md differ"
-            )
-    assert not mismatches, "Skill dual-path divergence:\n" + "\n".join(mismatches)
+def test_skills_have_one_canonical_location() -> None:
+    from omnicursor.compliance import COMPLIANCE_REGISTRY
+
+    paths = list((_REPO / "skills").glob("*/SKILL.md"))
+    assert {p.parent.name for p in paths} == set(COMPLIANCE_REGISTRY)
+    assert len(paths) == 17
+    assert not (_REPO / ".cursor" / "skills").exists()
+    assert list((_REPO / "skills").glob("*.md")) == [_REPO / "skills/README.md"]
+    for path in paths:
+        assert canonical_skill_id(path.parent.name) == path.parent.name

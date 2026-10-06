@@ -10,7 +10,7 @@ ships optional OS templates for durable ownership.
 
 1. **Primary — `sessionStart` ensure (automatic).** `session-start.py` fast-pings
    the daemon and, when it is down, spawns it detached via
-   `.cursor/hooks/lib/daemon_ensure.py`. Never blocks the hook; degrades to a
+   `hooks/lib/daemon_ensure.py`. Never blocks the hook; degrades to a
    no-op when no suitable interpreter is configured.
 2. **Fallback — first-prompt ensure (automatic).** For surfaces where
    `sessionStart` never fires (older Cursor builds, CLI), `user-prompt-submit.py`

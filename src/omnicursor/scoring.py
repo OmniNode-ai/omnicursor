@@ -4,7 +4,7 @@
 
 Shared by:
   - src/omnicursor/nodes/node_cursor_prompt_orchestrator/handlers/
-  - .cursor/hooks/lib/agent_scoring.py  (thin shim re-exports from here)
+  - hooks/lib/agent_scoring.py  (thin shim re-exports from here)
 
 See docs/dev/ROUTING_DEDUPLICATION.md.
 """

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2025 OmniNode.ai Inc.
 # SPDX-License-Identifier: MIT
 # OmniCursor node contract — Cursor-native analogue of OmniClaude skill orchestrators.
-# Implementation: .cursor/hooks/scripts/user-prompt-submit.py (stdlib only; must not import omnicursor).
+# Implementation: hooks/scripts/user-prompt-submit.py (stdlib only; must not import omnicursor).
 
 name: node_cursor_prompt_orchestrator
 contract_name: node_cursor_prompt_orchestrator
@@ -29,8 +29,8 @@ description: >
 
 cursor_native:
   hook_event: beforeSubmitPrompt
-  hooks_json_command: "python3 \"${CLAUDE_PLUGIN_ROOT}/.cursor/hooks/scripts/user-prompt-submit.py\""
-  implementation: .cursor/hooks/scripts/user-prompt-submit.py
+  hooks_json_command: "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/user-prompt-submit.py\""
+  implementation: hooks/scripts/user-prompt-submit.py
   blocking: false
 
 execution:

@@ -1,0 +1,144 @@
+---
+description: Activates when the user says "create a ticket", "plan this ticket", "ticket for", or provides a plan doc and asks for a ticket template. Bucket 2 — reads local files only, no external services.
+globs:
+alwaysApply: false
+---
+
+# Plan Ticket — Generate a Ticket Contract Template
+
+**Bucket 2 — Local-Data Hybrid.** Reads bounded local files to infer repo context. Outputs a YAML ticket template. No external service calls.
+
+**Announce at start:** "I'm using the plan-ticket rule to generate a ticket template."
+
+---
+
+## Phase 1: Bounded Context Read
+
+Announce and perform bounded file research per rule `01-codebase-research`:
+
+```
+Reading: README.md | Listing: <one-directory-from-prompt/>
+```
+
+Read README.md. Use the content for repo detection in Phase 2.
+
+---
+
+## Phase 2: Deterministic Repo Detection
+
+Determine which OmniNode repository this ticket belongs to using this **exact 3-priority chain**. Do not skip steps or reorder them.
+
+**Valid repo names** (exactly these 7):
+`omniclaude`, `omnibase_core`, `omnibase_infra`, `omnidash`, `omniintelligence`, `omnimemory`, `omninode_infra`
+
+**Priority 1 — CWD or prompt match:**
+If the current working directory path OR the user's prompt text contains one of the 7 valid repo names (exact substring match, case-insensitive), use that repo name. Stop.
+
+**Priority 2 — README project name:**
+If Priority 1 found nothing, check if README.md contains one of the 7 valid repo names as the project name (e.g., in a heading `# omniclaude` or `# OmniClaude`). If found, use that repo name. Stop.
+
+**Priority 3 — Ask:**
+If Priorities 1 and 2 both failed, output exactly ONE multiple-choice question:
+
+```
+Which repository does this ticket belong to?
+
+A) omniclaude
+B) omnibase_core
+C) omnibase_infra
+D) omnidash
+E) omniintelligence
+F) omnimemory
+G) omninode_infra
+H) Other (describe below)
+```
+
+Wait for the user's answer before generating the template. Do not guess.
+
+---
+
+## Phase 3: Generate Ticket Template
+
+Once the repo is determined, output a YAML ticket contract template pre-filled with context from the user's prompt and any design/plan doc provided.
+
+```yaml
+# Ticket Contract Template
+# Edit fields marked "FILL IN" then pass to your team's ticket creation workflow.
+
+title: "FILL IN: [concise imperative title]"
+repo: "<detected-repo>"  # omniclaude | omnibase_core | omnibase_infra | omnidash | omniintelligence | omnimemory | omninode_infra
+
+requirements:
+  - id: "R1"
+    statement: "FILL IN: [what must be true when this ticket is done]"
+    rationale: "FILL IN: [why this requirement exists]"
+    acceptance:
+      - "FILL IN: [specific, testable verification step]"
+      - "FILL IN: [another verification step]"
+
+  # Add R2, R3, etc. as needed:
+  # - id: "R2"
+  #   statement: "..."
+  #   rationale: "..."
+  #   acceptance:
+  #     - "..."
+
+verification:
+  - id: "V1"
+    title: "Unit tests pass"
+    kind: "unit_tests"
+    command: "pytest tests/ -m unit -v"
+    expected: "exit 0, all tests green"
+    blocking: true
+  - id: "V2"
+    title: "Lint passes"
+    kind: "lint"
+    command: "ruff check . && mypy src/"
+    expected: "exit 0"
+    blocking: true
+
+context:
+  relevant_files: []   # FILL IN: list exact paths touched by this change
+  patterns_found: []   # FILL IN: existing patterns this ticket builds on
+  notes: ""            # FILL IN: any constraints or out-of-scope notes
+```
+
+**Pre-fill rules:**
+- Derive `title` from the user's prompt (imperative verb form: "Add X to Y")
+- Set `repo` to the detected repo name
+- Add requirements inferred from the prompt — mark them "FILL IN" if uncertain
+- Do not invent file paths; leave `relevant_files` empty if you don't know them
+
+---
+
+## Handoff
+
+After outputting the template:
+
+```
+**Next step**: To create this ticket in Linear (or another tracker), complete manually in that system or use Cursor’s Linear MCP if configured. Save this template to `contract.yaml` (or your team’s path) and edit as needed.
+```
+
+---
+
+## Repo Reference Table
+
+| Repo | Description |
+|------|-------------|
+| `omniclaude` | Claude Code plugin — hooks, skills, agents |
+| `omnibase_core` | Core runtime, Pydantic models, contracts, validators |
+| `omnibase_infra` | Infrastructure services — session, config store, Kafka |
+| `omnidash` | Next.js analytics dashboard |
+| `omniintelligence` | Intelligence nodes — intent, drift, review |
+| `omnimemory` | Document ingestion and semantic retrieval |
+| `omninode_infra` | API service, Kubernetes manifests, Terraform |
+
+---
+
+## OmniCursor backend (library + files)
+
+1. Prefer hook-injected routing (`beforeSubmitPrompt`) when present.
+2. Read **[onex-plan-ticket](../skills/onex-plan-ticket/SKILL.md)** for the full methodology (skill id **`onex-plan-ticket`**).
+3. Optional: structured routing and compliance live in `src/omnicursor/agents.py` and `src/omnicursor/compliance.py` for tests and scripting.
+
+OmniCursor resource links resolve relative to this installed rule file. The project README and user-provided paths refer to the workspace being analyzed, not the plugin.

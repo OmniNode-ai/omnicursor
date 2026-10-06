@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/scripts/post-tool-use.py — mid-session refresh.
+"""Tests for hooks/scripts/post-tool-use.py — mid-session refresh.
 
 postToolUse infers a domain from the tool's file path, refreshes learned patterns
 via additional_context, and emits the ``tool.executed`` registry key.
@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
-_SCRIPTS = _ROOT / ".cursor" / "hooks" / "scripts"
+_LIB = _ROOT / "hooks" / "lib"
+_SCRIPTS = _ROOT / "hooks" / "scripts"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name
 
 

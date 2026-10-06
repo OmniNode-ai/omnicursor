@@ -29,14 +29,14 @@ def test_invoke_skill_loads_markdown_skill() -> None:
     payload = _skill_payload("systematic-debugging")
 
     assert payload["skill_name"] == "onex-systematic-debugging"
-    assert payload["path"] == ".cursor/skills/onex-systematic-debugging/SKILL.md"
+    assert payload["path"] == "skills/onex-systematic-debugging/SKILL.md"
 
 
 def test_invoke_skill_loads_brainstorming_skill() -> None:
     payload = _skill_payload("brainstorming")
 
     assert payload["skill_name"] == "onex-brainstorming"
-    assert payload["path"] == ".cursor/skills/onex-brainstorming/SKILL.md"
+    assert payload["path"] == "skills/onex-brainstorming/SKILL.md"
 
 
 def test_check_compliance_returns_result() -> None:

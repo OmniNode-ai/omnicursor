@@ -2,7 +2,7 @@
 
 Contracts live under ``omnicursor/nodes/*/contract.yaml``. They describe integration
 surfaces analogous to OmniClaude ``contract.yaml`` nodes, but **execution** is always
-via Cursor (``hooks.json`` + ``.cursor/hooks/*.py``), not Kafka.
+via Cursor (``hooks.json`` + ``hooks/*.py``), not Kafka.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class VersionTriple(BaseModel):
 
 
 class CursorNativeSpec(BaseModel):
-    """How this node binds to Cursor IDE hooks (source of truth: ``.cursor/hooks.json``)."""
+    """How this node binds to Cursor IDE hooks (source of truth: ``hooks/hooks.json``)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -98,7 +98,7 @@ def hooks_registration_ok(
     """Best-effort check that declared hook commands match hooks.json entries.
 
     Does not execute hooks — only compares ``hooks_json_command`` strings to the
-    project ``.cursor/hooks.json`` file, relative to the OmniCursor repo root.
+    project ``hooks/hooks.json`` file, relative to the OmniCursor repo root.
     """
     import json
 
@@ -106,7 +106,7 @@ def hooks_registration_ok(
         contracts = load_all_contracts()
 
     repo_root = Path(__file__).resolve().parents[2]
-    hooks_path = repo_root / ".cursor" / "hooks.json"
+    hooks_path = repo_root / "hooks" / "hooks.json"
     if not hooks_path.is_file():
         return False
 

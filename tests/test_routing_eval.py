@@ -21,7 +21,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).parent.parent
-AGENTS_DIR = REPO_ROOT / ".cursor" / "agents"
+AGENTS_DIR = REPO_ROOT / "agents"
 PROMPTS_CSV = REPO_ROOT / "eval" / "routing_labeled_prompts.csv"
 
 # ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from typing import Optional
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
+_LIB = _ROOT / "hooks" / "lib"
 
 
 def _load_emit_client():

@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/lib/daemon_ensure.py — shared-daemon provisioning.
+"""Tests for hooks/lib/daemon_ensure.py — shared-daemon provisioning.
 
 Phase 1 A2 contract: fast ping → detached spawn; never blocks the hook; always
 passes --kafka-bootstrap-servers; pins the daemon to the same socket the hooks
@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
+_LIB = _ROOT / "hooks" / "lib"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name
 
 

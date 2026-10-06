@@ -21,6 +21,22 @@ from pathlib import Path
 
 MCP_SERVER_NAME = "omnicursor-omnimarket"
 SCHEMA_RELPATH = "schemas/cursor-plugin.schema.json"
+COMPONENT_PATHS = {
+    "rules": "rules",
+    "agents": "agents",
+    "skills": "skills",
+    "hooks": "hooks/hooks.json",
+    "mcpServers": "mcp.json",
+}
+HOOK_SCRIPTS = {
+    "sessionStart": "session-start.py",
+    "beforeSubmitPrompt": "user-prompt-submit.py",
+    "beforeShellExecution": "shell-guard.py",
+    "afterFileEdit": "post-edit.py",
+    "postToolUse": "post-tool-use.py",
+    "stop": "stop.py",
+    "sessionEnd": "session-end.py",
+}
 
 
 def _validate_against_official_schema(manifest: dict, findings: list[str]) -> None:
@@ -67,7 +83,7 @@ def _load_json(path: Path, findings: list[str]) -> dict | None:
 def check(root: Path) -> list[str]:
     findings: list[str] = []
     manifest_path = root / ".cursor-plugin" / "plugin.json"
-    mcp_path = root / ".cursor" / "mcp.json"
+    mcp_path = root / "mcp.json"
 
     # Single canonical manifest (A10.2).
     if (root / "cursor-plugin.json").exists():
@@ -88,8 +104,10 @@ def check(root: Path) -> list[str]:
         version = str(manifest.get("version", ""))
         if not re.fullmatch(r"\d+\.\d+\.\d+", version):
             findings.append(f"{manifest_path}: version '{version}' is not semver X.Y.Z")
-        for key in ("rules", "agents", "skills", "hooks"):
+        for key, expected in COMPONENT_PATHS.items():
             rel = manifest.get(key)
+            if rel != expected:
+                findings.append(f"{manifest_path}: '{key}' must reference {expected}")
             if not rel:
                 findings.append(f"{manifest_path}: missing component path '{key}'")
             elif not isinstance(rel, str):
@@ -100,9 +118,9 @@ def check(root: Path) -> list[str]:
                 findings.append(
                     f"{manifest_path}: component '{key}' path {rel} does not exist"
                 )
-        if manifest.get("mcpServers") != ".cursor/mcp.json":
+        if manifest.get("mcpServers") != "mcp.json":
             findings.append(
-                f"{manifest_path}: 'mcpServers' must reference .cursor/mcp.json (A10.3)"
+                f"{manifest_path}: 'mcpServers' must reference mcp.json (A10.3)"
             )
 
         # CHANGELOG top versioned entry matches the manifest version (A10.1).
@@ -132,6 +150,12 @@ def check(root: Path) -> list[str]:
                 findings.append(f"{mcp_path}: must register '{MCP_SERVER_NAME}'")
             elif not ("command" in entry and "args" in entry):
                 findings.append(f"{mcp_path}: '{MCP_SERVER_NAME}' needs command+args")
+            elif entry["command"] != "python3" or entry["args"] != [
+                "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launcher.py"
+            ]:
+                findings.append(f"{mcp_path}: MCP must use the plugin-root launcher")
+            elif "PYTHONPATH" in entry.get("env", {}):
+                findings.append(f"{mcp_path}: MCP must not pin PYTHONPATH")
 
         bridge = root / "src/omnicursor/mcp/omnimarket_bridge_server.py"
         if (
@@ -141,16 +165,42 @@ def check(root: Path) -> list[str]:
             findings.append(f"{bridge}: FastMCP server name != '{MCP_SERVER_NAME}'")
 
         ignored = subprocess.run(
-            ["git", "check-ignore", ".cursor/mcp.json"],
+            ["git", "check-ignore", "mcp.json"],
             cwd=root,
             capture_output=True,
             text=True,
         )
         if ignored.returncode == 0:
             findings.append(
-                ".cursor/mcp.json: gitignored — it would silently never ship (A10.3)"
+                "mcp.json: gitignored — it would silently never ship (A10.3)"
             )
 
+    hooks = _load_json(root / "hooks/hooks.json", findings)
+    registrations = hooks.get("hooks", {}) if hooks else {}
+    if not isinstance(registrations, dict) or set(registrations) != set(HOOK_SCRIPTS):
+        findings.append("hooks/hooks.json: expected exactly seven hook events")
+    else:
+        for event, script in HOOK_SCRIPTS.items():
+            expected = [
+                {"command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}/hooks/scripts/{script}"'}
+            ]
+            if registrations[event] != expected:
+                findings.append(f"hooks/hooks.json: unexpected binding for {event}")
+    required = [
+        "scripts/mcp-launcher.py",
+        "src/omnicursor/__init__.py",
+        "src/omnicursor/mcp/omnimarket_bridge_server.py",
+        "config/event_registry/omnicursor.yaml",
+        "hooks/data/seed_patterns.json",
+        "hooks/config/dod_enforcement.json",
+        "hooks/lib/_common.py",
+        "pyproject.toml",
+        "docs/QUICKSTART.md",
+        *(f"hooks/scripts/{script}" for script in HOOK_SCRIPTS.values()),
+    ]
+    for rel in required:
+        if not (root / rel).is_file():
+            findings.append(f"{rel}: missing required resource")
     return findings
 
 

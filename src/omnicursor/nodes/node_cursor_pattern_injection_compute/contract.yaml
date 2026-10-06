@@ -28,16 +28,16 @@ description: >
 
 cursor_native:
   hook_event: sessionStart
-  hooks_json_command: "python3 \"${CLAUDE_PLUGIN_ROOT}/.cursor/hooks/scripts/session-start.py\""
-  implementation: .cursor/hooks/scripts/session-start.py
+  hooks_json_command: "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.py\""
+  implementation: hooks/scripts/session-start.py
   blocking: false
 
 execution:
   backend: cursor_ide
   notes: >
-    Context assembly in .cursor/hooks/lib/context_injection.py (shared by
+    Context assembly in hooks/lib/context_injection.py (shared by
     session-start.py and post-tool-use.py); pattern scoring in
-    .cursor/hooks/lib/prompt_pattern_selection.py.
+    hooks/lib/prompt_pattern_selection.py.
 
 local_event_bus:
   kind: append_only_jsonl

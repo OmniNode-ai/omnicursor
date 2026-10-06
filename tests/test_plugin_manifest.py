@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CURSOR_PLUGIN_MANIFEST = REPO_ROOT / ".cursor-plugin" / "plugin.json"
 LEGACY_MANIFEST_PATH = REPO_ROOT / "cursor-plugin.json"
 INSTALL_PLUGIN_SH_PATH = REPO_ROOT / "scripts" / "install-plugin.sh"
-MCP_JSON_PATH = REPO_ROOT / ".cursor" / "mcp.json"
+MCP_JSON_PATH = REPO_ROOT / "mcp.json"
 MCP_SERVER_NAME = "omnicursor-omnimarket"
 
 
@@ -99,26 +99,26 @@ def test_official_manifest_uses_only_official_fields() -> None:
 
 
 # ---------------------------------------------------------------------------
-# .cursor/mcp.json (A10.3): shipped, tracked, and naming-consistent with the
+# mcp.json (A10.3): shipped, tracked, and naming-consistent with the
 # FastMCP bridge server and the skill that depends on it by name.
 # ---------------------------------------------------------------------------
 
 
 def test_mcp_json_exists() -> None:
-    assert MCP_JSON_PATH.exists(), ".cursor/mcp.json not found (A10.3 MCP wiring)"
+    assert MCP_JSON_PATH.exists(), "mcp.json not found (A10.3 MCP wiring)"
 
 
 def test_mcp_json_has_mcp_servers_wrapper() -> None:
     data = _load_json(MCP_JSON_PATH)
-    assert "mcpServers" in data, ".cursor/mcp.json must use the mcpServers wrapper"
+    assert "mcpServers" in data, "mcp.json must use the mcpServers wrapper"
     assert isinstance(data["mcpServers"], dict)
 
 
 def test_mcp_json_registers_bridge_server() -> None:
     servers = _load_json(MCP_JSON_PATH)["mcpServers"]
     assert MCP_SERVER_NAME in servers, (
-        f".cursor/mcp.json must register '{MCP_SERVER_NAME}' — the exact name "
-        "skills/execute-plan.md depends on"
+        f"mcp.json must register '{MCP_SERVER_NAME}' — the exact name "
+        "skills/onex-execute-plan/SKILL.md depends on"
     )
     entry = servers[MCP_SERVER_NAME]
     assert "command" in entry and "args" in entry
@@ -130,10 +130,7 @@ def test_mcp_server_name_matches_bridge_source() -> None:
 
 
 def test_mcp_server_name_matches_skill_consumers() -> None:
-    for skill in (
-        "skills/execute-plan.md",
-        ".cursor/skills/onex-execute-plan/SKILL.md",
-    ):
+    for skill in ("skills/onex-execute-plan/SKILL.md",):
         assert MCP_SERVER_NAME in (REPO_ROOT / skill).read_text(), (
             f"{skill} no longer references '{MCP_SERVER_NAME}'"
         )
@@ -141,19 +138,19 @@ def test_mcp_server_name_matches_skill_consumers() -> None:
 
 def test_mcp_json_is_not_gitignored() -> None:
     result = subprocess.run(
-        ["git", "check-ignore", ".cursor/mcp.json"],
+        ["git", "check-ignore", "mcp.json"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )
     assert result.returncode != 0, (
-        ".cursor/mcp.json is gitignored — it would silently never ship (A10.3)"
+        "mcp.json is gitignored — it would silently never ship (A10.3)"
     )
 
 
 def test_manifest_references_mcp_json() -> None:
     data = _load_json(CURSOR_PLUGIN_MANIFEST)
-    assert data.get("mcpServers") == ".cursor/mcp.json"
+    assert data.get("mcpServers") == "mcp.json"
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +216,8 @@ def _run_installer(*flags: str, plugins_dir: Path, data_dir: Path | None = None)
 def test_install_dry_run_stages_only_curated_payload(tmp_path: Path) -> None:
     result = _run_installer("--dry-run", plugins_dir=tmp_path / "plugins")
     assert result.returncode == 0, result.stderr
-    staged = [line for line in result.stdout.splitlines() if "ln -s" in line]
-    assert staged, "dry-run must print the planned payload links"
+    staged = [line for line in result.stdout.splitlines() if "copy " in line]
+    assert staged, "dry-run must print the planned payload copies"
     for junk in DEV_JUNK:
         assert not any(
             f"/{junk} " in line or line.endswith(f"/{junk}") for line in staged
@@ -239,20 +236,21 @@ def test_install_payload_and_uninstall_lifecycle(tmp_path: Path) -> None:
     result = _run_installer(plugins_dir=plugins)
     assert result.returncode == 0, result.stderr
     installed = plugins / "omnicursor"
-    assert installed.is_symlink()
+    assert installed.is_dir()
+    assert not any(p.is_symlink() for p in [installed, *installed.rglob("*")])
 
     for junk in DEV_JUNK:
         assert not (installed / junk).exists(), (
             f"installed payload ships dev junk: {junk}"
         )
-    assert (installed / ".cursor" / "hooks.json").exists()
-    assert (installed / ".cursor" / "mcp.json").exists()
+    assert (installed / "hooks" / "hooks.json").exists()
+    assert (installed / "mcp.json").exists()
     assert (installed / "src" / "omnicursor" / "__init__.py").exists()
     assert (installed / "config" / "event_registry" / "omnicursor.yaml").exists(), (
         "daemon registry must ship with the payload (risk P6)"
     )
 
-    # Plain uninstall removes the symlink but preserves local data.
+    # Plain uninstall removes the copy but preserves local data.
     result = _run_installer("--uninstall", plugins_dir=plugins, data_dir=data)
     assert result.returncode == 0, result.stderr
     assert not installed.exists()
@@ -308,3 +306,11 @@ def test_uninstall_purge_refuses_dir_not_named_omnicursor(tmp_path: Path) -> Non
     assert result.returncode != 0
     assert "not named '.omnicursor'" in result.stdout + result.stderr
     assert (data / "keep.me").exists()
+
+
+def test_development_shim_matches_plugin_events_and_scripts() -> None:
+    canonical = _load_json(REPO_ROOT / "hooks/hooks.json")
+    shim = _load_json(REPO_ROOT / ".cursor/hooks.json")
+    assert len(canonical["hooks"]) == 7
+    normalized = json.loads(json.dumps(canonical).replace("${CLAUDE_PLUGIN_ROOT}/", ""))
+    assert normalized == shim

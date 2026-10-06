@@ -25,8 +25,8 @@ pytest tests/ -v                      # main suite; node suites: pytest src/omni
 pytest tests/ -k "debug"              # by name pattern
 
 # Lint (same scope as the gate and CI — scripts/ci/ is included)
-ruff check src/ tests/ .cursor/hooks/ scripts/ci/
-ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/
+ruff check src/ tests/ hooks/ scripts/ci/
+ruff format --check src/ tests/ hooks/ scripts/ci/
 ```
 
 Optional extra: `.[mcp]` for the omnimarket MCP server.
@@ -34,8 +34,8 @@ Optional extra: `.[mcp]` for the omnimarket MCP server.
 ## Local pre-commit gate (`.githooks/pre-commit`)
 
 Five steps (the hook script is the source of truth): `ruff check` + `ruff format --check`
-(scope above), full `pytest tests/ -v`, **skill-compliance coverage** (every `skills/*.md`
-except `README.md` needs an entry in `src/omnicursor/compliance.py`), and the **A10.7
+(scope above), full `pytest tests/ -v`, **skill-compliance coverage** (the discovered `skills/*/SKILL.md` IDs and the
+registry keys must both equal the expected set of 17), and the **A10.7
 plugin gates** (`scripts/ci/`: manifest validated against the pinned official
 cursor/plugins schema in `schemas/`, frontmatter+category, topic-literal, hook
 stdlib-only). Emergency bypass only: `git commit --no-verify`.
@@ -54,21 +54,21 @@ no branch protection at all, so verify live before relying on it.
 
 Four behavior surfaces + one library:
 
-1. **Rules** (`.cursor/rules/`, 14 `.mdc`) — `00`–`03` always-on; `10`+ activate on
-   keyword match. Rules direct the model to read `skills/*.md` and to use hook-injected
+1. **Rules** (`rules/`, 14 `.mdc`) — `00`–`03` always-on; `10`+ activate on
+   keyword match. Rules direct the model to read `skills/onex-<slug>/SKILL.md` and to use hook-injected
    routing when present.
-2. **Hooks** (`.cursor/hooks/`) — 7 lifecycle events wired in `.cursor/hooks.json`,
+2. **Hooks** (`hooks/`) — 7 lifecycle events wired in `hooks/hooks.json`,
    scripts under `scripts/`, shared logic under `lib/`. Deterministic, no LLM. Each event
    has an OmniClaude-shaped node contract (`src/omnicursor/nodes/*/contract.yaml`).
-3. **Skills** (17) — dual-located (see "Adding a skill").
-4. **Agents** (`.cursor/agents/`, 17 JSON configs) — routing profiles.
+3. **Skills** (17) — one collection under `skills/` (see "Adding a skill").
+4. **Agents** (`agents/`, 17 JSON configs) — routing profiles.
 5. **Python library** (`src/omnicursor/`) — `get_agent_context`, `SkillRepository`,
    `check_compliance`, the scoring engine, node-contract discovery, and schemas
    (`schemas.py`: 5 Pydantic v2 models). Single source of truth for hook logic.
 
 ### Hooks
 
-| Script (`.cursor/hooks/scripts/`) | Event | Behavior |
+| Script (`hooks/scripts/`) | Event | Behavior |
 |---|---|---|
 | `session-start.py` | `sessionStart` | Init + best-effort daemon-ensure + emit. **Injects** session context via `additional_context`. |
 | `user-prompt-submit.py` | `beforeSubmitPrompt` | Classify prompt → emit agent + confidence + patterns for backend learning. **Block/observe-only**; returns `{"continue": true}`. Does **not** inject. |
@@ -82,9 +82,9 @@ Four behavior surfaces + one library:
 `sessionStart.additional_context` (initial) and `postToolUse.additional_context`
 (refresh). `beforeSubmitPrompt` is block-only and CANNOT inject; per-prompt routing is
 emitted for backend learning, not injected. Shared context-assembly lives in
-`.cursor/hooks/lib/context_injection.py`.
+`hooks/lib/context_injection.py`.
 
-Active scripts are **stdlib-only**: they insert `.cursor/hooks/lib/` (and `src/` where
+Active scripts are **stdlib-only**: they insert `hooks/lib/` (and `src/` where
 needed) on `sys.path` and delegate to first-party helpers — never duplicate logic in the
 scripts. All hooks log to `~/.omnicursor/events.jsonl` and emit best-effort events via
 the shared emit daemon.
@@ -123,20 +123,24 @@ bare slug or a canonical id.
 - Hooks must use **Python stdlib only** (no pip dependencies in hook code paths);
   delegate logic to `omnicursor.*`, don't duplicate it.
 - `post-edit.py` is **diagnostic only** — never `--fix`, never writes files.
-- `.cursor/rules/*.mdc` are teaching artifacts — modify with care.
+- `rules/*.mdc` are teaching artifacts — modify with care.
 
 ### Adding an agent
 
-Create `.cursor/agents/<name>.json` (copy an existing config): `activation_patterns`
+Create `agents/<name>.json` (copy an existing config): `activation_patterns`
 must include `explicit_triggers`, `context_triggers`, `activation_keywords`;
 `recommended_skill` uses `onex-<slug>`. Auto-loads on startup.
 
-### Adding a skill (dual-path — both files required)
+### Adding a skill
 
-1. `skills/<slug>.md` (CI scans `skills/*.md`).
-2. `.cursor/skills/onex-<slug>/SKILL.md` (`SkillRepository` loads from here).
-3. Add a 3–5 check entry in `src/omnicursor/compliance.py`.
-4. Update the expected sets in `tests/test_compliance.py` and `tests/test_skills.py`.
+1. Create `skills/onex-<slug>/SKILL.md`, with the same canonical ID in frontmatter.
+2. Add a 3–5 check entry in `src/omnicursor/compliance.py`.
+3. Update the expected sets in `tests/test_compliance.py`, `tests/test_skills.py`
+   and `scripts/ci/check_frontmatter.py` when deliberately changing the collection.
+
+For checkout development, disable the installed plugin and use `.cursor/hooks.json`.
+For plugin acceptance, use the installed copy from a foreign workspace with no shim.
+See [QUICKSTART](docs/QUICKSTART.md#development-hook-source) for the two-mode procedure.
 
 ## OmniMarket bridge (opt-in)
 

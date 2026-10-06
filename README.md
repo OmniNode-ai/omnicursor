@@ -29,7 +29,7 @@ cd ~/tools/OmniCursor
 ./scripts/install-plugin.sh
 ```
 
-The installer stages a **curated runtime payload** (rules, hooks, skills, agents, manifest, `src/omnicursor/`, the event-registry config, and docs — never `tests/`, `docker/`, `eval/`, or `.git`) and symlinks it into `~/.cursor/plugins/local/omnicursor`.
+The installer stages a **curated runtime payload** (rules, hooks, skills, agents, manifest, `src/omnicursor/`, the event-registry config, and docs — never `tests/`, `docker/`, `eval/`, or `.git`) and copies it into `~/.cursor/plugins/local/omnicursor`.
 
 Restart Cursor (**Developer: Reload Window**). Confirm rules and skills appear under **Settings → Rules**. `./scripts/install-plugin.sh --status` reports the install state; `--dry-run` previews any action.
 
@@ -38,9 +38,9 @@ Full guide: **[docs/QUICKSTART.md](./docs/QUICKSTART.md)**
 ## Architecture (four layers)
 
 ```
-Rules + Skills + Agents     ← behavior surface (.cursor/rules, skills/, .cursor/agents)
+Rules + Skills + Agents     ← behavior surface (rules, skills/, agents)
         ↓
-Hooks (7 lifecycle scripts) ← deterministic, stdlib-only (.cursor/hooks/scripts/)
+Hooks (7 lifecycle scripts) ← deterministic, stdlib-only (hooks/scripts/)
         ↓
 ~/.omnicursor/              ← local patterns, events, sessions, outbox (see Privacy)
         ↓
@@ -51,7 +51,7 @@ Deep dive: **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**
 
 ## Hooks
 
-Configured in [`.cursor/hooks.json`](./.cursor/hooks.json).
+Configured in [`hooks/hooks.json`](./hooks/hooks.json).
 
 | Hook | Script | What it does |
 |------|--------|--------------|
@@ -63,7 +63,7 @@ Configured in [`.cursor/hooks.json`](./.cursor/hooks.json).
 | `stop` | `stop.py` | Session outcome (4-gate), recap, durable outbox write |
 | `sessionEnd` | `session-end.py` | Emits the true conversation-close event (fire-and-forget) |
 
-Supporting code lives in `.cursor/hooks/lib/` (`_common.py`, `emit_client.py`, `daemon_ensure.py`, `canonical_event.py`, `redaction.py`, `context_injection.py`). All hook commands use **stdlib only** — no pip dependencies at hook runtime.
+Supporting code lives in `hooks/lib/` (`_common.py`, `emit_client.py`, `daemon_ensure.py`, `canonical_event.py`, `redaction.py`, `context_injection.py`). All hook commands use **stdlib only** — no pip dependencies at hook runtime.
 
 ### Kill-switch & per-hook mask
 
@@ -86,7 +86,7 @@ Supporting code lives in `.cursor/hooks/lib/` (`_common.py`, `emit_client.py`, `
 | `logs/` | Emit-daemon and spawn logs |
 | `hooks-disabled` | Kill-switch marker (created by you) |
 
-**What can leave your machine:** hook events are emitted **best-effort** to a local Unix socket owned by the shared OmniNode emit daemon, which publishes to a Kafka broker at `localhost:19092`. Without that daemon/broker (the default on a standalone install) **nothing is transmitted anywhere** — hooks degrade to local logging only. Before any emit or local write, prompt/command fragments pass through the redaction pass in `.cursor/hooks/lib/redaction.py` (API keys, tokens, passwords, bearer headers, connection strings, private-key blocks, etc.). The full prompt travels only on the restricted `cmd` topic; broadcast events carry a redacted ≤100-char preview.
+**What can leave your machine:** hook events are emitted **best-effort** to a local Unix socket owned by the shared OmniNode emit daemon, which publishes to a Kafka broker at `localhost:19092`. Without that daemon/broker (the default on a standalone install) **nothing is transmitted anywhere** — hooks degrade to local logging only. Before any emit or local write, prompt/command fragments pass through the redaction pass in `hooks/lib/redaction.py` (API keys, tokens, passwords, bearer headers, connection strings, private-key blocks, etc.). The full prompt travels only on the restricted `cmd` topic; broadcast events carry a redacted ≤100-char preview.
 
 ## Uninstall
 
@@ -99,18 +99,18 @@ Supporting code lives in `.cursor/hooks/lib/` (`_common.py`, `emit_client.py`, `
 
 ## MCP setup (optional — Bucket-3 skills)
 
-The `onex-execute-plan` skill calls the FastMCP bridge server **`omnicursor-omnimarket`**, shipped and registered via [`.cursor/mcp.json`](./.cursor/mcp.json):
+The `onex-execute-plan` skill calls the FastMCP bridge server **`omnicursor-omnimarket`**, shipped and registered via [`mcp.json`](./mcp.json):
 
 ```bash
 pip install -e ".[mcp]"          # the mcp dependency for the bridge server
 export OMNIMARKET_ROOT=/path/to/omnimarket   # local omnimarket checkout
 ```
 
-The bridge subprocess interpreter can be overridden with `OMNIMARKET_PYTHON`. **Linear MCP is a separate dependency** (already enabled in `.cursor/settings.json`) — `onex-execute-plan` needs both. The server is started via [`.cursor/mcp-launcher.py`](./.cursor/mcp-launcher.py), which resolves the plugin's own `src/` onto `sys.path` — the registered `python3` only needs to be able to import `mcp` (the `.[mcp]` extra above).
+The bridge subprocess interpreter can be overridden with `OMNIMARKET_PYTHON`. **Linear MCP is a separate dependency** (configure it in Cursor for the target workspace) — `onex-execute-plan` needs both. The server is started via [`scripts/mcp-launcher.py`](./scripts/mcp-launcher.py), which resolves the plugin's own `src/` onto `sys.path` — the `python3` resolved by **Cursor.app** must be Python ≥3.10 with `omnicursor[mcp]` and its dependencies installed externally. Copying the plugin does not install packages. See [GUI environment and acceptance](./docs/QUICKSTART.md#gui-environment-and-acceptance).
 
 ## Skills (17)
 
-Canonical Markdown in [`skills/`](./skills/), mirrored for Cursor at [`.cursor/skills/onex-<slug>/SKILL.md`](./.cursor/skills/). Each skill id is **`onex-<slug>`** (YAML `name`, `/` picker, compliance registry). Bucket classification is canonical in [ARCHITECTURE.md §3](./docs/ARCHITECTURE.md#3-skills).
+One canonical collection at [`skills/onex-<slug>/SKILL.md`](./skills/), shared by Cursor, the Python loader and compliance gates. Each skill id is **`onex-<slug>`** (YAML `name`, `/` picker, compliance registry). Bucket classification is canonical in [ARCHITECTURE.md §3](./docs/ARCHITECTURE.md#3-skills).
 
 | Bucket | Skills |
 |--------|--------|
@@ -136,19 +136,17 @@ Details: [`src/omnicursor/README.md`](./src/omnicursor/README.md)
 ```text
 OmniCursor/
 ├── .cursor-plugin/plugin.json   # Cursor plugin manifest (single canonical)
-├── .cursor/
-│   ├── rules/                   # 14 .mdc rules (4 always-on)
-│   ├── hooks/                   # 7 hook scripts + lib/
-│   ├── hooks.json
-│   ├── mcp.json                 # omnicursor-omnimarket bridge registration
-│   ├── mcp-launcher.py          # plugin-root-resolving MCP server launcher
-│   ├── skills/                  # onex-*/SKILL.md mirrors
-│   └── agents/                  # 17 JSON routing configs
+├── .cursor/                     # Development-only hooks shim, settings, README
+├── rules/                       # 14 .mdc rules (4 always-on)
+├── agents/                      # 17 JSON routing profiles (not native agents)
+├── skills/onex-*/SKILL.md        # Single collection of 17 skills
+├── hooks/                       # hooks.json, 7 scripts, lib, config, seeds
+├── mcp.json                     # Optional MCP bridge registration
+├── scripts/mcp-launcher.py      # Resolves src from the installed copy
 ├── config/event_registry/       # Emit-daemon fan-out registry (semantic key → topics)
 ├── docs/                        # QUICKSTART, ARCHITECTURE, CURRENT_STATE, injection evidence
 ├── schemas/                     # Pinned official cursor/plugins manifest schema (CI gate)
 ├── provisioning/                # Optional launchd/systemd templates for the emit daemon
-├── skills/                      # Canonical skill Markdown
 ├── src/omnicursor/              # Python library + node contracts
 ├── tests/
 ├── scripts/install-plugin.sh

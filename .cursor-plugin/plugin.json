@@ -26,9 +26,9 @@
     "pr-review",
     "workflow-automation"
   ],
-  "rules": ".cursor/rules",
-  "agents": ".cursor/agents",
-  "skills": ".cursor/skills",
-  "hooks": ".cursor/hooks.json",
-  "mcpServers": ".cursor/mcp.json"
+  "rules": "rules",
+  "agents": "agents",
+  "skills": "skills",
+  "hooks": "hooks/hooks.json",
+  "mcpServers": "mcp.json"
 }

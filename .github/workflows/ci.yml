@@ -59,26 +59,16 @@ jobs:
           pip install -e ".[dev,mcp]" ruff
 
       - name: Lint
-        run: ruff check src/ tests/ .cursor/hooks/ scripts/ci/
+        run: ruff check src/ tests/ hooks/ scripts/ci/
 
       - name: Format check
-        run: ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/
+        run: ruff format --check src/ tests/ hooks/ scripts/ci/
 
       - name: Test
         run: pytest tests/ -v
 
       - name: Validate skill compliance coverage
-        run: |
-          python - <<'EOF'
-          import pathlib, sys
-          skills = {f.stem for f in pathlib.Path("skills").glob("*.md") if f.name != "README.md"}
-          compliance = pathlib.Path("src/omnicursor/compliance.py").read_text()
-          missing = [s for s in sorted(skills) if s not in compliance]
-          if missing:
-              print(f"Skills missing compliance entries: {missing}")
-              sys.exit(1)
-          print(f"All {len(skills)} skills have compliance entries.")
-          EOF
+        run: python scripts/ci/check_frontmatter.py --compliance-only
 
   # Type check, ported from omniclaude (mypy config in pyproject.toml).
   typecheck:
@@ -103,7 +93,7 @@ jobs:
         run: mypy src/
 
   # Structural plugin gates (A10.7): manifest/MCP wiring, skill+agent
-  # frontmatter & dual-location parity, hardcoded-topic-literal guard
+  # frontmatter & exact skill coverage, hardcoded-topic-literal guard
   # (OMN-13944 analog — Jonah's PR-#4 follow-up), stdlib-only hook imports,
   # shell hygiene.
   plugin-gates:
@@ -132,7 +122,7 @@ jobs:
       - name: Skill/agent frontmatter + category gate
         run: python scripts/ci/check_frontmatter.py
 
-      - name: Hardcoded topic-literal gate (.cursor/hooks/)
+      - name: Hardcoded topic-literal gate (hooks/)
         run: python scripts/ci/check_topic_literals.py
 
       - name: Hook stdlib-only import gate
@@ -240,7 +230,7 @@ jobs:
       OMNIBASE_CORE_PIN: 665b9657f2d310cec647fdc5e0093ae28835bbab
       # omniclaude is the redaction-pattern donor (tests/test_redaction.py
       # TestByteParity). A red weekly run here means the donor moved: re-port
-      # the _SECRET_PATTERNS block into .cursor/hooks/lib/redaction.py, then
+      # the _SECRET_PATTERNS block into hooks/lib/redaction.py, then
       # bump this pin.
       OMNICLAUDE_PIN: 00589f12c8b66447f7da23fff0b72dacd6f3446d
 

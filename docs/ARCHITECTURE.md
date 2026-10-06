@@ -22,11 +22,11 @@ versus *what is opt-in or aspirational*, read [`CURRENT_STATE.md`](./CURRENT_STA
         ┌─────────────────────────────────┴─────────────────────────────────┐
         │                         BEHAVIOR SURFACE                            │
         │                                                                     │
-        │  Rules (.cursor/rules/*.mdc)      → injected guidance / methodology │
-        │  Skills (skills/*.md + mirror)    → multi-step playbooks the model  │
+        │  Rules (rules/*.mdc)      → injected guidance / methodology │
+        │  Skills (skills/onex-*/SKILL.md)    → multi-step playbooks the model  │
         │                                     reads from disk                 │
-        │  Agents (.cursor/agents/*.json)   → routing personas                │
-        │  Hooks (.cursor/hooks/scripts/)   → deterministic, stdlib-only      │
+        │  Agents (agents/*.json)   → routing personas                │
+        │  Hooks (hooks/scripts/)   → deterministic, stdlib-only      │
         │                                     lifecycle scripts               │
         └─────────────────────────────────┬─────────────────────────────────┘
                                           │ reads / writes
@@ -45,25 +45,25 @@ There are **four behavior surfaces** plus **one support library**:
 
 | Surface | Location | Role |
 |---------|----------|------|
-| **Rules** | `.cursor/rules/*.mdc` (14 files) | Instructions injected into the model's context |
-| **Skills** | `skills/*.md` (17) + `.cursor/skills/onex-*/SKILL.md` (17) | Methodology playbooks the model reads on demand |
-| **Agents** | `.cursor/agents/*.json` (17) | Routing personas scored against the prompt |
-| **Hooks** | `.cursor/hooks/scripts/*.py` (7) | Deterministic, stdlib-only lifecycle scripts |
+| **Rules** | `rules/*.mdc` (14 files) | Instructions injected into the model's context |
+| **Skills** | `skills/onex-*/SKILL.md` (17) | Methodology playbooks the model reads on demand |
+| **Agents** | `agents/*.json` (17) | Routing personas scored against the prompt |
+| **Hooks** | `hooks/scripts/*.py` (7) | Deterministic, stdlib-only lifecycle scripts |
 | **Library** | `src/omnicursor/` | Routing, scoring, skills, compliance, contracts, bridge — shared hook logic + pytest/CI/scripting |
 
 > **Key boundary:** the hooks are **stdlib-only** and must run without a
-> virtualenv. The active scripts reach shared logic by inserting `.cursor/hooks/lib/`
+> virtualenv. The active scripts reach shared logic by inserting `hooks/lib/`
 > (and `src/` where needed) onto `sys.path` and importing the lib modules
 > (`_common`, `context_injection`, …) and `omnicursor.*` **directly** — those are the
 > single source of truth, the scripts are thin entrypoints. The previous duplicated
-> `.cursor/hooks/on_*.py` set was deleted in the W4 alignment. See [§4 Hooks](#4-hooks)
+> `hooks/on_*.py` set was deleted in the W4 alignment. See [§4 Hooks](#4-hooks)
 > and [§7 Node contracts](#7-node-contracts-onex-shaped).
 
 ---
 
 ## 2. Rules
 
-14 `.mdc` files in `.cursor/rules/`, each Markdown with YAML frontmatter.
+14 `.mdc` files in `rules/`, each Markdown with YAML frontmatter.
 
 - **Always-on (4):** `00-omninode-concepts`, `01-codebase-research`,
   `02-no-secrets-in-commits`, `03-omnicursor-ownership` — all carry
@@ -71,7 +71,7 @@ There are **four behavior surfaces** plus **one support library**:
 - **Keyword/`@mention`-activated (10):** `10`–`19` drive methodology workflows
   (brainstorming, writing plans, plan-ticket, systematic debugging, PR review,
   handoff, plan-to-tickets, plan-review, recap, execute-plan). Each rule points
-  the model at the matching `.cursor/skills/onex-<slug>/SKILL.md`.
+  the model at the matching `skills/onex-<slug>/SKILL.md`.
 
 Rules are **teaching/rubric artifacts** — change them deliberately.
 
@@ -79,22 +79,11 @@ Rules are **teaching/rubric artifacts** — change them deliberately.
 
 ## 3. Skills
 
-17 methodology playbooks. Each skill exists in **two places**:
-
-| Copy | Path | Who reads it |
-|------|------|--------------|
-| **Canonical** | `skills/<slug>.md` (bare slug) | **CI/parity** scans here |
-| **Cursor mirror** | `.cursor/skills/onex-<slug>/SKILL.md` | The Cursor `/` picker **and** the Python `SkillRepository` load here |
-
-> **The two copies are asymmetric.** `SkillRepository` (via
-> `db.SKILLS_DIR = REPO_ROOT/.cursor/skills`) loads **only** the mirror, while CI
-> scans `skills/`. Editing only `skills/<slug>.md` changes nothing at runtime
-> until the mirror is updated — and `tests/test_skills.py::test_skills_dual_path_parity`
-> enforces that the two are **content-identical** (UTF-8 text comparison).
-
-**Canonical id:** `onex-<slug>` (e.g. `onex-systematic-debugging`). The bare
-`<slug>` is the on-disk stem; the loader also accepts a legacy `onex:` colon form
-for back-compat.
+17 methodology playbooks in one collection: `skills/onex-<slug>/SKILL.md`.
+Cursor discovery, `SkillRepository` and compliance gates use that same collection.
+Frontmatter names match directory names; the gate compares discovered IDs and
+registry keys against the agreed set of 17 and rejects missing or empty collections.
+The loader still accepts bare slugs and legacy `onex:` aliases.
 
 ### 3-bucket classification
 
@@ -136,7 +125,7 @@ directory listing, then emits the YAML ticket-contract template.
 
 ## 4. Hooks
 
-Seven Cursor lifecycle events are wired in `.cursor/hooks.json` to
+Seven Cursor lifecycle events are wired in `hooks/hooks.json` to
 **stdlib-only** scripts:
 
 | Event | Active script | Can block? | Role |
@@ -153,7 +142,7 @@ Seven Cursor lifecycle events are wired in `.cursor/hooks.json` to
 - **Injection** happens only at `sessionStart.additional_context` (initial) and
   `postToolUse.additional_context` (refresh) — Cursor's `beforeSubmitPrompt` output is
   block-only (`{continue, user_message}`) and a `systemMessage` there is silently ignored.
-  Shared context-assembly lives in `.cursor/hooks/lib/context_injection.py`.
+  Shared context-assembly lives in `hooks/lib/context_injection.py`.
 - The observational hooks append to `~/.omnicursor/events.jsonl` and emit best-effort
   events via the shared daemon.
 - All hooks **fail open**: any exception degrades to allow / no-op so a hook can
@@ -171,8 +160,8 @@ Seven Cursor lifecycle events are wired in `.cursor/hooks.json` to
 
 ### Hook script layout
 
-All hooks live under `.cursor/hooks/scripts/*.py` (the only set wired in
-`hooks.json`), delegating to shared logic in `.cursor/hooks/lib/*.py` and, where
+All hooks live under `hooks/scripts/*.py` (the only set wired in
+`hooks.json`), delegating to shared logic in `hooks/lib/*.py` and, where
 needed, to `src/omnicursor/`. The lib holds **10** modules: `_common`,
 `context_injection`, `emit_client`, `pattern_loader`, `prompt_pattern_selection`,
 `pattern_sync`, the `agent_scoring` shim (re-exports `src/omnicursor/scoring.py`),
@@ -194,11 +183,11 @@ The previous parallel top-level `on_*.py` set was deleted in the W4 hook alignme
 
 ## 5. Agent routing
 
-17 JSON configs in `.cursor/agents/` define routing personas
+17 JSON configs in `agents/` define routing personas
 (`name`, `category`, `activation_patterns`, `instructions`, `recommended_skill`).
 Both the prompt hook and the library score prompts with the **same engine**,
 `src/omnicursor/scoring.py` (hooks reach it through the
-`.cursor/hooks/lib/agent_scoring.py` shim).
+`hooks/lib/agent_scoring.py` shim).
 
 **Two merge layers** (`agents.py`): hardcoded `AGENT_CONTEXTS`
 (4 categories: debugging, brainstorming, planning, ticketing) merged with the JSON
@@ -257,7 +246,7 @@ from ~/.omnicursor/learned_patterns    emit prompt_classified    │
 Each hook is also described by a declarative **`contract.yaml`** modeled on
 OmniClaude's per-node contract format, under `src/omnicursor/nodes/<node>/`.
 `node_contracts.py` discovers, parses (Pydantic, `extra="allow"`), caches, and
-best-effort validates them against the real `.cursor/hooks.json`.
+best-effort validates them against the real `hooks/hooks.json`.
 
 There are **7 contracts across 7 hook events**:
 
@@ -277,14 +266,14 @@ Both the runtime hook scripts and the importable node surface delegate to the
 **same** shared library modules (`file_edit`, `shell_guard`, `session_outcome`,
 `scoring`, …):
 
-- **Runtime:** Cursor executes the stdlib-only `.cursor/hooks/scripts/*.py`, which
-  insert `src/` (and `.cursor/hooks/lib/`) onto `sys.path` and `import omnicursor.*`
+- **Runtime:** Cursor executes the stdlib-only `hooks/scripts/*.py`, which
+  insert `src/` (and `hooks/lib/`) onto `sys.path` and `import omnicursor.*`
   directly. They are thin entrypoints — **not** duplicated logic.
 - **In-process surface:** each node's `node.py` → `handler.py` → `handlers/*.py` →
   typed `models/*.py` re-runs the same delegation for tests/CI/scripting.
 
 There is **no duplicated hook logic left in the tree** — the legacy
-`.cursor/hooks/on_*.py` set (self-contained copies that had drifted from the
+`hooks/on_*.py` set (self-contained copies that had drifted from the
 active scripts) was deleted in the W4 alignment (see §4).
 
 > Known field-mapping gaps in the in-process node surface (document, don't mistake
@@ -346,7 +335,7 @@ omniintelligence service APIs directly.
 - **MCP server** (stdio, name `omnicursor-omnimarket`) exposes three tools:
   `run_local_review`, `run_ticket_pipeline`, `run_ci_watch`. Needs the optional
   `mcp` extra (`pip install -e ".[mcp]"`); `run_ci_watch` needs the `gh` CLI.
-- **Launch path:** `.cursor/mcp.json` runs `.cursor/mcp-launcher.py`, which
+- **Launch path:** `mcp.json` runs `scripts/mcp-launcher.py`, which
   resolves the plugin root from its **own real path** (the same
   `Path(__file__).resolve()` idiom the hooks use) and puts `<root>/src` on
   `sys.path` before starting the server — so the import works from any host
@@ -398,14 +387,19 @@ All networked tiers are **opt-in**; the plugin works fully offline.
 
 - **Python package:** setuptools `src/` layout, runtime deps `pydantic` + `pyyaml`,
   extras `[dev]` (pytest + jsonschema for the manifest gate) and `[mcp]`. Version
-  `0.1.0`. Only `nodes/*/contract.yaml` is bundled as package data — the `.cursor/`
-  surfaces ship via the plugin symlink, **not** via pip.
-- **Cursor plugin:** `scripts/install-plugin.sh` stages a curated runtime
-  payload (`.cursor/`, `.cursor-plugin/`, `src/omnicursor/`, `config/`,
-  pyproject + README/LICENSE/CHANGELOG — no `tests/`, `docker/`, `eval/`,
-  `compose.yaml`, `.git`) into `build/plugin/` and symlinks it to
-  `~/.cursor/plugins/local/omnicursor`; `--uninstall` removes it and
-  `--uninstall --purge` additionally clears `~/.omnicursor/` local data.
+  `0.1.0`. Only `nodes/*/contract.yaml` is bundled as Python package data.
+  The behavior surfaces ship through the plugin copy.
+- **Cursor plugin:** `scripts/install-plugin.sh` copies the manifest, rules,
+  routing profiles, skills, hooks, MCP registration/launcher, `src/omnicursor/`,
+  `config/`, metadata, README/LICENSE/CHANGELOG and `docs/QUICKSTART.md`.
+  It excludes `.cursor`, venvs, tests (including node tests), caches and development
+  tools. Staging is validated outside `plugins/local` before replacement; a failed
+  replacement restores the previous install. The managed marker is outside the manifest.
+  Reinstallation removes stale files. `--status` and `--dry-run` do not write.
+  Recognized legacy links are removed without changing their targets; unknown
+  destinations must be backed up outside `plugins/local` first.
+  `--uninstall` preserves local data; `--uninstall --purge` removes it only after
+  validating the explicit data path. No environments or dependencies are installed.
   `.cursor-plugin/plugin.json` is the single canonical manifest (the former
   root `cursor-plugin.json` companion was removed in A10.2; version-floor
   facts live in README — Cursor `>=0.40.0` — and `pyproject.toml` — Python

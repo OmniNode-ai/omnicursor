@@ -1,212 +1,198 @@
 #!/usr/bin/env bash
-# install-plugin.sh — Install OmniCursor as a Cursor user plugin.
-#
-# Stages the curated runtime payload (A10.4) into build/plugin/ — per-entry
-# symlinks back into this repository — and exposes it to Cursor via a single
-# symlink at ~/.cursor/plugins/local/omnicursor. Dev junk (tests/, docker/,
-# eval/, compose.yaml, .git, ...) never reaches the installed plugin.
-#
-# Hooks resolve their real location with Path(__file__).resolve(), so they
-# execute against this checkout regardless of the symlink chain; the payload
-# controls what Cursor (and anyone auditing the install) sees.
-#
-# Usage:
-#   ./scripts/install-plugin.sh
-#   ./scripts/install-plugin.sh --dry-run
-#   ./scripts/install-plugin.sh --status
-#   ./scripts/install-plugin.sh --uninstall            # keeps ~/.omnicursor/ data
-#   ./scripts/install-plugin.sh --uninstall --purge    # also removes ~/.omnicursor/
-
+# Install an independent runtime copy at ~/.cursor/plugins/local/omnicursor.
+# No packages or environments are installed. Only explicitly managed destinations
+# (or recognized legacy links) can be replaced; user data survives --uninstall.
 set -euo pipefail
-
 OMNICURSOR_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLUGIN_NAME="omnicursor"
-PLUGIN_PARENT="${CURSOR_PLUGINS_LOCAL:-$HOME/.cursor/plugins/local}"
-TARGET="$PLUGIN_PARENT/$PLUGIN_NAME"
-STAGING="$OMNICURSOR_ROOT/build/plugin"
+exec python3 - "$OMNICURSOR_ROOT" "$@" <<'PY'
+from __future__ import annotations
 
-# Curated runtime payload (A10.4): repo-root-relative entries staged into
-# build/plugin/. src/omnicursor (not src/) keeps egg-info out; config/ ships
-# the event registry the emit daemon is spawned with (daemon_ensure.py
-# resolves it via REPO_ROOT — see P6 in the phase plan).
-PAYLOAD_ENTRIES=(
-    ".cursor"
-    ".cursor-plugin"
-    "src/omnicursor"
-    "config"
-    "pyproject.toml"
-    "README.md"
-    "LICENSE"
-    "CHANGELOG.md"
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import stat
+import sys
+import tempfile
+
+SOURCE = Path(sys.argv[1]).resolve()
+PARENT = Path(os.environ.get("CURSOR_PLUGINS_LOCAL", str(Path.home() / ".cursor/plugins/local"))).expanduser().absolute()
+TARGET = PARENT / "omnicursor"
+MARKER = ".omnicursor-managed-install"
+MARKER_CONTENT = "omnicursor-copy-v1\n"
+ENTRIES = (
+    ".cursor-plugin/plugin.json", "rules", "agents", "skills", "hooks", "mcp.json",
+    "scripts/mcp-launcher.py", "src/omnicursor", "config", "pyproject.toml",
+    "README.md", "LICENSE", "CHANGELOG.md", "docs/QUICKSTART.md",
 )
+EXCLUDED = {
+    "tests", "__tests__", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+    ".git", ".github", ".cursor", ".venv", "venv", "node_modules", ".DS_Store",
+}
+HOOK_SCRIPTS = {
+    "sessionStart": "session-start.py", "beforeSubmitPrompt": "user-prompt-submit.py",
+    "beforeShellExecution": "shell-guard.py", "afterFileEdit": "post-edit.py",
+    "postToolUse": "post-tool-use.py", "stop": "stop.py", "sessionEnd": "session-end.py",
+}
 
-DRY_RUN=0
-UNINSTALL=0
-STATUS=0
-PURGE=0
 
-for arg in "$@"; do
-    case "$arg" in
-        --dry-run)   DRY_RUN=1 ;;
-        --uninstall) UNINSTALL=1 ;;
-        --status)    STATUS=1 ;;
-        --purge)     PURGE=1 ;;
-        -*)          echo "Unknown flag: $arg" >&2; exit 1 ;;
-        *)           echo "Unexpected argument: $arg" >&2; exit 1 ;;
-    esac
-done
+def excluded(path):
+    return (path.name in EXCLUDED or path.suffix in {".pyc", ".pyo", ".pem", ".key"}
+            or path.name.startswith(".env") or path.name.endswith(".egg-info"))
 
-if [ "$PURGE" = "1" ] && [ "$UNINSTALL" != "1" ]; then
-    echo "ERROR: --purge only applies with --uninstall" >&2
-    exit 1
-fi
 
-_stage_payload() {
-    if [ "$DRY_RUN" = "1" ]; then
-        echo "  [dry-run] rm -rf $STAGING && mkdir -p $STAGING"
-        for entry in "${PAYLOAD_ENTRIES[@]}"; do
-            echo "  [dry-run] ln -s $OMNICURSOR_ROOT/$entry $STAGING/$entry"
-        done
+def selected_files(path):
+    # lstat before traversal: never follow a source symlink, including a selected
+    # directory's ancestors (e.g. src -> another checkout).
+    for ancestor in (path, *path.parents):
+        if ancestor == SOURCE:
+            break
+        if ancestor.is_symlink():
+            raise ValueError(f"refuse source symlink: {ancestor}")
+    if excluded(path):
         return
-    fi
-    rm -rf "$STAGING"
-    mkdir -p "$STAGING"
-    for entry in "${PAYLOAD_ENTRIES[@]}"; do
-        case "$entry" in
-            */*) mkdir -p "$STAGING/$(dirname "$entry")" ;;
-        esac
-        ln -s "$OMNICURSOR_ROOT/$entry" "$STAGING/$entry"
-        echo "  staged: $entry"
-    done
-}
+    mode = path.lstat().st_mode
+    if stat.S_ISREG(mode):
+        yield path
+    elif stat.S_ISDIR(mode):
+        for child in sorted(path.iterdir()):
+            yield from selected_files(child)
+    else:
+        raise ValueError(f"unsupported payload file: {path}")
 
-_link() {
-    local src="$1" dst="$2"
-    if [ "$DRY_RUN" = "1" ]; then
-        echo "  [dry-run] mkdir -p $(dirname "$dst")"
-        echo "  [dry-run] ln -sfn $src $dst"
+
+def destination_kind():
+    if TARGET.is_symlink():
+        return "legacy" if TARGET.resolve() in {SOURCE, SOURCE / "build/plugin"} else "unknown"
+    if not TARGET.exists():
+        return "missing"
+    marker = TARGET / MARKER
+    if TARGET.is_dir() and marker.is_file() and not marker.is_symlink():
+        if marker.read_text() == MARKER_CONTENT:
+            return "managed"
+    return "unknown"
+
+
+def validate(root):
+    manifest = json.loads((root / ".cursor-plugin/plugin.json").read_text())
+    expected = {"rules": "rules", "agents": "agents", "skills": "skills",
+                "hooks": "hooks/hooks.json", "mcpServers": "mcp.json"}
+    if manifest.get("name") != "omnicursor" or any(manifest.get(k) != v for k, v in expected.items()):
+        raise ValueError("invalid plugin manifest or component paths")
+    for directory, pattern, count in (("rules", "*.mdc", 14), ("agents", "*.json", 17), ("skills", "*/SKILL.md", 17)):
+        if len(list((root / directory).glob(pattern))) != count:
+            raise ValueError(f"incomplete payload collection: {directory} (expected {count})")
+    hooks = json.loads((root / "hooks/hooks.json").read_text())["hooks"]
+    if set(hooks) != set(HOOK_SCRIPTS):
+        raise ValueError("expected exactly seven hook events")
+    for event, script in HOOK_SCRIPTS.items():
+        command = f'python3 "${{CLAUDE_PLUGIN_ROOT}}/hooks/scripts/{script}"'
+        if hooks[event] != [{"command": command}] or not (root / "hooks/scripts" / script).is_file():
+            raise ValueError(f"invalid hook binding: {event}")
+    server = json.loads((root / "mcp.json").read_text())["mcpServers"]["omnicursor-omnimarket"]
+    if server.get("command") != "python3" or server.get("args") != ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launcher.py"]:
+        raise ValueError("invalid MCP launcher registration")
+    required = ("hooks/lib/_common.py", "hooks/data/seed_patterns.json", "hooks/config/dod_enforcement.json",
+                "src/omnicursor/__init__.py", "src/omnicursor/mcp/omnimarket_bridge_server.py",
+                "config/event_registry/omnicursor.yaml", "docs/QUICKSTART.md")
+    for rel in (*required, *(entry for entry in ENTRIES if (SOURCE / entry).is_file())):
+        if not (root / rel).is_file():
+            raise ValueError(f"missing payload resource: {rel}")
+    if len(list((root / "src/omnicursor/nodes").glob("*/contract.yaml"))) != 7:
+        raise ValueError("expected seven node contracts")
+    for path in root.rglob("*"):
+        if path.is_symlink() or excluded(path):
+            raise ValueError(f"forbidden installed artifact: {path}")
+
+
+def purge_path():
+    path = Path(os.environ.get("OMNICURSOR_DATA_DIR", str(Path.home() / ".omnicursor"))).expanduser().resolve()
+    if path in {Path("/"), Path.home().resolve()}:
+        raise ValueError(f"refuse to purge unsafe data dir: {path}")
+    if path.name != ".omnicursor":
+        raise ValueError(f"refuse to purge dir not named '.omnicursor': {path}")
+    return path
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--status", action="store_true")
+    mode.add_argument("--uninstall", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--purge", action="store_true")
+    args = parser.parse_args(sys.argv[2:])
+    if args.purge and not args.uninstall:
+        parser.error("--purge only applies with --uninstall")
+    kind = destination_kind()
+    print(f"OmniCursor plugin: {TARGET}\n  status: {kind}")
+    if args.status:
         return
-    fi
-    mkdir -p "$(dirname "$dst")"
-    ln -sfn "$src" "$dst"
-}
+    if kind == "unknown":
+        raise ValueError("destination is not managed by this installer; back up the manual copy outside plugins/local before installing")
+    data = purge_path() if args.purge else None
+    if args.uninstall:
+        if kind != "missing":
+            if args.dry_run:
+                print(f"[dry-run] remove {TARGET} (preserve local data)")
+            elif kind == "legacy":
+                TARGET.unlink()  # remove only the link, never its source
+            else:
+                shutil.rmtree(TARGET)
+        if data is not None:
+            if args.dry_run:
+                print(f"[dry-run] rm -rf {data}")
+            elif data.is_dir():
+                shutil.rmtree(data)
+        return
 
-_status_icon() {
-    local dst="$1"
-    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$STAGING")" ]; then
-        echo "linked"
-    elif [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$OMNICURSOR_ROOT")" ]; then
-        echo "legacy"
-    elif [ -e "$dst" ]; then
-        echo "manual"
-    else
-        echo "missing"
-    fi
-}
+    files = [p for entry in ENTRIES for p in selected_files(SOURCE / entry)]
+    if args.dry_run:
+        for entry in ENTRIES:
+            print(f"[dry-run] copy {SOURCE / entry} -> {TARGET / entry}")
+        return
+    # Staging and rollback live outside plugins/local so Cursor cannot discover
+    # half-built plugins or the old copy during replacement.
+    PARENT.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix=".omnicursor-install-", dir=PARENT.parent))
+    staged, previous = work / "payload", work / "previous"
+    staged.mkdir()
+    preserve_rollback = False
+    try:
+        for source in files:
+            dest = staged / source.relative_to(SOURCE)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, dest, follow_symlinks=False)
+        # Preserve selected directory permissions as well as file modes.
+        for directory in sorted((p for p in staged.rglob("*") if p.is_dir()), reverse=True):
+            shutil.copystat(SOURCE / directory.relative_to(staged), directory)
+        validate(staged)
+        (staged / MARKER).write_text(MARKER_CONTENT)
+        if destination_kind() != kind:
+            raise ValueError("destination changed during staging; rerun after inspecting it")
+        if kind != "missing":
+            os.replace(TARGET, previous)
+        try:
+            os.replace(staged, TARGET)
+        except BaseException:
+            if previous.exists() or previous.is_symlink():
+                try:
+                    os.replace(previous, TARGET)
+                except OSError:
+                    preserve_rollback = True
+                    print(f"Rollback could not restore destination; previous install preserved at {previous}", file=sys.stderr)
+            raise
+    finally:
+        if not preserve_rollback:
+            shutil.rmtree(work)
+    print("Installed independent copy (no symlinks). Restart Cursor or reload the window.")
+    print("For checkout development, disable the installed plugin before using the project hook shim.")
 
-if [ "$STATUS" = "1" ]; then
-    echo "OmniCursor plugin: $TARGET"
-    icon="$(_status_icon "$TARGET")"
-    case "$icon" in
-        linked)  echo "  status: installed (symlink → $STAGING)" ;;
-        legacy)  echo "  status: legacy whole-repo install — rerun ./scripts/install-plugin.sh to migrate to the curated payload" ;;
-        manual)  echo "  status: path exists but is not our symlink" ;;
-        missing) echo "  status: not installed" ;;
-    esac
-    exit 0
-fi
 
-if [ "$UNINSTALL" = "1" ]; then
-    echo "Removing OmniCursor plugin symlink..."
-    if [ -L "$TARGET" ]; then
-        resolved="$(readlink -f "$TARGET")"
-        if [ "$resolved" = "$(readlink -f "$STAGING")" ] || [ "$resolved" = "$(readlink -f "$OMNICURSOR_ROOT")" ]; then
-            if [ "$DRY_RUN" = "1" ]; then
-                echo "  [dry-run] rm $TARGET"
-            else
-                rm "$TARGET"
-                echo "  removed: $TARGET"
-            fi
-        else
-            echo "  skip: $TARGET exists but is not managed by this script" >&2
-            exit 1
-        fi
-    elif [ -e "$TARGET" ]; then
-        echo "  skip: $TARGET exists but is not managed by this script" >&2
-        exit 1
-    else
-        echo "  nothing to remove"
-    fi
-
-    if [ -d "$STAGING" ]; then
-        if [ "$DRY_RUN" = "1" ]; then
-            echo "  [dry-run] rm -rf $STAGING"
-        else
-            rm -rf "$STAGING"
-            echo "  removed staging: $STAGING"
-        fi
-    fi
-
-    # A10.5 — opt-in local-data purge. Plain --uninstall never touches
-    # ~/.omnicursor/ (learned_patterns.json, outbox.jsonl, events.jsonl,
-    # emit.sock/pid, event-spool/, logs/, hooks-disabled marker).
-    # The hooks hardcode ~/.omnicursor (lib/_common.py), so the only dir this
-    # script will ever destroy is one literally named ".omnicursor" — resolve
-    # symlinks first, then refuse anything else (a typo'd OMNICURSOR_DATA_DIR
-    # must not become an rm -rf of /etc or an unrelated user directory).
-    if [ "$PURGE" = "1" ]; then
-        OMNICURSOR_DATA="${OMNICURSOR_DATA_DIR:-$HOME/.omnicursor}"
-        OMNICURSOR_DATA="$(readlink -f "$OMNICURSOR_DATA" 2>/dev/null || printf '%s' "$OMNICURSOR_DATA")"
-        case "$OMNICURSOR_DATA" in
-            ""|"/"|"$HOME"|"$(readlink -f "$HOME" 2>/dev/null)")
-                echo "  refuse to purge unsafe data dir: '$OMNICURSOR_DATA'" >&2
-                exit 1
-                ;;
-        esac
-        if [ "$(basename "$OMNICURSOR_DATA")" != ".omnicursor" ]; then
-            echo "  refuse to purge dir not named '.omnicursor': '$OMNICURSOR_DATA'" >&2
-            exit 1
-        fi
-        if [ -d "$OMNICURSOR_DATA" ]; then
-            if [ "$DRY_RUN" = "1" ]; then
-                echo "  [dry-run] rm -rf $OMNICURSOR_DATA"
-            else
-                rm -rf "$OMNICURSOR_DATA"
-                echo "  purged local data: $OMNICURSOR_DATA"
-            fi
-        else
-            echo "  no local data to purge ($OMNICURSOR_DATA)"
-        fi
-    fi
-    exit 0
-fi
-
-echo "Installing OmniCursor Cursor plugin..."
-[ "$DRY_RUN" = "1" ] && echo "(dry-run — no files written)"
-echo "  source: $OMNICURSOR_ROOT"
-echo "  staging: $STAGING"
-echo "  target: $TARGET"
-echo ""
-
-if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-    echo "ERROR: $TARGET exists and is not a symlink. Remove or rename it first." >&2
-    exit 1
-fi
-
-if [ -L "$TARGET" ]; then
-    resolved="$(readlink -f "$TARGET")"
-    if [ "$resolved" != "$(readlink -f "$STAGING")" ] && [ "$resolved" != "$(readlink -f "$OMNICURSOR_ROOT")" ]; then
-        echo "ERROR: $TARGET points elsewhere. Use --uninstall on the other install first." >&2
-        exit 1
-    fi
-fi
-
-_stage_payload
-_link "$STAGING" "$TARGET"
-echo "  linked"
-
-echo ""
-echo "Next steps:"
-echo "  1. Restart Cursor or run: Developer: Reload Window"
-echo "  2. Settings → Rules — confirm OmniCursor rules/skills are available"
-echo "  3. Open any project — hooks and routing apply globally via the plugin"
+try:
+    main()
+except (OSError, ValueError, KeyError, TypeError) as exc:
+    print(f"ERROR: {exc}", file=sys.stderr)
+    sys.exit(1)
+PY

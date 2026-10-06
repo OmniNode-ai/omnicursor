@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """node_cursor_prompt_orchestrator — thin dispatch shell.
 
-Runtime execution is .cursor/hooks/scripts/user-prompt-submit.py (stdlib only).
+Runtime execution is hooks/scripts/user-prompt-submit.py (stdlib only).
 This module is the library surface: validates input, calls the handler, returns
 typed output. Use for tests, CI, and optional scripting.
 """

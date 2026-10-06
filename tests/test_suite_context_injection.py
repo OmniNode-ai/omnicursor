@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/lib/context_injection.py — shared injection logic.
+"""Tests for hooks/lib/context_injection.py — shared injection logic.
 
 Covers domain inference, pattern fetch (with cache fallback), prior-session
 loading, and the sessionStart / postToolUse markdown block builders.
@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
+_LIB = _ROOT / "hooks" / "lib"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name
 
 

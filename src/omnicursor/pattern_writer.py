@@ -41,11 +41,7 @@ except ImportError:  # pragma: no cover - exercised via the package import path
     import importlib.util as _ilu
 
     _redaction_path = (
-        Path(__file__).resolve().parents[2]
-        / ".cursor"
-        / "hooks"
-        / "lib"
-        / "redaction.py"
+        Path(__file__).resolve().parents[2] / "hooks" / "lib" / "redaction.py"
     )
     _spec = _ilu.spec_from_file_location("redaction", _redaction_path)
     _redaction = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]

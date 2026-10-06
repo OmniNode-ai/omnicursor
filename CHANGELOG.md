@@ -6,6 +6,15 @@ All notable changes to OmniCursor are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Move rules, routing profiles, skills, hooks and MCP registration to the native
+  plugin layout (OMN-16596). Skills now have one canonical location.
+- Install a validated runtime copy with rollback, preserving local data and
+  excluding development files, node tests, environments and symlinks.
+- Keep a development hook shim and require one active hook source at a time.
+- Fail gates on absent/empty collections and compare exact skill/compliance IDs.
+
+
 ### Added
 - B5 measurement parity: the `stop` hook emits one `ContractPhaseMetrics`
   measurement per Cursor session (`phase.metrics` →

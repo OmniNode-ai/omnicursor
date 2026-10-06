@@ -11,7 +11,7 @@ OmniCursor is a [Cursor plugin](https://cursor.com/docs/plugins): agent routing,
 
 ---
 
-## Step 1 — Clone to a permanent location
+## Step 1 — Obtain the source
 
 ```bash
 git clone https://github.com/OmniNode-ai/OmniCursor ~/tools/OmniCursor
@@ -24,11 +24,17 @@ cd ~/tools/OmniCursor
 ./scripts/install-plugin.sh
 ```
 
-This stages a **curated runtime payload** (rules, hooks, skills, agents,
-manifest, `src/omnicursor/`, event-registry config — never `tests/`, `docker/`,
-`eval/`, or `.git`) into `build/plugin/` and symlinks that to
-`~/.cursor/plugins/local/omnicursor`. Don't symlink the repo root by hand — the
-curated payload is what keeps dev-only files out of the installed plugin.
+This copies a curated runtime payload to `~/.cursor/plugins/local/omnicursor`.
+The copy works after removing the source checkout. It contains no symlinks, venv,
+project shim, secrets, caches or tests (including node tests). Reinstall after
+changing the source; stale files disappear. The installer validates clean staging
+before replacement and restores the previous copy if replacement fails.
+
+Recognized old symlinks migrate automatically without changing their targets.
+An unmarked manual copy is protected: move it to a backup **outside** `plugins/local`
+before installing. A managed-install marker is stored outside the manifest.
+`--dry-run` and `--status` make no writes. Plain `--uninstall` preserves user data;
+`--uninstall --purge` remains an explicit, path-checked operation.
 
 **Check status:**
 
@@ -64,7 +70,7 @@ Full per-hook behavior: [README → Hooks](../README.md#hooks) ·
 
 Four rules are **always active** (`00`–`03`): ONEX vocabulary, codebase research policy, no-secrets guard, and OmniCursor/OmniMarket ownership boundary.
 
-Ten others activate on keywords (brainstorm, plan, debug, PR review, handoff, recap, Linear tickets, execute-plan, etc.). See [`.cursor/rules/README.md`](../.cursor/rules/README.md).
+Ten others activate on keywords (brainstorm, plan, debug, PR review, handoff, recap, Linear tickets, execute-plan, etc.). See [`rules/README.md`](../rules/README.md).
 
 ### Skills (keyword-triggered)
 
@@ -101,7 +107,7 @@ Bucket 2 is retired at the skill level; the `12-plan-ticket` **rule** stays loca
 | `plan to tickets` | onex-plan-to-tickets | Linear MCP | Batch-create Linear tickets from a plan |
 | `execute plan` | onex-execute-plan | Linear MCP (+ OmniMarket for node dispatch) | Autonomous ticket execution pipeline |
 
-See [`.cursor/skills/`](../.cursor/skills/) for the full set. Architecture details: [ARCHITECTURE.md](./ARCHITECTURE.md).
+See [`skills/`](../skills/) for the full set. Architecture details: [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -145,10 +151,13 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) § Intelligence options for the A/B mod
 ## Updating OmniCursor
 
 ```bash
-cd ~/tools/OmniCursor && git pull
+cd ~/tools/OmniCursor
+git pull
+./scripts/install-plugin.sh
 ```
 
-Reload Cursor if rules or hooks do not pick up changes immediately.
+`git pull` updates the source checkout only. Run the installer again to replace
+the installed copy, then reload Cursor to use the updated plugin.
 
 ## Uninstalling the plugin
 
@@ -170,7 +179,7 @@ pip install -e ".[dev]" ruff # [dev] = pytest + jsonschema (manifest gate); ruff
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit
 pytest tests/ -v
-ruff check src/ tests/ .cursor/hooks/ scripts/ci/
+ruff check src/ tests/ hooks/ scripts/ci/
 ```
 
 CI runs the same checks on every PR to `main`.
@@ -197,3 +206,82 @@ OmniCursor writes session data to files under `~/.omnicursor/`:
 **The description field captures prompt content.** If your prompts contain secrets, credentials, PII, or sensitive project names, that content may appear in `learned_patterns.json`. OmniCursor does not transmit this file anywhere by default — it is local storage unless you enable `OMNICURSOR_PATTERN_SYNC_HTTP=1` (pull-only from a local omniintelligence service).
 
 If you are working with sensitive material, avoid typing it directly into prompts or clear `~/.omnicursor/learned_patterns.json` periodically.
+
+
+## Development hook source
+
+| Option | Benefit | Cost |
+|---|---|---|
+| Keep the project shim — chosen | Test checkout edits without reinstalling | Keep two equivalent configurations and disable the installed plugin while using the shim |
+| Remove project hooks | One distributed configuration | Lose direct checkout execution; reinstall the copy to test every change |
+
+Use only one source at a time. In Cursor's plugin settings, disable OmniCursor
+before opening this checkout with its `.cursor/hooks.json` shim. Verify one set of
+local hook events for a new conversation. For plugin mode, enable OmniCursor,
+reinstall, then use a foreign workspace with no OmniCursor project hooks and start
+a separate conversation. Tests normalize the root prefix and compare all seven
+shim bindings with `hooks/hooks.json`. There is no automatic deduplication.
+
+## Optional runtime requirements
+
+| Surface | External requirement |
+|---|---|
+| Offline hooks, routing, guards, state and learning | Compatible `python3` visible to Cursor; stdlib and copied code only. Ruff/TypeScript diagnostics are optional |
+| Existing emit daemon | Socket reachable; `ensure_daemon()` pings before checking interpreters |
+| Automatic daemon startup | `OMNICURSOR_DAEMON_PYTHON` points to an existing interpreter with OmniMarket installed. An invalid path disables startup; the copy has no `.venv` fallback |
+| Optional MCP server | Cursor.app's `python3` must be Python ≥3.10 with `omnicursor[mcp]` and all dependencies installed externally. The launcher prioritizes the copy's `src` |
+| MCP node execution | `OMNIMARKET_ROOT` points to the external checkout; the `.git`/`omnimarket-main` development fallback is absent from the payload |
+| Bridge subprocesses | `OMNIMARKET_PYTHON`, or the MCP interpreter when unset, must satisfy node dependencies |
+
+`OMNICURSOR_DAEMON_PYTHON` does not select the MCP interpreter. The installer does
+not install packages, create environments or rewrite interpreters. Missing `mcp`
+produces a stderr diagnostic with the effective interpreter and required extra;
+other import errors remain visible. A configured MCP environment can start and
+list tools without an OmniMarket checkout; running nodes needs that checkout.
+
+## GUI environment and acceptance
+
+Save your work and fully quit Cursor before setting runtime variables. Launch a
+new process through its executable; exports in another terminal, a new window,
+or Reload Window do not prove that the application received the environment.
+Use externally prepared paths (the MCP PATH entry is needed only for MCP):
+
+```bash
+env -u PYTHONPATH -u CLAUDE_CODE_SESSION_ID \
+  PATH="/path/to/prepared-mcp/bin:$PATH" \
+  OMNICURSOR_DAEMON_PYTHON="/path/to/omnimarket/.venv/bin/python" \
+  OMNIMARKET_ROOT="/path/to/omnimarket" \
+  OMNIMARKET_PYTHON="/path/to/omnimarket/.venv/bin/python" \
+  OMNICURSOR_EMIT_SOCKET="$HOME/.omnicursor/emit.sock" \
+  KAFKA_BOOTSTRAP_SERVERS="localhost:19092" \
+  /Applications/Cursor.app/Contents/MacOS/Cursor /path/to/foreign-workspace
+```
+
+Verify the interpreter and only the relevant variables from the launched process
+or a limited probe; do not dump the whole environment. The foreign workspace must
+have no OmniCursor project hooks. Record the source revision, installed inventory
+and hashes, Cursor version, timestamps and `Plugins.log`. Record rule/skill
+discovery and read a skill through an installed rule's relative link. The 17 JSON
+files are routing profiles; loading their manifest path does not prove native
+agent discovery. Record any agent-folder warnings or plugin rejection verbatim.
+
+Test automatic daemon startup separately with an isolated HOME/socket and external
+interpreter. Record the process command and the copied registry path/hash with all
+nine keys. Startup is asynchronous: `ensure_daemon()` can return false after spawning,
+and the first `session.started` is not retried. A harness invocation is synthetic.
+Stop only that test's processes and retain its evidence.
+
+For a real Cursor conversation, make the daemon available **before** sessionStart.
+Verify broker connectivity and registry provenance from startup arguments and the
+registry hash; ping alone proves only liveness. Create a new conversation, submit
+an identifiable prompt with a fictitious credential, and let the turn finish.
+Capture sessionStart, prompt and stop for that same conversation: local logs,
+`session.started`, canonical prompt and preview, correlated outbox/session outcome,
+and B5 `run_id` with `context.toolchain="cursor"`. Stop attribution uses correlation
+and B5; it does not require an added `agent_source` field.
+
+Keep four evidence classes separate: synthetic tests, local logs/files, queued
+ACKs and records actually read from Kafka (topic, partition, offset and IDs).
+Preserve existing user logs. Then test the shim separately with the plugin disabled.
+A missing MCP extra means the initialize/tools/list/tool-call test is **SKIPPED,
+not verified**; do not install dependencies merely to remove that skip.

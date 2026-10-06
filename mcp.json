@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "omnicursor-omnimarket": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launcher.py"
+      ],
+      "env": {
+        "OMNIMARKET_ROOT": "${env:OMNIMARKET_ROOT}"
+      }
+    }
+  }
+}

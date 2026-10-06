@@ -1,4 +1,4 @@
-"""Tests for .cursor/hooks/scripts/session-end.py — true session-close event.
+"""Tests for hooks/scripts/session-end.py — true session-close event.
 
 Fire-and-forget: outputs {} and emits the ``session.ended`` registry key
 (the registry YAML owns the topic string).
@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
-_SCRIPTS = _ROOT / ".cursor" / "hooks" / "scripts"
+_LIB = _ROOT / "hooks" / "lib"
+_SCRIPTS = _ROOT / "hooks" / "scripts"
 sys.path.insert(0, str(_LIB))  # lib modules import each other by bare name
 
 

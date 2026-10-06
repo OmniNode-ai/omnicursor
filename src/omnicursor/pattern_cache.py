@@ -3,8 +3,8 @@
 """Thread-safe in-memory pattern cache — canonical source of truth.
 
 Shared by:
-  - .cursor/hooks/pattern_loader.py  (shim re-exports from here)
-  - .cursor/hooks/lib/pattern_loader.py  (shim re-exports from here)
+  - hooks/pattern_loader.py  (shim re-exports from here)
+  - hooks/lib/pattern_loader.py  (shim re-exports from here)
 
 Stdlib-only (json, threading, time, pathlib).
 """

@@ -5,7 +5,7 @@ The hook scripts run under whatever ``python3`` Cursor resolves — no venv, no
 pip dependencies. Importing ``omnimarket``/``omnibase_core``/``pydantic``/
 ``yaml`` from a hook would break every install (and would violate the
 "shared daemon, not shared import" transport ruling). First-party imports are
-allowed: the modules in ``.cursor/hooks/lib/`` and the ``omnicursor`` package
+allowed: the modules in ``hooks/lib/`` and the ``omnicursor`` package
 (hooks put ``src/`` on sys.path; the 3.9-smoke tests keep those code paths
 stdlib-clean transitively).
 
@@ -27,7 +27,7 @@ from pathlib import Path
 def _allowed_modules(root: Path) -> set[str]:
     allowed = set(sys.stdlib_module_names)
     allowed.add("omnicursor")  # first-party, via the hooks' src/ sys.path insert
-    for lib_file in (root / ".cursor" / "hooks" / "lib").glob("*.py"):
+    for lib_file in (root / "hooks" / "lib").glob("*.py"):
         allowed.add(lib_file.stem)  # first-party hook lib, via the lib/ insert
     return allowed
 
@@ -56,9 +56,20 @@ def check_file(path: Path, allowed: set[str]) -> list[str]:
 
 
 def check(root: Path) -> list[str]:
+    hooks = root / "hooks"
+    if not hooks.is_dir():
+        return ["hooks: missing directory"]
+    lib = hooks / "lib"
+    if not lib.is_dir():
+        return ["hooks/lib: missing directory"]
+    if not list(lib.glob("*.py")):
+        return ["hooks/lib: no Python helpers"]
+    paths = sorted(p for p in hooks.rglob("*.py") if "__pycache__" not in p.parts)
+    if not list((hooks / "scripts").glob("*.py")):
+        return ["hooks/scripts: no Python entrypoints"]
     allowed = _allowed_modules(root)
     findings: list[str] = []
-    for path in sorted((root / ".cursor" / "hooks").rglob("*.py")):
+    for path in paths:
         if "__pycache__" in path.parts:
             continue
         findings.extend(check_file(path, allowed))

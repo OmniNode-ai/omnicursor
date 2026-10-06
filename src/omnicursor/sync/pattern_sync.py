@@ -1,7 +1,7 @@
 """Fetch learned patterns from omniintelligence into learned_patterns.json.
 
 Used by tests and optional tooling. Hooks invoke the stdlib copy in
-``.cursor/hooks/lib/pattern_sync.py`` only when ``OMNICURSOR_PATTERN_SYNC_HTTP`` is set
+``hooks/lib/pattern_sync.py`` only when ``OMNICURSOR_PATTERN_SYNC_HTTP`` is set
 (dev / experimentation — not the default capstone path).
 """
 

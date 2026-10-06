@@ -26,7 +26,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).parent.parent
-AGENTS_DIR = REPO_ROOT / ".cursor" / "agents"
+AGENTS_DIR = REPO_ROOT / "agents"
 PROMPTS_CSV = Path(__file__).parent / "routing_labeled_prompts.csv"
 RESULTS_CSV = Path(__file__).parent / "routing_results.csv"
 

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Session outcome classification shared by node_cursor_session_outcome_orchestrator.
 
-Extracted from .cursor/hooks/scripts/stop.py. Pure functions — no side effects,
+Extracted from hooks/scripts/stop.py. Pure functions — no side effects,
 no filesystem I/O. The hook script retains its own copy for stdlib-only execution.
 """
 

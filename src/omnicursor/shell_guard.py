@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Shell-guard business logic shared by node_cursor_shell_guard_effect.
 
-Extracted from .cursor/hooks/scripts/shell-guard.py. The hook script retains
+Extracted from hooks/scripts/shell-guard.py. The hook script retains
 its own copy for stdlib-only execution; this module is the importable version
 for node handlers and tests.
 """

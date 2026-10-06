@@ -1,0 +1,33 @@
+---
+description: Activates when the user asks for a PR review, pull request review, merge readiness check, severity-classified findings, or code review with CRITICAL/MAJOR/MINOR/NIT. Uses OmniCursor hooks and file-backed skills.
+globs:
+alwaysApply: false
+---
+
+# PR Review
+
+**Rule file:** `14-pr-review.mdc`. In Cursor Composer, mention **`@14-pr-review`** to attach this rule explicitly.
+
+This rule complements the preserved OmniNode starter-kit rules.
+It does not replace `00-omninode-concepts`, `01-codebase-research`, `02-no-secrets-in-commits`, `10-brainstorming`, `11-writing-plans`, `12-plan-ticket`, `13-systematic-debugging`, or `15-handoff`.
+
+## Routing Contract
+
+1. Self-classify the request as **`review`** (alias: `pr`, `pull-request`, `pr-review`).
+2. Prefer hook-injected routing (`beforeSubmitPrompt`) when present.
+3. Read **[onex-pr-review](../skills/onex-pr-review/SKILL.md)** and follow it.
+4. Optionally validate output against the keyword checks in `src/omnicursor/compliance.py` for skill **`onex-pr-review`** (e.g. via tests or a short Python snippet).
+
+## Working Style
+
+- Keep always-on rules for vocabulary, bounded research (`01-codebase-research`), and no leaked secrets (`02-no-secrets-in-commits`).
+- If the user has no PR number, work from the current branch diff or pasted patch; use `gh pr view` only when available and appropriate.
+- Classify every finding into **CRITICAL / MAJOR / MINOR / NIT** and state merge readiness explicitly.
+
+## Handoffs
+
+- If the thread is about fixing a defect or traceback, hand off to **`13-systematic-debugging`**.
+- If work becomes ideation or design, hand off to **`10-brainstorming`**.
+- If the user is ending a session, hand off to **`15-handoff`**.
+
+OmniCursor resource links resolve relative to this installed rule file. The project README and user-provided paths refer to the workspace being analyzed, not the plugin.

@@ -1,13 +1,12 @@
-# Cursor configuration
+# Checkout development configuration
 
-This directory holds OmniCursor plugin assets: rules, hooks, agents, and skills. End users install via **`./scripts/install-plugin.sh`** (symlink to `~/.cursor/plugins/local/omnicursor`); see [QUICKSTART](../docs/QUICKSTART.md).
+`hooks.json` is a development shim for the seven scripts in `../hooks/scripts/`.
+It uses workspace-relative commands. `settings.json` is project configuration.
+Neither file is part of the installed payload.
 
-| Subfolder | Purpose |
-|-----------|---------|
-| [`rules/`](./rules/) | `.mdc` rules — always-on guardrails + activatable methodology (buckets 1–3). |
-| [`hooks/`](./hooks/) | Python **stdlib-only** scripts wired by [`hooks.json`](./hooks.json). |
-| [`agents/`](./agents/) | JSON agent definitions merged with base categories in `src/omnicursor/agents.py`. |
+Disable the installed OmniCursor plugin while using this shim. To test the plugin,
+reinstall the copy and use a foreign workspace without OmniCursor project hooks.
+The two sources are tested independently; there is no automatic deduplication.
 
-**Also here:** [`hooks.json`](./hooks.json) — maps Cursor lifecycle events (`beforeSubmitPrompt`, `beforeShellExecution`, etc.) to hook scripts.
-
-**Docs:** [Root README](../README.md), [Quickstart](../docs/QUICKSTART.md), [Architecture](../docs/ARCHITECTURE.md) (architecture, conventions, constraints).
+[Development modes and trade-offs](../docs/QUICKSTART.md#development-hook-source)
+· [Canonical plugin hooks](../hooks/hooks.json)

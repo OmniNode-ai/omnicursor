@@ -31,10 +31,10 @@ The map of OmniCursor's active documentation. Start here.
 | Understand the whole system | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
 | Know what actually works right now | [`CURRENT_STATE.md`](./CURRENT_STATE.md) |
 | Install and use the plugin | [`QUICKSTART.md`](./QUICKSTART.md) |
-| Change agent routing | [`ARCHITECTURE.md` §5](./ARCHITECTURE.md#5-agent-routing) → `src/omnicursor/scoring.py`, `.cursor/agents/`, `eval/` |
-| Change hook behavior | [`ARCHITECTURE.md` §4](./ARCHITECTURE.md#4-hooks) → `.cursor/hooks/scripts/`, `tests/` |
-| Add or change a skill | [`ARCHITECTURE.md` §3](./ARCHITECTURE.md#3-skills) → `skills/`, `.cursor/skills/`, `compliance.py`, tests |
-| Work on event emission | [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-event-emission) → `.cursor/hooks/lib/emit_client.py` (shared platform emit daemon) |
+| Change agent routing | [`ARCHITECTURE.md` §5](./ARCHITECTURE.md#5-agent-routing) → `src/omnicursor/scoring.py`, `agents/`, `eval/` |
+| Change hook behavior | [`ARCHITECTURE.md` §4](./ARCHITECTURE.md#4-hooks) → `hooks/scripts/`, `tests/` |
+| Add or change a skill | [`ARCHITECTURE.md` §3](./ARCHITECTURE.md#3-skills) → `skills/onex-*/SKILL.md`, `compliance.py`, tests |
+| Work on event emission | [`ARCHITECTURE.md` §8](./ARCHITECTURE.md#8-event-emission) → `hooks/lib/emit_client.py` (shared platform emit daemon) |
 | Wire the OmniMarket bridge / MCP | [`ARCHITECTURE.md` §9](./ARCHITECTURE.md#9-omnimarket-bridge--mcp) → `OMNIMARKET_ROOT` |
 | Verify context injection actually works | [`W4_INJECTION_EVIDENCE.md`](./W4_INJECTION_EVIDENCE.md) → `OMNICURSOR_INJECTION_SENTINEL=1` sentinel protocol |
 

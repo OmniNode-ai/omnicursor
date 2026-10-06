@@ -1,15 +1,12 @@
-# Skills (canonical source)
+# Methodology skills
 
-This directory holds the **canonical** skill Markdown — one `<slug>.md` per skill. CI's skill-compliance check scans `skills/*.md`, and each file must have a matching entry in `src/omnicursor/compliance.py`.
+The single canonical collection is `skills/onex-<slug>/SKILL.md`. Cursor discovery,
+`SkillRepository` and CI read the same files. Directory names and YAML `name` fields
+use `onex-<slug>`; aliases remain accepted by the Python API.
 
-Cursor discovers skills from **mirrored** copies at `.cursor/skills/onex-<slug>/SKILL.md` (the `/` slash-picker uses each `onex-<slug>` directory name). Canonical skill ids are **`onex-<slug>`** — the same `<slug>` as the filename here.
+To change a skill, edit its `SKILL.md`. When deliberately adding or removing a skill,
+update the compliance registry and exact expected sets in its gate and tests.
+The current set contains 17 skills; absent, empty or incomplete collections fail CI.
 
-Each skill has YAML frontmatter (`name:`, `description:`) followed by the skill instructions.
-
-**Adding / editing a skill:**
-
-1. Create or edit `skills/<slug>.md`.
-2. Mirror it to `.cursor/skills/onex-<slug>/SKILL.md`.
-3. Add a `compliance.py` entry and update `tests/test_compliance.py` / `tests/test_skills.py`.
-
-See `.cursor-plugin/plugin.json` (the single canonical manifest).
+See [plugin manifest](../.cursor-plugin/plugin.json) and
+[architecture](../docs/ARCHITECTURE.md#3-skills).

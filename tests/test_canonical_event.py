@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
+_LIB = _ROOT / "hooks" / "lib"
 _CORE_SRC = _ROOT.parent / "omnibase_core" / "src"
 
 

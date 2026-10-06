@@ -114,7 +114,7 @@ docker exec <redpanda-container> rpk group list | grep "cursor-hook-event"
 ```
 
 Wire format for publishing proof events: the **bare six-key canonical dict** from
-`.cursor/hooks/lib/canonical_event.py::build_cursor_event()` — not an
+`hooks/lib/canonical_event.py::build_cursor_event()` — not an
 `ModelEventEnvelope` wrapper (envelope keys get merged into the payload consumer-side
 and rejected as `extra_forbidden`). `session_id` must be a UUID for the
 `agent_actions` persistence path. Confirm delivery from the producer's delivery

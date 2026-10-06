@@ -1,4 +1,4 @@
-"""Direct unit tests for .cursor/hooks/lib/agent_scoring.py.
+"""Direct unit tests for hooks/lib/agent_scoring.py.
 
 agent_scoring.py is the canonical scoring engine shared by on_prompt.py,
 user-prompt-submit.py, and agents.py (via importlib bridge). These tests
@@ -14,9 +14,7 @@ from pathlib import Path
 import pytest
 
 # Make lib/ importable without installing
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / ".cursor" / "hooks" / "lib")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks" / "lib"))
 
 from agent_scoring import (  # noqa: E402
     HARD_FLOOR,

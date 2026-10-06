@@ -32,30 +32,17 @@ if ! "${PYTHON_BIN}" -m ruff --version >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[pre-commit] Lint: ruff check src/ tests/ .cursor/hooks/ scripts/ci/"
-"${PYTHON_BIN}" -m ruff check src/ tests/ .cursor/hooks/ scripts/ci/
+echo "[pre-commit] Lint: ruff check src/ tests/ hooks/ scripts/ci/"
+"${PYTHON_BIN}" -m ruff check src/ tests/ hooks/ scripts/ci/
 
-echo "[pre-commit] Format: ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/"
-"${PYTHON_BIN}" -m ruff format --check src/ tests/ .cursor/hooks/ scripts/ci/
+echo "[pre-commit] Format: ruff format --check src/ tests/ hooks/ scripts/ci/"
+"${PYTHON_BIN}" -m ruff format --check src/ tests/ hooks/ scripts/ci/
 
 echo "[pre-commit] Test: pytest tests/ -v"
 "${PYTHON_BIN}" -m pytest tests/ -v
 
 echo "[pre-commit] Skill compliance coverage"
-"${PYTHON_BIN}" - <<'PY'
-import pathlib
-import sys
-
-skills = {f.stem for f in pathlib.Path("skills").glob("*.md") if f.name != "README.md"}
-compliance = pathlib.Path("src/omnicursor/compliance.py").read_text()
-missing = [s for s in sorted(skills) if s not in compliance]
-
-if missing:
-    print(f"Skills missing compliance entries: {missing}")
-    sys.exit(1)
-
-print(f"All {len(skills)} skills have compliance entries.")
-PY
+"${PYTHON_BIN}" scripts/ci/check_frontmatter.py --compliance-only
 
 # A10.7 plugin gates (fast, stdlib+pyyaml only — same scripts CI runs).
 echo "[pre-commit] Plugin gates (scripts/ci/)"

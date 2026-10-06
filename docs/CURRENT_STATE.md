@@ -9,10 +9,10 @@
 
 | Metric | Value | Verified by |
 |--------|-------|-------------|
-| Cursor rules (`.mdc`) | **14** | `.cursor/rules/*.mdc` |
-| File-backed skills | **17** (× 2 locations) | `skills/*.md` (excl. `README.md`), `.cursor/skills/onex-*/SKILL.md` |
-| Agent configs | **17** | `.cursor/agents/*.json` |
-| Active hooks | **7** | `.cursor/hooks.json` |
+| Cursor rules (`.mdc`) | **14** | `rules/*.mdc` |
+| File-backed skills | **17** (one location) | `skills/onex-*/SKILL.md` |
+| Agent configs | **17** | `agents/*.json` |
+| Active hooks | **7** | `hooks/hooks.json` |
 | Node contracts | **7** (one per hook event) | `src/omnicursor/nodes/*/contract.yaml` |
 | Test functions | **759** across **36** test files | `tests/` (704/31) + `src/omnicursor/nodes/*/tests/` (55/5) |
 | Compliance smoke-checks | **17** keys | `src/omnicursor/compliance.py` |
@@ -21,7 +21,7 @@
 
 ## Works fully offline (core plugin)
 
-These need only the plugin symlink — no network, no Docker, no extra deps:
+These need only the plugin copy — no network, no Docker, no extra deps:
 
 - ✅ **Rules** load and apply (`00`–`03` always-on; `10`–`19` on keyword/`@mention`).
 - ✅ **Skills** are discoverable via the Cursor `/` picker and readable by the model.
@@ -88,11 +88,11 @@ These need only the plugin symlink — no network, no Docker, no extra deps:
 Honest list of things that surprise readers. None are blockers for the core
 plugin, but they shape any work in these areas.
 
-1. **Single hook implementation.** `.cursor/hooks/scripts/*.py` (delegating to
-   `.cursor/hooks/lib/*.py`) are the only entrypoints; the legacy top-level
+1. **Single hook implementation.** `hooks/scripts/*.py` (delegating to
+   `hooks/lib/*.py`) are the only entrypoints; the legacy top-level
    `on_*.py` set was deleted in W4. See ARCHITECTURE §4.
-2. **Skill dual-path asymmetry.** Runtime loads from `.cursor/skills/` only; CI
-   scans `skills/`. They must be content-identical (UTF-8 text; enforced by a parity test).
+2. **Single skill collection.** Runtime and CI both use `skills/onex-*/SKILL.md`;
+   exact-ID coverage guards against missing, empty or incomplete collections.
 3. **7 contracts / 7 hooks.** One contract per hook event (sessionStart,
    beforeSubmitPrompt, beforeShellExecution, afterFileEdit, postToolUse, stop, sessionEnd).
 4. **In-process node fields dropped.** Shell-guard soft-warn message and file-edit
@@ -115,7 +115,7 @@ plugin, but they shape any work in these areas.
 ## Tests & CI
 
 - **Suite shape (3 tiers):** (a) library/unit tests; (b) four
-  `test_suite_eventN_*.py` that `importlib`-load the real `.cursor/hooks/scripts/*.py`
+  `test_suite_eventN_*.py` that `importlib`-load the real `hooks/scripts/*.py`
   and exercise each lifecycle event; (c) the routing eval gate
   (`test_routing_eval.py`) + manual human-graded prompts/rubrics under
   `tests/prompts/` and `tests/rubrics/`.
@@ -127,8 +127,8 @@ plugin, but they shape any work in these areas.
   check), `typecheck` (mypy over `src/`), `plugin-gates` (`scripts/ci/`:
   manifest validated against the **pinned official cursor/plugins schema**
   (`schemas/cursor-plugin.schema.json`, provenance in `schemas/README.md`)
-  plus MCP wiring, skill/agent frontmatter + dual-location parity +
-  category uniqueness, hardcoded-topic-literal guard over `.cursor/hooks/`,
+  plus MCP wiring, skill/agent frontmatter + exact skill coverage +
+  category uniqueness, hardcoded-topic-literal guard over `hooks/`,
   hook stdlib-only imports, shellcheck), `security` (bandit; detect-secrets
   vs the audited `.secrets.baseline`), `links` (offline lychee over
   README/CHANGELOG/docs), `sibling-drift` (checks out

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """File-edit business logic shared by node_cursor_file_edit_effect.
 
-Extracted from .cursor/hooks/scripts/post-edit.py. The hook script retains
+Extracted from hooks/scripts/post-edit.py. The hook script retains
 its own copy for stdlib-only execution; this module is the importable version
 for node handlers and tests.
 """

@@ -40,7 +40,7 @@ _fuzzy_threshold = fuzzy_threshold
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_AGENTS_DIR = _REPO_ROOT / ".cursor" / "agents"
+_AGENTS_DIR = _REPO_ROOT / "agents"
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ DEFAULT_CONTEXT = AgentContext(
     description="General-purpose fallback agent for unmatched categories.",
     instructions=[
         "Prefer the preserved Cursor rules before inventing a new workflow.",
-        "Read mirrored skills under .cursor/skills/onex-<slug>/ when needed; use hook routing hints when present.",
+        "Read canonical skills under skills/onex-<slug>/ when needed; use hook routing hints when present.",
         "Check 00-omninode-concepts for shared vocabulary.",
     ],
     recommended_skill=None,
@@ -181,7 +181,7 @@ ALIASES: Dict[str, str] = {
 
 
 def _load_json_agents() -> Dict[str, AgentContext]:
-    """Load agent configs from .cursor/agents/*.json files.
+    """Load agent configs from agents/*.json files.
 
     Returns a dict keyed by the ``category`` field in each JSON file.
     Returns ``{}`` on any failure so the hardcoded fallback always works.
@@ -359,7 +359,7 @@ def list_agents() -> List[str]:
 def reload_agents() -> None:
     """Reload JSON agents from disk and rebuild the merged scoring pool.
 
-    Useful in tests or after adding new ``.cursor/agents/*.json`` files without
+    Useful in tests or after adding new ``agents/*.json`` files without
     restarting the process.
     """
     global \

@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LAUNCHER = REPO_ROOT / ".cursor" / "mcp-launcher.py"
+LAUNCHER = REPO_ROOT / "scripts" / "mcp-launcher.py"
 
 _HAS_MCP = True
 try:  # the .[mcp] extra is optional
@@ -30,9 +30,9 @@ except ImportError:
 
 def test_launcher_exists_and_is_wired_into_mcp_json() -> None:
     assert LAUNCHER.is_file()
-    cfg = json.loads((REPO_ROOT / ".cursor" / "mcp.json").read_text())
+    cfg = json.loads((REPO_ROOT / "mcp.json").read_text())
     server = cfg["mcpServers"]["omnicursor-omnimarket"]
-    assert server["args"] == ["${workspaceFolder}/.cursor/mcp-launcher.py"]
+    assert server["args"] == ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launcher.py"]
     # The launcher owns sys.path setup; a PYTHONPATH pin would reintroduce
     # the workspace-layout assumption the launcher exists to remove.
     assert "PYTHONPATH" not in server.get("env", {})
@@ -41,7 +41,7 @@ def test_launcher_exists_and_is_wired_into_mcp_json() -> None:
 def test_launcher_fails_closed_without_plugin_src(tmp_path: Path) -> None:
     """Copied out of the plugin tree (no src/omnicursor sibling), the launcher
     must exit 1 with a diagnostic instead of importing whatever is ambient."""
-    fake_cursor = tmp_path / ".cursor"
+    fake_cursor = tmp_path / "scripts"
     fake_cursor.mkdir()
     orphan = fake_cursor / "mcp-launcher.py"
     shutil.copy(LAUNCHER, orphan)
@@ -133,3 +133,44 @@ def test_launcher_serves_initialize_and_tool_call_from_sandbox(
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
+
+
+def test_launcher_diagnoses_missing_mcp_with_effective_interpreter(
+    tmp_path: Path,
+) -> None:
+    proc = subprocess.run(
+        [sys.executable, "-S", str(LAUNCHER)],
+        cwd=tmp_path,
+        env={"PATH": os.environ["PATH"], "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert proc.returncode == 1
+    assert "missing mcp" in proc.stderr
+    assert sys.executable in proc.stderr
+    assert "omnicursor[mcp]" in proc.stderr
+    assert not proc.stdout
+
+
+def test_launcher_does_not_hide_other_import_failures(tmp_path: Path) -> None:
+    # A present but broken MCP install must surface its original import error.
+    fake = tmp_path / "mcp"
+    fake.mkdir()
+    (fake / "__init__.py").write_text("import missing_pr5_dependency\n")
+    proc = subprocess.run(
+        [sys.executable, "-S", str(LAUNCHER)],
+        cwd=tmp_path,
+        env={
+            "PATH": os.environ["PATH"],
+            "HOME": str(tmp_path),
+            "PYTHONPATH": str(tmp_path),
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert proc.returncode == 1
+    assert "missing_pr5_dependency" in proc.stderr
+    assert "Traceback" in proc.stderr
+    assert "is missing mcp" not in proc.stderr

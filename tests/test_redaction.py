@@ -1,6 +1,6 @@
 """A5 — secret redaction: byte-parity with the omniclaude donor + behavior.
 
-The pattern table in ``.cursor/hooks/lib/redaction.py`` is a byte-for-byte port
+The pattern table in ``hooks/lib/redaction.py`` is a byte-for-byte port
 of ``omniclaude/src/omniclaude/hooks/schemas.py`` (the authoritative copy that
 gates OmniClaude's broadcast topics — NOT the ``secret_redactor.py`` twin).
 The parity test extracts the assignment block from both files and compares
@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_REDACTION_PATH = _ROOT / ".cursor" / "hooks" / "lib" / "redaction.py"
+_REDACTION_PATH = _ROOT / "hooks" / "lib" / "redaction.py"
 _DONOR_PATH = (
     _ROOT.parent / "omniclaude" / "src" / "omniclaude" / "hooks" / "schemas.py"
 )

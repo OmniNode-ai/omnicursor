@@ -110,7 +110,7 @@ events:
   # Gives Cursor the same measurement footprint a Claude session has; before
   # this Cursor emitted none, so it was invisible to promotion-gate and
   # attribution analytics. Payload is a ContractMeasurementEvent envelope
-  # wrapping ContractPhaseMetrics -- see .cursor/hooks/lib/measurement_emitter.py.
+  # wrapping ContractPhaseMetrics -- see hooks/lib/measurement_emitter.py.
   phase.metrics:
     fan_out:
       - topic: "onex.evt.omnicursor.phase-metrics.v1"

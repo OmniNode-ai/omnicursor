@@ -323,13 +323,7 @@ class TestPatternSyncDefensive:
 
     def test_shim_delegates_to_canonical_run(self, tmp_path: Path) -> None:
         """lib/pattern_sync.py shim executes the same logic as the canonical run."""
-        shim_path = (
-            Path(__file__).parent.parent
-            / ".cursor"
-            / "hooks"
-            / "lib"
-            / "pattern_sync.py"
-        )
+        shim_path = Path(__file__).parent.parent / "hooks" / "lib" / "pattern_sync.py"
         spec = importlib.util.spec_from_file_location("_test_shim_ps", shim_path)
         assert spec is not None and spec.loader is not None
         shim = importlib.util.module_from_spec(spec)

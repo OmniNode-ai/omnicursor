@@ -1,0 +1,11 @@
+---
+description: "Execute plan — autonomous pipeline: plan review, Linear ticket creation, implementation"
+globs:
+alwaysApply: false
+---
+
+When the user says `/execute_plan` or "execute plan" or "run plan" or "implement plan" or "execute this plan":
+
+Read the plan file at the path provided. Then follow [onex-execute-plan](../skills/onex-execute-plan/SKILL.md) exactly (skill id **`onex-execute-plan`**).
+
+OmniCursor resource links resolve relative to this installed rule file. The project README and user-provided paths refer to the workspace being analyzed, not the plugin.

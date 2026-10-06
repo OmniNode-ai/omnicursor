@@ -1,0 +1,31 @@
+---
+description: Activates when the user wants a session handoff, session summary, context for the next chat, or to capture remaining work and blockers before stopping. Uses OmniCursor hooks and file-backed skills.
+globs:
+alwaysApply: false
+---
+
+# Session handoff
+
+**Rule file:** `15-handoff.mdc`. In Cursor Composer, mention **`@15-handoff`** to attach this rule explicitly.
+
+This rule complements the preserved OmniNode starter-kit rules.
+It does not replace `00-omninode-concepts`, `01-codebase-research`, `02-no-secrets-in-commits`, `10-brainstorming`, `11-writing-plans`, `12-plan-ticket`, `13-systematic-debugging`, `14-pr-review`, `16-create-ticket`, or `17-consume-ticket`.
+
+## Routing Contract
+
+1. Self-classify the request as **`handoff`** (aliases: `session-handoff`, `continuity`).
+2. Prefer hook-injected routing when present.
+3. Read **[onex-handoff](../skills/onex-handoff/SKILL.md)** and follow it.
+4. Optionally run compliance checks for **`onex-handoff`** via `src/omnicursor/compliance.py`.
+
+## Working Style
+
+- Prefer writing a **dated artifact** under `docs/plans/` or `docs/archive/dev/handoffs/` (e.g. `docs/archive/dev/handoffs/YYYY-MM-DD-session.md`) so archived continuity docs are not overwritten unless the user asks for a specific path by name.
+- Include branch, recent commits, files in play, ordered next steps, and blockers.
+
+## Handoffs
+
+- If the user needs a PR assessment, hand off to **`14-pr-review`**.
+- If the user needs implementation planning next, hand off to **`11-writing-plans`**.
+
+OmniCursor resource links resolve relative to this installed rule file. The project README and user-provided paths refer to the workspace being analyzed, not the plugin.

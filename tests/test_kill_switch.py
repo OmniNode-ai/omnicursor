@@ -22,8 +22,8 @@ from typing import Any, Callable, Dict, List, Tuple
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_LIB = _ROOT / ".cursor" / "hooks" / "lib"
-_SCRIPTS = _ROOT / ".cursor" / "hooks" / "scripts"
+_LIB = _ROOT / "hooks" / "lib"
+_SCRIPTS = _ROOT / "hooks" / "scripts"
 
 
 def _load(name: str, path: Path) -> Any:
