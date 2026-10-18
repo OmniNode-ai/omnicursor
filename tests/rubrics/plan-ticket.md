@@ -7,7 +7,7 @@
 
 ## Repo Detection (3-Priority Chain)
 
-The repo detection algorithm must follow the exact chain specified in `docs/ARCHITECTURE.md`.
+The repo detection algorithm must follow the exact chain specified in `.cursor/rules/12-plan-ticket.mdc`.
 
 ### Priority 1 — CWD or Prompt Match
 

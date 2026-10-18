@@ -76,7 +76,6 @@ def test_cursor_plugin_manifest_version_format() -> None:
 # `execution`, `surfaces`, `manifest`) must never reappear: their facts live in
 # README (cursor floor) and pyproject.toml (python floor) instead.
 # Single source of truth: the pinned official cursor/plugins schema
-# (schemas/README.md has the pin provenance — PR #10 review, point 5).
 OFFICIAL_MANIFEST_FIELDS = set(
     _load_json(REPO_ROOT / "schemas" / "cursor-plugin.schema.json")["properties"]
 )

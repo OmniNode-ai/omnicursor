@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Auto-loaded entry point for Claude Code and Cursor agents; top of the doc
-source-of-truth hierarchy (after the actual code). Doc map: [`docs/INDEX.md`](docs/INDEX.md).
+source-of-truth hierarchy (after the actual code). Documentation lives in the
+[public knowledge base](https://github.com/OmniNode-ai/knowledge_base).
 
 ## What OmniCursor is
 
@@ -9,8 +10,6 @@ A **Cursor-native** plugin porting OmniClaude's methodology to Cursor: behavior 
 **rules**, **hooks**, **skills**, and **agent configs**, backed by a Python library under
 `src/omnicursor/` (tests, CI, the MCP server, the shared logic hooks delegate to). The
 core runs fully **offline**; intelligence and event-emission tiers are opt-in.
-Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Status & known drift:
-[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ## Commands
 
@@ -50,7 +49,7 @@ need a maintainer's "Approve and run" (see the trigger comment in `ci.yml`). Bra
 protection should require the aggregate `ci-summary` job — as of 2026-07-26 `main` has
 no branch protection at all, so verify live before relying on it.
 
-## Architecture (overview — depth in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md))
+## Architecture overview
 
 Four behavior surfaces + one library:
 
@@ -97,8 +96,7 @@ planning, ticketing) with the 17 JSON configs via `{**AGENT_CONTEXTS, **_JSON_AG
 engine in `scoring.py`: a 4-stage scorer (exact explicit-trigger, exact context-trigger,
 length-aware fuzzy on explicit triggers only, keyword overlap) with `HARD_FLOOR = 0.55`.
 No match falls back to `omnicursor-generalist` (library `DEFAULT_CONTEXT`) /
-`polymorphic-agent` (hook runtime). Exact thresholds: `src/omnicursor/scoring.py` and
-[`docs/ARCHITECTURE.md` §5](docs/ARCHITECTURE.md#5-agent-routing).
+`polymorphic-agent` (hook runtime). Exact thresholds: `src/omnicursor/scoring.py`.
 
 ### Skills & the 3-bucket model
 
@@ -107,8 +105,7 @@ No match falls back to `omnicursor-generalist` (library `DEFAULT_CONTEXT`) /
 integration (Linear MCP / Kafka / validators). Subtlety to preserve: the **rule**
 `12-plan-ticket` is Bucket 2 (emits a local YAML ticket template, no calls) while the
 **skill** `onex-plan-ticket` it points to is Bucket 3 (adds a Linear MCP step);
-`onex-plan-to-tickets` and `onex-execute-plan` are also Bucket 3. Full skill table:
-[`docs/ARCHITECTURE.md` §3](docs/ARCHITECTURE.md).
+`onex-plan-to-tickets` and `onex-execute-plan` are also Bucket 3.
 
 Compliance: `src/omnicursor/compliance.py` maps all 17 skills (3–5 checks each) —
 **vocabulary smoke-checks**, not behavioral verification; `check_compliance` accepts a
@@ -157,6 +154,6 @@ The bridge invokes **omnimarket** nodes as the path to OmniNode
 ## Source-of-truth hierarchy
 
 When documents disagree: **1.** actual codebase behavior → **2.** `CLAUDE.md` (this
-file) → **3.** `docs/` (`ARCHITECTURE.md`, `CURRENT_STATE.md`) → **4.**
-`omnicursor-team-guidance.md` (local; gitignored) → **5.** `omniclaude/` read-only
+file) → **3.** the [public knowledge base](https://github.com/OmniNode-ai/knowledge_base)
+→ **4.** `omniclaude/` read-only
 reference checkout (local-only; absent from a clean clone).
