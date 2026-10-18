@@ -2,8 +2,8 @@
 """CI gate (A10.7): plugin manifest + MCP wiring validation.
 
 Validates the single canonical manifest (A10.2) against the **pinned official
-`cursor/plugins` schema** (`schemas/cursor-plugin.schema.json` — provenance in
-`schemas/README.md`), plus the project invariants the schema cannot express:
+`cursor/plugins` schema** (`schemas/cursor-plugin.schema.json`), plus the project
+invariants the schema cannot express:
 component paths exist, semver version, CHANGELOG/version sync (A10.1), and
 the shipped MCP registration (A10.3).
 

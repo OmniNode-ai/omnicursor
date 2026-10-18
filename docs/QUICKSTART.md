@@ -57,14 +57,13 @@ Seven Cursor lifecycle hooks load automatically — `sessionStart`,
 `stop`, `sessionEnd`. Only **shell-guard** (`beforeShellExecution`) can block a
 command; every other hook is observe/inject-only and always exits 0.
 
-Full per-hook behavior: [README → Hooks](../README.md#hooks) ·
-[ARCHITECTURE.md §4](./ARCHITECTURE.md#4-hooks).
+Hook implementations live under [`.cursor/hooks/`](../.cursor/hooks/).
 
 ### Rules (always-on + keyword)
 
 Four rules are **always active** (`00`–`03`): ONEX vocabulary, codebase research policy, no-secrets guard, and OmniCursor/OmniMarket ownership boundary.
 
-Ten others activate on keywords (brainstorm, plan, debug, PR review, handoff, recap, Linear tickets, execute-plan, etc.). See [`.cursor/rules/README.md`](../.cursor/rules/README.md).
+Ten others activate on keywords (brainstorm, plan, debug, PR review, handoff, recap, Linear tickets, execute-plan, etc.). See [`.cursor/rules/`](../.cursor/rules/).
 
 ### Skills (keyword-triggered)
 
@@ -93,7 +92,7 @@ Say the keyword in chat and Cursor reads the skill file and follows it.
 
 #### Bucket 3 — External services (Linear MCP)
 
-Bucket 2 is retired at the skill level; the `12-plan-ticket` **rule** stays local-only (YAML template, no external calls). Canonical classification: [ARCHITECTURE.md §3](./ARCHITECTURE.md#3-skills).
+Bucket 2 is retired at the skill level; the `12-plan-ticket` **rule** stays local-only (YAML template, no external calls).
 
 | Keyword | Skill | Requires | What it does |
 |---------|-------|----------|--------------|
@@ -101,7 +100,7 @@ Bucket 2 is retired at the skill level; the `12-plan-ticket` **rule** stays loca
 | `plan to tickets` | onex-plan-to-tickets | Linear MCP | Batch-create Linear tickets from a plan |
 | `execute plan` | onex-execute-plan | Linear MCP (+ OmniMarket for node dispatch) | Autonomous ticket execution pipeline |
 
-See [`.cursor/skills/`](../.cursor/skills/) for the full set. Architecture details: [ARCHITECTURE.md](./ARCHITECTURE.md).
+See [`.cursor/skills/`](../.cursor/skills/) for the full set.
 
 ---
 
@@ -138,10 +137,6 @@ OmniCursor works fully offline with local pattern learning (`~/.omnicursor/learn
 3. Enable HTTP pattern sync: `OMNICURSOR_PATTERN_SYNC_HTTP=1`
 4. Event emission: hook events flow best-effort to the **shared platform emit daemon** (omnimarket `node_emit_daemon`) when it owns `~/.omnicursor/emit.sock` — there is no Cursor-side publisher to run.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) § Intelligence options for the A/B model.
-
----
-
 ## Updating OmniCursor
 
 ```bash
@@ -175,10 +170,7 @@ ruff check src/ tests/ .cursor/hooks/ scripts/ci/
 
 CI runs the same checks on every PR to `main`.
 
-Key contributor docs:
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, buckets, routing, event emission
-- [INDEX.md](./INDEX.md) — documentation map
+Documentation lives in the [public knowledge base](https://github.com/OmniNode-ai/knowledge_base).
 
 ---
 

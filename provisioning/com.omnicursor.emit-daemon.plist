@@ -5,7 +5,7 @@
 
   OPTIONAL durability hardening: the hooks already self-provision the daemon
   (sessionStart ensure, first-prompt fallback). Install this only if you want
-  the daemon up independently of Cursor sessions. See provisioning/README.md.
+  the daemon up independently of Cursor sessions.
 
   Before installing, replace the two placeholders:
     __DAEMON_PYTHON__    absolute path to a python with omnimarket installed

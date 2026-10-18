@@ -233,7 +233,7 @@ class TestPatternTextSanitization:
 
 class TestProofSentinel:
     """OMNICURSOR_INJECTION_SENTINEL=1 mints a per-fire UUID receipt token
-    (W4_INJECTION_EVIDENCE.md R1/R2/R4); off by default."""
+    when enabled; off by default."""
 
     def test_off_by_default_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("OMNICURSOR_INJECTION_SENTINEL", raising=False)

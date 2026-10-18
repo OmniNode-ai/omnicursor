@@ -239,8 +239,8 @@ def _proof_sentinel(channel: str) -> str:
 
     When ``OMNICURSOR_INJECTION_SENTINEL=1``, mint a fresh UUID for this fire,
     record it in ``events.jsonl``, and return a marker line for the injected
-    block. The injection-receipt check (``docs/W4_INJECTION_EVIDENCE.md``
-    R1/R2/R4) passes only when the model's verbatim echo matches the logged
+    block. The injection-receipt check passes only when the model's verbatim
+    echo matches the logged
     value — the static banner cannot serve as the receipt token.
     """
     if os.environ.get("OMNICURSOR_INJECTION_SENTINEL") != "1":
